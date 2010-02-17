@@ -32,6 +32,28 @@ PLUGIN_HEADER
 
 #define DEFAULT_WAIT_TIME 3
 
+/* Key assignement */
+#define MY_QUIT PLA_QUIT
+
+#define DEMYSTIFY_INCREASE_SPEED PLA_RIGHT
+#define DEMYSTIFY_DECREASE_SPEED PLA_LEFT
+#define DEMYSTIFY_INCREASE_SPEED_REPEAT PLA_RIGHT_REPEAT
+#define DEMYSTIFY_DECREASE_SPEED_REPEAT PLA_LEFT_REPEAT
+
+#define DEMYSTIFY_ADD_POLYGON PLA_UP
+#define DEMYSTIFY_REMOVE_POLYGON PLA_DOWN
+#define DEMYSTIFY_ADD_POLYGON_REPEAT PLA_UP_REPEAT
+#define DEMYSTIFY_REMOVE_POLYGON_REPEAT PLA_DOWN_REPEAT
+
+const struct button_mapping *plugin_contexts[]
+= {generic_directions, generic_actions,
+#if defined(HAVE_REMOTE_LCD)
+    remote_directions
+#endif
+};
+#define NB_ACTION_CONTEXTS \
+    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+
 #ifdef HAVE_LCD_COLOR
 struct line_color
 {
@@ -39,6 +61,16 @@ struct line_color
     int current_r,current_g,current_b;
 };
 #endif
+
+void cleanup(void *parameter)
+{
+    (void)parameter;
+
+    backlight_use_settings();
+#ifdef HAVE_REMOTE_LCD
+    remote_backlight_use_settings();
+#endif
+}
 
 #ifdef HAVE_LCD_COLOR
 void color_randomize(struct line_color * color)
@@ -96,6 +128,8 @@ void color_apply(struct line_color * color, struct screen * display)
 
 int plugin_main(void)
 {
+    int action;
+    int sleep_time = DEFAULT_WAIT_TIME;
 	int i;
 	
 	FOR_NB_SCREENS(i)
@@ -112,35 +146,58 @@ int plugin_main(void)
     color_init(&color);
 #endif
     
-    FOR_NB_SCREENS(i)
+    while (true)
     {
-		struct screen * display=rb->screens[i];
-		
-#ifdef HAVE_LCD_COLOR
-        color_apply(&color, display);
-#endif
-        
-        for (i = 0; i < 1000; i ++)
+        FOR_NB_SCREENS(i)
         {
-            display->drawline (rb->rand() % (display->getwidth()),
-                               rb->rand() % (display->getheight()),
-                               rb->rand() % (display->getwidth()),
-                               rb->rand() % (display->getheight()));
-                               
-            display->update();
+            struct screen *display = rb->screens[i];
             
+            for (i = 0; i < 1000; i ++)
+            {
+                display->drawline (rb->rand() % (display->getwidth()),
+                                   rb->rand() % (display->getheight()),
+                                   rb->rand() % (display->getwidth()),
+                                   rb->rand() % (display->getheight()));
+                
 #ifdef HAVE_LCD_COLOR
-            color_change(&color);
+                color_apply(&color, display);
 #endif
 
-            rb->sleep(DEFAULT_WAIT_TIME * 10);
+                display->update();
+                
+#ifdef HAVE_LCD_COLOR
+                //color_change(&color);
+#endif
+
+#ifdef HAVE_LCD_COLOR
+                color_init(&color);
+#endif
+                rb->sleep(DEFAULT_WAIT_TIME * 5); /* ? */
+                
+                /* Speed handling*/
+                if (sleep_time < 0) /* full speed */
+                    rb->yield();
+                else
+                    rb->sleep(sleep_time);
+                action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+                                             plugin_contexts, NB_ACTION_CONTEXTS);
+                switch (action)
+                {
+                    case MY_QUIT:
+                        cleanup(NULL);
+                        return PLUGIN_OK;
+                    default:
+                        if (rb->default_event_handler_ex(action, cleanup, NULL)
+                            == SYS_USB_CONNECTED)
+                            return PLUGIN_USB_CONNECTED;
+                        break;
+                }
+            }
+            
+            rb->sleep(DEFAULT_WAIT_TIME * 300);
+            return PLUGIN_OK;
         }
-        
-		//display->drawline(10, 10, 70, 70);
-		rb->sleep(DEFAULT_WAIT_TIME * 300);
     }
-    
-    return PLUGIN_OK;
 }
 
 /* this is the plugin entry point */
