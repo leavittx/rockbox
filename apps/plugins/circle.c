@@ -9,7 +9,7 @@
  *
  * Copyright (C) 2010 Lev Panov
  * 
- * Sierpinsky triangle demo plugin
+ * Circle demo plugin
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -34,6 +34,8 @@ PLUGIN_HEADER
 
 /* Key assignement */
 #define MY_QUIT PLA_QUIT
+#define MY_LESS_R PLA_DEC
+#define MY_MORE_R PLA_INC
 
 const struct button_mapping *plugin_contexts[]
 = {generic_directions, generic_actions,
@@ -112,6 +114,51 @@ void color_apply(struct line_color * color, struct screen * display)
 }
 #endif /* #ifdef HAVE_LCD_COLOR */
 
+void circle_points( int cx, int cy, int x, int y, struct screen *display )
+{
+	if (x == 0) {
+		display->drawpixel(cx, cy + y);
+		display->drawpixel(cx, cy - y);
+		display->drawpixel(cx + y, cy);
+		display->drawpixel(cx - y, cy);
+	} else 
+	if (x == y) {
+		display->drawpixel(cx + x, cy + y);
+		display->drawpixel(cx - x, cy + y);
+		display->drawpixel(cx + x, cy - y);
+		display->drawpixel(cx - x, cy - y);
+	} else 
+	if (x < y) {
+		display->drawpixel(cx + x, cy + y);
+		display->drawpixel(cx - x, cy + y);
+		display->drawpixel(cx + x, cy - y);
+		display->drawpixel(cx - x, cy - y);
+		display->drawpixel(cx + y, cy + x);
+		display->drawpixel(cx - y, cy + x);
+		display->drawpixel(cx + y, cy - x);
+		display->drawpixel(cx - y, cy - x);
+	}
+}
+
+void draw_circle( int xCenter, int yCenter, int radius, struct screen *display )
+{
+	int x = 0;
+	int y = radius;
+	int p = (5 - radius*4)/4;
+
+	circle_points(xCenter, yCenter, x, y, display);
+	while (x < y) {
+		x++;
+		if (p < 0) {
+			p += 2*x+1;
+		} else {
+			y--;
+			p += 2*(x-y)+1;
+		}
+		circle_points(xCenter, yCenter, x, y, display);
+	}
+}
+
 /*
  * Main function
  */
@@ -120,7 +167,8 @@ int plugin_main(void)
 {
     int action;
     int sleep_time = DEFAULT_WAIT_TIME;
-	int i;
+	int i, W, H;
+	int R, Xc, Yc;
 	
     FOR_NB_SCREENS(i)
     {
@@ -128,6 +176,13 @@ int plugin_main(void)
         struct screen *display = rb->screens[i];
         if (display->is_color)
             display->set_background(LCD_BLACK);
+            
+        W = display->getwidth();
+		H = display->getheight();
+		
+		Xc = W / 2;
+		Yc = H / 2;
+		R  = H / 3;
 #endif
     }
     
@@ -135,60 +190,52 @@ int plugin_main(void)
     struct line_color color;
     color_init(&color);
 #endif
-    
+
     while (true)
     {
         FOR_NB_SCREENS(i)
         {
             struct screen *display = rb->screens[i];
             
-            for (i = 0; i < 1000; i ++)
-            {
-                display->drawline(rb->rand() % (display->getwidth()),
-                                  rb->rand() % (display->getheight()),
-                                  rb->rand() % (display->getwidth()),
-                                  rb->rand() % (display->getheight()));
-                
 #ifdef HAVE_LCD_COLOR
-                color_apply(&color, display);
+            color_apply(&color, display);
 #endif
-
-                display->update();
-/*                
-#ifdef HAVE_LCD_COLOR
-                color_change(&color);
-#endif
-*/
-/* Random colors */
-#ifdef HAVE_LCD_COLOR
-                color_init(&color);
-#endif
-/* Some delay */
-                rb->sleep(DEFAULT_WAIT_TIME * 5); /* ? */
-                
-                /* Speed handling*/
-                if (sleep_time < 0) /* full speed */
-                    rb->yield();
-                else
-                    rb->sleep(sleep_time);
-                action = pluginlib_getaction(TIMEOUT_NOBLOCK,
-                                             plugin_contexts,
-                                             NB_ACTION_CONTEXTS);
-                switch (action)
-                {
-                    case MY_QUIT:
-                        cleanup(NULL);
-                        return PLUGIN_OK;
-                    default:
-                        if (rb->default_event_handler_ex(action, cleanup, NULL)
-                            == SYS_USB_CONNECTED)
-                            return PLUGIN_USB_CONNECTED;
-                        break;
-                }
-            }
             
-            rb->sleep(DEFAULT_WAIT_TIME * 300);
-            return PLUGIN_OK;
+            draw_circle(Xc, Yc, R, display);
+            
+            display->update();
+               
+			/* Speed handling*/
+			if (sleep_time < 0) /* full speed */
+				rb->yield();
+			else
+				rb->sleep(sleep_time);
+				
+			action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+										 plugin_contexts,
+										 NB_ACTION_CONTEXTS);
+			switch (action)
+			{
+				case MY_QUIT:
+					cleanup(NULL);
+					return PLUGIN_OK;
+					
+				case MY_MORE_R:
+					if (R < H / 2)
+						R ++;
+					break;
+					
+				case MY_LESS_R:
+					if (R > 0)
+						R --;
+					break;
+					
+				default:
+					if (rb->default_event_handler_ex(action, cleanup, NULL)
+						== SYS_USB_CONNECTED)
+						return PLUGIN_USB_CONNECTED;
+					break;
+			}
         }
     }
 }

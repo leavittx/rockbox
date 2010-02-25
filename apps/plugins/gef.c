@@ -9,7 +9,7 @@
  *
  * Copyright (C) 2010 Lev Panov
  * 
- * Sierpinsky triangle demo plugin
+ * GEF demo plugin
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@
  *
  ****************************************************************************/
 #include "plugin.h"
+#include "lib/fixedpoint.h"
 
 #ifdef HAVE_LCD_BITMAP
 #include "lib/pluginlib_actions.h"
@@ -32,8 +33,12 @@ PLUGIN_HEADER
 
 #define DEFAULT_WAIT_TIME 3
 
-/* Key assignement */
-#define MY_QUIT PLA_QUIT
+#define pi 180
+enum { MAX = 5 };
+double b = pi / 3, c = pi / 9, d = pi / 3;
+double k1 = 0.5, k2 = 0.5, k3 = 0.9;
+int rec_lvl = 0;
+bool need_redraw = true;
 
 const struct button_mapping *plugin_contexts[]
 = {generic_directions, generic_actions,
@@ -112,6 +117,36 @@ void color_apply(struct line_color * color, struct screen * display)
 }
 #endif /* #ifdef HAVE_LCD_COLOR */
 
+void RecursiveDrawIter( int x, int y, double l, double a, struct screen *display )
+{
+/*
+  double x1 = x * fp14_cos(a) - y * fp14_sin(a), y1 = x * fp14_sin(a) + y * fp14_cos(a);
+*/
+  double x1, y1;
+  //static int rec_lvl = 0;
+
+  if (rec_lvl > MAX || l < 1/* || inp(0x60) == 1*/)
+    return;
+  rec_lvl ++;
+
+  x1 = x + l * fp14_cos(a) / 16384;
+  y1 = y - l * fp14_sin(a) / 16384;
+
+  display->drawline(x, y, (int)x1, (int)y1);
+  display->update();
+              //TGR_RGB(rec_lvl * 10 - 100, rec_lvl * 10 - 20, rec_lvl * 20)
+              /* TGR_RGB(134, 22, 44) */ 
+
+  RecursiveDrawIter(x1, y1, l * k3, pi / 2, display);
+  RecursiveDrawIter(x1, y1, l * k1, a - b, display);
+  RecursiveDrawIter(x1, y1, l * k1, a + b, display);
+  RecursiveDrawIter(x1, y1, l * k2, a - c, display);
+  RecursiveDrawIter(x1, y1, l * k2, a + c, display);
+//  RecursiveDrawIter(x1, y1, l * k3, a - d);
+
+  rec_lvl --;
+}
+
 /*
  * Main function
  */
@@ -120,7 +155,8 @@ int plugin_main(void)
 {
     int action;
     int sleep_time = DEFAULT_WAIT_TIME;
-	int i;
+	int i, W, H;
+	//static bool need_redraw = true;
 	
     FOR_NB_SCREENS(i)
     {
@@ -128,6 +164,10 @@ int plugin_main(void)
         struct screen *display = rb->screens[i];
         if (display->is_color)
             display->set_background(LCD_BLACK);
+            
+        W = display->getwidth();
+		H = display->getheight();
+
 #endif
     }
     
@@ -135,61 +175,71 @@ int plugin_main(void)
     struct line_color color;
     color_init(&color);
 #endif
-    
+
+	FOR_NB_SCREENS(i)
+        {
+            struct screen *display = rb->screens[i];
+            
+			{
+#ifdef HAVE_LCD_COLOR
+            color_apply(&color, display);
+#endif
+				
+				rb->lcd_clear_display();
+				rb->lcd_update();
+				
+				RecursiveDrawIter(W / 2, H, (W + H) / 12, pi / 2, display);
+				
+				display->update();
+				
+				need_redraw = false;
+			}
+        }
+	
     while (true)
     {
+		/*if (need_redraw == true)
         FOR_NB_SCREENS(i)
         {
             struct screen *display = rb->screens[i];
             
-            for (i = 0; i < 1000; i ++)
-            {
-                display->drawline(rb->rand() % (display->getwidth()),
-                                  rb->rand() % (display->getheight()),
-                                  rb->rand() % (display->getwidth()),
-                                  rb->rand() % (display->getheight()));
-                
+			{
 #ifdef HAVE_LCD_COLOR
-                color_apply(&color, display);
+            color_apply(&color, display);
 #endif
-
-                display->update();
-/*                
-#ifdef HAVE_LCD_COLOR
-                color_change(&color);
-#endif
-*/
-/* Random colors */
-#ifdef HAVE_LCD_COLOR
-                color_init(&color);
-#endif
-/* Some delay */
-                rb->sleep(DEFAULT_WAIT_TIME * 5); /* ? */
-                
-                /* Speed handling*/
-                if (sleep_time < 0) /* full speed */
-                    rb->yield();
-                else
-                    rb->sleep(sleep_time);
-                action = pluginlib_getaction(TIMEOUT_NOBLOCK,
-                                             plugin_contexts,
-                                             NB_ACTION_CONTEXTS);
-                switch (action)
-                {
-                    case MY_QUIT:
-                        cleanup(NULL);
-                        return PLUGIN_OK;
-                    default:
-                        if (rb->default_event_handler_ex(action, cleanup, NULL)
-                            == SYS_USB_CONNECTED)
-                            return PLUGIN_USB_CONNECTED;
-                        break;
-                }
-            }
-            
-            rb->sleep(DEFAULT_WAIT_TIME * 300);
-            return PLUGIN_OK;
-        }
+				
+				rb->lcd_clear_display();
+				rb->lcd_update();
+				
+				RecursiveDrawIter(W / 2, H, (W + H) / 15, pi / 2, display);
+				
+				display->update();
+				
+				need_redraw = false;
+			}
+        }*/
+        
+			/* Speed handling*/
+			if (sleep_time < 0) /* full speed */
+				rb->yield();
+			else
+				rb->sleep(sleep_time);
+				
+			action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+										 plugin_contexts,
+										 NB_ACTION_CONTEXTS);
+			switch (action)
+			{
+				case PLA_QUIT:
+					cleanup(NULL);
+					return PLUGIN_OK;
+					
+				default:
+					if (rb->default_event_handler_ex(action, cleanup, NULL)
+						== SYS_USB_CONNECTED)
+						return PLUGIN_USB_CONNECTED;
+					break;
+			}
     }
 }
 

@@ -125,3 +125,7 @@ wavview,viewers
 wormlet,games
 xobox,games
 zxbox,viewers
+
+sierpinski,demos
+helloworld,demos
+circle,demos
