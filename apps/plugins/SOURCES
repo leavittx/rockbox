@@ -1,10 +1,4 @@
 /* plugins common to all models */
-helloworld.c
-sierpinski.c
-circle.c
-testkeys.c
-gef.c
-
 chessclock.c
 credits.c
 cube.c
@@ -254,4 +248,13 @@ test_scanrate.c
 test_touchscreen.c
 #endif
 test_viewports.c
+#endif
+
+#if defined(COWON_D2)
+helloworld.c
+sierpinski.c
+circle.c
+testkeys.c
+gef.c
+c-ray-f.c
 #endif
