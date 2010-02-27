@@ -92,3 +92,7 @@ pluginlib_touchscreen.c
 #endif
 
 #endif /* !SIMULATOR */
+
+#if defined(COWON_D2)
+pdbox-func.c
+#endif

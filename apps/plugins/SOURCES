@@ -256,5 +256,4 @@ sierpinski.c
 circle.c
 testkeys.c
 gef.c
-c-ray-f.c
 #endif

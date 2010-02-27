@@ -15,29 +15,27 @@
  * ---------------------------------------------------------------------
  */
 
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <ctype.h>
-#include <errno.h>
-*/
-
 /* Rockbox specific headers */
 #include "plugin.h"
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
 
-#include "pdbox/pdbox.h"
-//#include "pdbox/pdbox-func.c"
+/* you cant just include headers from other plugins
+ * like #include "pdbox/pdbox.h"
+ * So I've stolen some functions from pdbox
+ * For math */
+#include "lib/pdbox-lib.h"
 
-/* In the original version of c-ray we have some type defenitions, but
- * this header file will make everything for us */
+/* For memory allocation */
+#include "codecs/lib/tlsf/src/tlsf.h"
+
+/* In the original version of c-ray we have some type defenitions
+ * (uint8_t, uint32_t), this will make everything for us */
 #include <inttypes.h>
 
-/* This macros must always be included. Should be placed at the top by
-   convention, although the actual position doesn't matter */
+/* This macros must always be included. 
+ * Should be placed at the top by convention,
+ * although the actual position doesn't matter */
 PLUGIN_HEADER
 
 struct vec3 {
@@ -148,6 +146,7 @@ int plugin_main(void) {
 	uint32_t pixels[xres * yres * sizeof(uint32_t)];
 	int rays_per_pixel = 1;
 	int infile, outfile;
+	char memory_pool[307200];
 /*
 	for(i=1; i<argc; i++) {
 		if(argv[i][0] == '-' && argv[i][2] == 0) {
@@ -208,31 +207,35 @@ int plugin_main(void) {
 	}
 */
 
-	if ((infile = rb->open("scene", O_RDONLY)) == -1)
+	if ((infile = rb->open(PLUGIN_DEMOS_DIR "/scene.txt", O_RDONLY)) == -1)
 	{
 		rb->splash(HZ*2, "Can't open scene file :(");
 		return PLUGIN_ERROR;
 	}
 	
-	if ((outfile = rb->open("out.pnm", O_WRONLY|O_CREAT)) == -1)
+	if ((outfile = rb->open(PLUGIN_DEMOS_DIR "/out.pnm", O_WRONLY|O_CREAT)) == -1)
 	{
 		rb->splash(HZ*2, "Can't create output file :(");
 		return PLUGIN_ERROR;
 	}
 	
+	init_memory_pool(307200, memory_pool);
+	
+	rb->splash(HZ*2, "Will load scene now...");
 	load_scene(infile);
+	rb->splash(HZ*2, "Scene loaded, rendering...");
 
 	/* initialize the random number tables for the jitter */
-	for(i=0; i<NRAN; i++) urand[i].x = (double)rand() / RAND_MAX - 0.5;
-	for(i=0; i<NRAN; i++) urand[i].y = (double)rand() / RAND_MAX - 0.5;
-	for(i=0; i<NRAN; i++) irand[i] = (int)(NRAN * ((double)rand() / RAND_MAX));
+	for(i=0; i<NRAN; i++) urand[i].x = (double)rb->rand() / RAND_MAX - 0.5;
+	for(i=0; i<NRAN; i++) urand[i].y = (double)rb->rand() / RAND_MAX - 0.5;
+	for(i=0; i<NRAN; i++) irand[i] = (int)(NRAN * ((double)rb->rand() / RAND_MAX));
 	
 	start_time = get_msec();
 	render(xres, yres, pixels, rays_per_pixel);
 	rend_time = get_msec() - start_time;
 	
 	/* output statistics to stderr */
-	rb->splashf(HZ*2, "Rendering took: %lu seconds (%lu milliseconds)\n", rend_time / 1000, rend_time);
+	rb->splashf(HZ*2, "Rendering took: %lu seconds (%lu milliseconds)", rend_time / 1000, rend_time);
 
 	/* output the image */
 	rb->fdprintf(outfile, "P6\n%d %d\n255\n", xres, yres);
@@ -240,9 +243,9 @@ int plugin_main(void) {
 	/*	fputc((pixels[i] >> RSHIFT) & 0xff, outfile);
 		fputc((pixels[i] >> GSHIFT) & 0xff, outfile);
 		fputc((pixels[i] >> BSHIFT) & 0xff, outfile);	*/
-		write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
-		write(outfile, (pixels[i] >> GSHIFT) & 0xff, 1);
-		write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);
+		rb->write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
+		rb->write(outfile, (pixels[i] >> GSHIFT) & 0xff, 1);
+		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);
 	}
 	
 	/* fflush(outfile); */
@@ -455,7 +458,7 @@ struct ray get_primary_ray(int x, int y, int sample) {
 
 struct vec3 get_sample_pos(int x, int y, int sample) {
 	struct vec3 pt;
-	double xsz = 2.0, ysz = xres / aspect;
+	/*double xsz = 2.0, ysz = xres / aspect;*/
 	static double sf = 0.0;
 
 	if(sf == 0.0) {
@@ -532,13 +535,15 @@ void load_scene(int fd) {
 	char line[256], *ptr, type;
 	char *store = NULL;
 
-	object_list = malloc(sizeof(struct sphere));
+	object_list = tlsf_malloc(sizeof(struct sphere));
 	object_list->next = 0;
 	
-	while((ptr = rb->read_line(fd, line, 256)) != -1) {
+	while((rb->read_line(fd, line, 256)) > 0) {
 		int i;
 		struct vec3 pos, col;
 		double rad, spow, refl;
+		
+		ptr = line;
 		
 		while(*ptr == ' ' || *ptr == '\t') ptr++;
 		if(*ptr == '#' || *ptr == '\n') continue;
@@ -552,19 +557,21 @@ void load_scene(int fd) {
 		}
 
 		if(type == 'l') {
+			rb->splash(HZ*2, "Light");
 			lights[lnum++] = pos;
 			continue;
 		}
 
 		if(!(ptr = rb->strtok_r(0, DELIM, &store))) continue;
-		rad = atof(ptr);
+		rad = rb_atof(ptr);
 
 		for(i=0; i<3; i++) {
 			if(!(ptr = rb->strtok_r(0, DELIM, &store))) break;
-			*((double*)&col.x + i) = atof(ptr);
+			*((double*)&col.x + i) = rb_atof(ptr);
 		}
 
 		if(type == 'c') {
+			rb->splash(HZ*2, "Camera");
 			cam.pos = pos;
 			cam.targ = col;
 			cam.fov = rad;
@@ -572,13 +579,14 @@ void load_scene(int fd) {
 		}
 
 		if(!(ptr = rb->strtok_r(0, DELIM, &store))) continue;
-		spow = atof(ptr);
+		spow = rb_atof(ptr);
 
 		if(!(ptr = rb->strtok_r(0, DELIM, &store))) continue;
-		refl = atof(ptr);
+		refl = rb_atof(ptr);
 
 		if(type == 's') {
-			struct sphere *sph = malloc(sizeof *sph);
+			rb->splash(HZ*2, "Sphere");
+			struct sphere *sph = tlsf_malloc(sizeof *sph);
 			sph->next = object_list->next;
 			object_list->next = sph;
 
@@ -588,40 +596,15 @@ void load_scene(int fd) {
 			sph->mat.spow = spow;
 			sph->mat.refl = refl;
 		} else {
-			rb->splashf(HZ*2, "unknown type: %c\n", type);
+			rb->splashf(HZ*2, "unknown type: %c", type);
 		}
 	}
 }
 
-/* Temporary stub */
+/* provide a millisecond-resolution timer */
 unsigned long get_msec(void) {
-	return 0;
+	return *rb->current_tick;
 }
-
-#if 0
-/* provide a millisecond-resolution timer for each system */
-#if defined(__unix__) || defined(unix)
-#include <time.h>
-#include <sys/time.h>
-unsigned long get_msec(void) {
-	static struct timeval timeval, first_timeval;
-	
-	gettimeofday(&timeval, 0);
-	if(first_timeval.tv_sec == 0) {
-		first_timeval = timeval;
-		return 0;
-	}
-	return (timeval.tv_sec - first_timeval.tv_sec) * 1000 + (timeval.tv_usec - first_timeval.tv_usec) / 1000;
-}
-#elif defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-unsigned long get_msec(void) {
-	return GetTickCount();
-}
-#else
-#error "I don't know how to measure time on your platform"
-#endif
-#endif /* #if 0 */
 
 enum plugin_status plugin_start(const void* parameter)
 {

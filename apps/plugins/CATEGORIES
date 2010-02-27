@@ -129,3 +129,6 @@ zxbox,viewers
 sierpinski,demos
 helloworld,demos
 circle,demos
+gef,demos
+testkeys,demos
+c-ray,demos
