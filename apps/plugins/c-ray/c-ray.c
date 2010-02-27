@@ -89,7 +89,7 @@ unsigned long get_msec(void);
 #define ERR_MARGIN		1e-6			/* an arbitrary error margin to avoid surface acne */
 
 /* bit-shift ammount for packing each color into a 32bit uint */
-#ifdef LITTLE_ENDIAN
+#ifndef ROCKBOX_LITTLE_ENDIAN
 #define RSHIFT	16
 #define BSHIFT	0
 #else	/* big endian */
@@ -109,7 +109,6 @@ unsigned long get_msec(void);
 	double len = rb_sqrt(DOT(a, a));\
 	(a).x /= len; (a).y /= len; (a).z /= len;\
 } while(0);
-//#defile pow(x, y) rb->fp_exp10 fuck fuck fuck...
 
 /* global state */
 /*
@@ -200,6 +199,7 @@ int plugin_main(void) {
 		}
 	}
 	*/
+
 /* We will use static memory allocation, at least for now */
 /*	if(!(pixels = malloc(xres * yres * sizeof *pixels))) {
 		perror("pixel buffer allocation failed");
@@ -219,6 +219,9 @@ int plugin_main(void) {
 		return PLUGIN_ERROR;
 	}
 	
+	
+	rb->splashf(HZ*2, "This thing is %s", (RSHIFT == 16 && BSHIFT ==0) ? "little-endian" : "big-endian");
+	
 	init_memory_pool(307200, memory_pool);
 	
 	rb->splash(HZ*2, "Will load scene now...");
@@ -226,6 +229,7 @@ int plugin_main(void) {
 	rb->splash(HZ*2, "Scene loaded, rendering...");
 
 	/* initialize the random number tables for the jitter */
+	rb->srand(*rb->current_tick);
 	for(i=0; i<NRAN; i++) urand[i].x = (double)rb->rand() / RAND_MAX - 0.5;
 	for(i=0; i<NRAN; i++) urand[i].y = (double)rb->rand() / RAND_MAX - 0.5;
 	for(i=0; i<NRAN; i++) irand[i] = (int)(NRAN * ((double)rb->rand() / RAND_MAX));
@@ -248,6 +252,7 @@ int plugin_main(void) {
 		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);
 	}
 	
+	/* We don't have such thing on rockbox... */
 	/* fflush(outfile); */
 
 	rb->close(infile);
@@ -601,9 +606,9 @@ void load_scene(int fd) {
 	}
 }
 
-/* provide a millisecond-resolution timer */
+/* provide a millisecond-resolution timer for rockbox */
 unsigned long get_msec(void) {
-	return *rb->current_tick;
+	return *rb->current_tick * 1000 / HZ;
 }
 
 enum plugin_status plugin_start(const void* parameter)
