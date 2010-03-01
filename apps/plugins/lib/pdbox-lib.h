@@ -22,33 +22,7 @@
 #ifndef _PDBOX_LIB_H_
 #define _PDBOX_LIB_H_
 
-
-#if 0 /* 1 */
-/* NOT Use TLSF. */
-#include "codecs/lib/tlsf/src/tlsf.h"
-#endif
-
-/* Pure Data */
-/* This is lib, so not needed
-#include "PDa/src/m_pd.h"
-*/
-
 typedef long long t_time;
-
-/* Minimal memory size. */
-/* Not needed
-#define MIN_MEM_SIZE (4 * 1024 * 1024)
-*/
-
-/* Memory prototypes. */
-/* Not needed */
-#if 0 /* 1 */
-/* Direct memory allocator functions to TLSF. */
-#define malloc(size) tlsf_malloc(size)
-#define free(ptr) tlsf_free(ptr)
-#define realloc(ptr, size) tlsf_realloc(ptr, size)
-#define calloc(elements, elem_size) tlsf_calloc(elements, elem_size)
-#endif
 
 /* Additional functions. */
 char *rb_strncat(char *s, const char *t, size_t n);
@@ -83,38 +57,5 @@ union f2i
     float f;
     int32_t i;
 };
-
-/* Everything else not needed,
- * otherwise will not compile */
-
-/* Redefinitons of ANSI C functions. */
-/*
-#include "lib/wrappers.h"
-
-#define strncmp rb->strncmp
-#define atoi rb->atoi
-#define write rb->write
-
-#define strncat rb_strncat
-#define floor rb_floor
-#define atof rb_atof
-#define atol rb_atol
-#define ftoan rb_ftoan
-#define sin rb_sin
-#define cos rb_cos
-#define log10 rb_log10
-#define log rb_log
-#define exp rb_exp
-#define pow rb_pow
-#define sqrt rb_sqrt
-#define fabs rb_fabs
-#define atan rb_atan
-#define atan2 rb_atan2
-#define sinh rb_sinh
-#define tan rb_tan
-
-#define strtok_r rb->strtok_r
-#define strstr rb->strcasestr
-*/
 
 #endif /* _PDBOX_LIB_H_ */

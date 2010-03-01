@@ -166,8 +166,7 @@ int plugin_main(void)
             display->set_background(LCD_BLACK);
             
         W = display->getwidth();
-		H = display->getheight();
-
+	H = display->getheight();
 #endif
     }
     

@@ -89,7 +89,7 @@ unsigned long get_msec(void);
 #define ERR_MARGIN		1e-6			/* an arbitrary error margin to avoid surface acne */
 
 /* bit-shift ammount for packing each color into a 32bit uint */
-#ifndef ROCKBOX_LITTLE_ENDIAN
+#ifdef ROCKBOX_LITTLE_ENDIAN
 #define RSHIFT	16
 #define BSHIFT	0
 #else	/* big endian */
@@ -131,15 +131,48 @@ const char *usage = {
 	"Usage: c-ray-f [options]\n"
 	"  Reads a scene file from stdin, writes the image to stdout, and stats to stderr.\n\n"
 	"Options:\n"
-	"  -s WxH     where W is the width and H the height of the image\n"
+	"  -s WxH	 where W is the width and H the height of the image\n"
 	"  -r <rays>  shoot <rays> rays per pixel (antialiasing)\n"
 	"  -i <file>  read from <file> instead of stdin\n"
 	"  -o <file>  write to <file> instead of stdout\n"
-	"  -h         this help screen\n\n"
+	"  -h		 this help screen\n\n"
 };*/
 
+#ifdef HAVE_LCD_COLOR
+struct line_color
+{
+	int r,g,b;
+};
+#endif
+
+void cleanup(void *parameter)
+{
+	(void)parameter;
+
+	backlight_use_settings();
+#ifdef HAVE_REMOTE_LCD
+	remote_backlight_use_settings();
+#endif
+}
+
+#ifdef HAVE_LCD_COLOR
+
+#define COLOR_RGBPACK(color) \
+	LCD_RGBPACK((color)->r, (color)->g, (color)->b)
+
+void color_apply(struct line_color * color, struct screen * display)
+{
+	if (display->is_color){
+		unsigned foreground=
+			SCREEN_COLOR_TO_NATIVE(display,COLOR_RGBPACK(color));
+		display->set_foreground(foreground);
+	}
+}
+#endif /* #ifdef HAVE_LCD_COLOR */
+
+
 int plugin_main(void) {
-	int i;
+	int i, j;
 	unsigned long rend_time, start_time;
 	/* uint32_t *pixels; */
 	uint32_t pixels[xres * yres * sizeof(uint32_t)];
@@ -207,26 +240,28 @@ int plugin_main(void) {
 	}
 */
 
-	if ((infile = rb->open(PLUGIN_DEMOS_DIR "/scene.txt", O_RDONLY)) == -1)
+	if ((infile = rb->open(PLUGIN_DEMOS_DIR "/scene.txt", O_RDONLY)) < 0)
 	{
-		rb->splash(HZ*2, "Can't open scene file :(");
+		rb->splash(HZ*3, "Can't open scene file :(");
 		return PLUGIN_ERROR;
 	}
 	
-	if ((outfile = rb->open(PLUGIN_DEMOS_DIR "/out.pnm", O_WRONLY|O_CREAT)) == -1)
+	if ((outfile = rb->open(PLUGIN_DEMOS_DIR "/out.pnm", O_WRONLY|O_CREAT)) < 0)
 	{
-		rb->splash(HZ*2, "Can't create output file :(");
+		rb->close(infile);
+		rb->splash(HZ*3, "Can't create output file :(");
 		return PLUGIN_ERROR;
 	}
 	
 	
-	rb->splashf(HZ*2, "This thing is %s", (RSHIFT == 16 && BSHIFT ==0) ? "little-endian" : "big-endian");
+	rb->splashf(HZ/2, "This thing is %s", (RSHIFT == 16 && BSHIFT ==0) ? "little-endian" : "big-endian");
 	
 	init_memory_pool(307200, memory_pool);
 	
-	rb->splash(HZ*2, "Will load scene now...");
+	rb->splash(HZ/2, "Will load scene now...");
 	load_scene(infile);
-	rb->splash(HZ*2, "Scene loaded, rendering...");
+	rb->close(infile);
+	rb->splash(HZ/2, "Scene loaded, rendering...");
 
 	/* initialize the random number tables for the jitter */
 	rb->srand(*rb->current_tick);
@@ -238,18 +273,61 @@ int plugin_main(void) {
 	render(xres, yres, pixels, rays_per_pixel);
 	rend_time = get_msec() - start_time;
 	
-	/* output statistics to stderr */
-	rb->splashf(HZ*2, "Rendering took: %lu seconds (%lu milliseconds)", rend_time / 1000, rend_time);
+	/* output statistics */
+	rb->splashf(HZ*3, "Rendering took: %lu seconds (%lu milliseconds)", rend_time / 1000, rend_time);
+
+
+	int W, H;
+	//static bool need_redraw = true;
+	
+	FOR_NB_SCREENS(i)
+	{
+#ifdef HAVE_LCD_COLOR
+		struct screen *display = rb->screens[i];
+		if (display->is_color)
+			display->set_background(LCD_BLACK);
+			
+		W = display->getwidth();
+		H = display->getheight();
+#endif
+	}
+
+	/* rb->splashf(HZ*2, "W = %i, H = %i", W, H); */
 
 	/* output the image */
 	rb->fdprintf(outfile, "P6\n%d %d\n255\n", xres, yres);
-	for(i=0; i<xres * yres; i++) {
+	for (i = 0; i < xres*yres; i++) {
 	/*	fputc((pixels[i] >> RSHIFT) & 0xff, outfile);
 		fputc((pixels[i] >> GSHIFT) & 0xff, outfile);
 		fputc((pixels[i] >> BSHIFT) & 0xff, outfile);	*/
-		rb->write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
+		unsigned char temp;
+		struct line_color color;
+		
+		temp = (pixels[i] >> RSHIFT) & 0xff;
+		color.r = temp;
+		rb->write(outfile, &temp, 1);
+		
+		temp = (pixels[i] >> GSHIFT) & 0xff;
+		color.g = temp;
+		rb->write(outfile, &temp, 1);
+		
+		temp = (pixels[i] >> BSHIFT) & 0xff;
+		color.b = temp;
+		rb->write(outfile, &temp, 1);
+		
+		FOR_NB_SCREENS(j)
+		{
+			struct screen *display = rb->screens[j];
+			
+			color_apply(&color, display);
+			display->drawpixel(i % xres, i / xres);
+			
+			//display->update();
+		}
+		
+	/*	rb->write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
 		rb->write(outfile, (pixels[i] >> GSHIFT) & 0xff, 1);
-		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);
+		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);	*/
 	}
 	
 	/* We don't have such thing on rockbox... */
@@ -257,6 +335,13 @@ int plugin_main(void) {
 
 	rb->close(infile);
 	rb->close(outfile);
+	
+	FOR_NB_SCREENS(j)
+	{
+		struct screen *display = rb->screens[j];
+		display->update();
+	}
+	rb->sleep(HZ*30);
 	
 	return PLUGIN_OK;
 }
@@ -368,7 +453,7 @@ struct vec3 shade(struct sphere *obj, struct spoint *sp, int depth) {
 
 			idiff = MAX(DOT(sp->normal, ldir), 0.0);
 		/*	ispec = obj->mat.spow > 0.0 ? pow(MAX(DOT(sp->vref, ldir), 0.0), obj->mat.spow) : 0.0; */
-			/* pow(x, y ) = exp(y * log(x)) */
+			/* btw: pow(x, y ) = exp(y * log(x)) */
 			ispec = obj->mat.spow > 0.0 ? rb_pow(MAX(DOT(sp->vref, ldir), 0.0), obj->mat.spow) : 0.0;
 
 			col.x += idiff * obj->mat.col.x + ispec;
@@ -562,7 +647,7 @@ void load_scene(int fd) {
 		}
 
 		if(type == 'l') {
-			rb->splash(HZ*2, "Light");
+			rb->splash(HZ/2, "Light");
 			lights[lnum++] = pos;
 			continue;
 		}
@@ -576,7 +661,7 @@ void load_scene(int fd) {
 		}
 
 		if(type == 'c') {
-			rb->splash(HZ*2, "Camera");
+			rb->splash(HZ/2, "Camera");
 			cam.pos = pos;
 			cam.targ = col;
 			cam.fov = rad;
@@ -590,7 +675,7 @@ void load_scene(int fd) {
 		refl = rb_atof(ptr);
 
 		if(type == 's') {
-			rb->splash(HZ*2, "Sphere");
+			rb->splash(HZ/2, "Sphere");
 			struct sphere *sph = tlsf_malloc(sizeof *sph);
 			sph->next = object_list->next;
 			object_list->next = sph;
@@ -601,7 +686,7 @@ void load_scene(int fd) {
 			sph->mat.spow = spow;
 			sph->mat.refl = refl;
 		} else {
-			rb->splashf(HZ*2, "unknown type: %c", type);
+			rb->splashf(HZ*3, "unknown type: %c", type);
 		}
 	}
 }
@@ -615,19 +700,19 @@ enum plugin_status plugin_start(const void* parameter)
 {
 	int ret;
 	
-    /* if you don't use the parameter, you can do like
-       this to avoid the compiler warning about it */
-    (void)parameter;
-    
+	/* if you don't use the parameter, you can do like
+	   this to avoid the compiler warning about it */
+	(void)parameter;
+	
 #if LCD_DEPTH > 1
-    rb->lcd_set_backdrop(NULL);
+	rb->lcd_set_backdrop(NULL);
 #endif
-    backlight_force_on(); /* backlight control in lib/helper.c */
+	backlight_force_on(); /* backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
-    remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
+	remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
 #endif
 
-    ret = plugin_main();
+	ret = plugin_main();
 
-    return ret;
+	return ret;
 }
