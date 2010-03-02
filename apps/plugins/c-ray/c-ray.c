@@ -1,5 +1,6 @@
-/* c-ray-f - a simple raytracing filter.
+/* c-ray - a simple raytracing filter.
  * Copyright (C) 2006 John Tsiombikas <nuclear@siggraph.org>
+ * Rockbox-adopted by Lev Panov 2010 <lev.panov@gmail.com>
  *
  * You are free to use, modify and redistribute this program under the
  * terms of the GNU General Public License v2 or (at your option) later.
@@ -22,7 +23,7 @@
 
 /* you cant just include headers from other plugins
  * like #include "pdbox/pdbox.h"
- * So I've stolen some functions from pdbox
+ * So I put some functions from pdbox to lib
  * For math */
 #include "lib/pdbox-lib.h"
 
@@ -41,9 +42,8 @@
  * although the actual position doesn't matter */
 PLUGIN_HEADER
 
-//#define MEMORY_POOL_SIZE 307200
 #define SLEEP_TIME 10
-enum { xres = 320, yres = 240 };
+enum { xres = 40, yres = 30 };
 bool DEBUG = false;
 
 struct vec3 {
@@ -131,17 +131,6 @@ struct camera cam;
 #define JMASK	(NRAN - 1) /* Originally simply 'MASK', due to name conflict changed to 'JMASK' */
 struct vec3 urand[NRAN];
 int irand[NRAN];
-/*
-const char *usage = {
-	"Usage: c-ray-f [options]\n"
-	"  Reads a scene file from stdin, writes the image to stdout, and stats to stderr.\n\n"
-	"Options:\n"
-	"  -s WxH	 where W is the width and H the height of the image\n"
-	"  -r <rays>  shoot <rays> rays per pixel (antialiasing)\n"
-	"  -i <file>  read from <file> instead of stdin\n"
-	"  -o <file>  write to <file> instead of stdout\n"
-	"  -h		 this help screen\n\n"
-};*/
 
 const struct button_mapping *plugin_contexts[]
 = {generic_directions, generic_actions,
@@ -181,89 +170,29 @@ void color_apply(struct Color * color, struct screen * display)
 		display->set_foreground(foreground);
 	}
 }
-#endif /* #ifdef HAVE_LCD_COLOR */
+#endif /* HAVE_LCD_COLOR */
 
 int plugin_main(void) {
 	int i, j;
 	unsigned long rend_time, start_time;
 	uint32_t *pixels;
-	//uint32_t pixels[xres * yres * sizeof(uint32_t)];
 	int rays_per_pixel = 1;
 	int infile, outfile;
-	//unsigned char memory_pool[MEMORY_POOL_SIZE];
 	unsigned char *memory_pool;
-	
-/*
-	for(i=1; i<argc; i++) {
-		if(argv[i][0] == '-' && argv[i][2] == 0) {
-			char *sep;
-			switch(argv[i][1]) {
-			case 's':
-				if(!isdigit(argv[++i][0]) || !(sep = strchr(argv[i], 'x')) || !isdigit(*(sep + 1))) {
-					fputs("-s must be followed by something like \"640x480\"\n", stderr);
-					return EXIT_FAILURE;
-				}
-				xres = atoi(argv[i]);
-				yres = atoi(sep + 1);
-				aspect = (double)xres / (double)yres;
-				break;
-
-			case 'i':
-				if(!(infile = fopen(argv[++i], "r"))) {
-					fprintf(stderr, "failed to open input file %s: %s\n", argv[i], strerror(errno));
-					return EXIT_FAILURE;
-				}
-				break;
-
-			case 'o':
-				if(!(outfile = fopen(argv[++i], "w"))) {
-					fprintf(stderr, "failed to open output file %s: %s\n", argv[i], strerror(errno));
-					return EXIT_FAILURE;
-				}
-				break;
-
-			case 'r':
-				if(!isdigit(argv[++i][0])) {
-					fputs("-r must be followed by a number (rays per pixel)\n", stderr);
-					return EXIT_FAILURE;
-				}
-				rays_per_pixel = atoi(argv[i]);
-				break;
-
-			case 'h':
-				fputs(usage, stdout);
-				return 0;
-				
-			default:
-				fprintf(stderr, "unrecognized argument: %s\n", argv[i]);
-				fputs(usage, stderr);
-				return EXIT_FAILURE;
-			}
-		} else {
-			fprintf(stderr, "unrecognized argument: %s\n", argv[i]);
-			fputs(usage, stderr);
-			return EXIT_FAILURE;
-		}
-	}
-	*/
-
-/* We will use static memory allocation, at least for now */
-/*	if(!(pixels = malloc(xres * yres * sizeof *pixels))) {
-		perror("pixel buffer allocation failed");
-		return EXIT_FAILURE;
-	}
-*/
-
 	size_t size;
+	
 	memory_pool = rb->plugin_get_audio_buffer(&size);
+	
 	if (DEBUG)
 		rb->splashf(HZ*5, "plugin_get_audio_buffer() allocated %lu bytes", size);
+		
 	//ALIGN(memory_pool, sizeof(uint32_t));
 	while ((unsigned long)memory_pool & PTR_MASK)
 	{
 		memory_pool ++;
 		size --;
 	}
+	
 	init_memory_pool(size, memory_pool);
 	pixels = tlsf_malloc(xres * yres * sizeof(uint32_t));
 	
@@ -288,8 +217,6 @@ int plugin_main(void) {
 					(RSHIFT == 16 && BSHIFT == 0) ? "little-endian" : "big-endian",
 					INT_MAX, sizeof(uint32_t));
 	}
-	
-	//init_memory_pool(MEMORY_POOL_SIZE, memory_pool);
 	
 	if (DEBUG)
 	{
@@ -345,16 +272,6 @@ int plugin_main(void) {
 	
 	rb->fdprintf(outfile, "P6\n%d %d\n255\n", xres, yres);
 	for (i = 0; i < xres*yres; i++) {
-	/*	Original
-		fputc((pixels[i] >> RSHIFT) & 0xff, outfile);
-		fputc((pixels[i] >> GSHIFT) & 0xff, outfile);
-		fputc((pixels[i] >> BSHIFT) & 0xff, outfile);	*/
-		
-	/*	We need a buffer for write() call, so this is wrong
-	    rb->write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
-		rb->write(outfile, (pixels[i] >> GSHIFT) & 0xff, 1);
-		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);	*/
-		
 		unsigned char tmp;
 		struct Color color;
 		
@@ -696,10 +613,7 @@ void load_scene(int fd) {
 	char line[256], *ptr, type;
 	char *store = NULL;
 	
-	//store = tlsf_malloc(256);
-
 	object_list = tlsf_malloc(sizeof(struct sphere));
-	
 	object_list->next = 0;
 	
 	while((rb->read_line(fd, line, 256)) > 0) {
@@ -809,6 +723,5 @@ enum plugin_status plugin_start(const void* parameter)
 #endif
 
 	ret = plugin_main();
-
 	return ret;
 }
