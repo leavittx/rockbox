@@ -29,6 +29,9 @@
 /* For memory allocation */
 #include "codecs/lib/tlsf/src/tlsf.h"
 
+//#define ALIGN(stack, size) ((stack) += ((size) - (long)(stack)) & ((size) - 1));
+#define PTR_MASK    (sizeof(void *) - 1)
+
 /* In the original version of c-ray we have some type defenitions
  * (uint8_t, uint32_t), this will make everything for us */
 #include <inttypes.h>
@@ -37,6 +40,11 @@
  * Should be placed at the top by convention,
  * although the actual position doesn't matter */
 PLUGIN_HEADER
+
+//#define MEMORY_POOL_SIZE 307200
+#define SLEEP_TIME 10
+enum { xres = 320, yres = 240 };
+bool DEBUG = false;
 
 struct vec3 {
 	double x, y, z;
@@ -102,8 +110,7 @@ unsigned long get_msec(void);
 #define SQ(x)		((x) * (x))
 /* We already have these macroses in 'firmware/export/system.h'
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
-#define MIN(a, b)	((a) < (b) ? (a) : (b))
-*/
+#define MIN(a, b)	((a) < (b) ? (a) : (b)) */
 #define DOT(a, b)	((a).x * (b).x + (a).y * (b).y + (a).z * (b).z)
 #define NORMALIZE(a)  do {\
 	double len = rb_sqrt(DOT(a, a));\
@@ -111,11 +118,9 @@ unsigned long get_msec(void);
 } while(0);
 
 /* global state */
-/*
+/* not using this now
 int xres = 800;
-int yres = 600;
-*/
-enum { xres = 320, yres = 240 };
+int yres = 600; */
 double aspect = 1.333333;
 struct sphere *object_list; /* obj_list -- name conflict with 'pdbox/PDa/src/m_pd.h' */
 struct vec3 lights[MAX_LIGHTS];
@@ -138,10 +143,19 @@ const char *usage = {
 	"  -h		 this help screen\n\n"
 };*/
 
+const struct button_mapping *plugin_contexts[]
+= {generic_directions, generic_actions,
+#if defined(HAVE_REMOTE_LCD)
+    remote_directions
+#endif
+};
+#define NB_ACTION_CONTEXTS \
+    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+
 #ifdef HAVE_LCD_COLOR
-struct line_color
+struct Color
 {
-	int r,g,b;
+	uint32_t r,g,b;
 };
 #endif
 
@@ -156,11 +170,10 @@ void cleanup(void *parameter)
 }
 
 #ifdef HAVE_LCD_COLOR
-
 #define COLOR_RGBPACK(color) \
 	LCD_RGBPACK((color)->r, (color)->g, (color)->b)
 
-void color_apply(struct line_color * color, struct screen * display)
+void color_apply(struct Color * color, struct screen * display)
 {
 	if (display->is_color){
 		unsigned foreground=
@@ -170,15 +183,16 @@ void color_apply(struct line_color * color, struct screen * display)
 }
 #endif /* #ifdef HAVE_LCD_COLOR */
 
-
 int plugin_main(void) {
 	int i, j;
 	unsigned long rend_time, start_time;
-	/* uint32_t *pixels; */
-	uint32_t pixels[xres * yres * sizeof(uint32_t)];
+	uint32_t *pixels;
+	//uint32_t pixels[xres * yres * sizeof(uint32_t)];
 	int rays_per_pixel = 1;
 	int infile, outfile;
-	char memory_pool[307200];
+	//unsigned char memory_pool[MEMORY_POOL_SIZE];
+	unsigned char *memory_pool;
+	
 /*
 	for(i=1; i<argc; i++) {
 		if(argv[i][0] == '-' && argv[i][2] == 0) {
@@ -240,6 +254,19 @@ int plugin_main(void) {
 	}
 */
 
+	size_t size;
+	memory_pool = rb->plugin_get_audio_buffer(&size);
+	if (DEBUG)
+		rb->splashf(HZ*5, "plugin_get_audio_buffer() allocated %lu bytes", size);
+	//ALIGN(memory_pool, sizeof(uint32_t));
+	while ((unsigned long)memory_pool & PTR_MASK)
+	{
+		memory_pool ++;
+		size --;
+	}
+	init_memory_pool(size, memory_pool);
+	pixels = tlsf_malloc(xres * yres * sizeof(uint32_t));
+	
 	if ((infile = rb->open(PLUGIN_DEMOS_DIR "/scene.txt", O_RDONLY)) < 0)
 	{
 		rb->splash(HZ*3, "Can't open scene file :(");
@@ -253,67 +280,95 @@ int plugin_main(void) {
 		return PLUGIN_ERROR;
 	}
 	
+	if (DEBUG)
+	{
+		rb->lcd_clear_display();
+		rb->lcd_update();
+		rb->splashf(HZ*3, "This thing is %s, INT_MAX = %iu, sizeof(uint32_t) = %lu",
+					(RSHIFT == 16 && BSHIFT == 0) ? "little-endian" : "big-endian",
+					INT_MAX, sizeof(uint32_t));
+	}
 	
-	rb->splashf(HZ/2, "This thing is %s", (RSHIFT == 16 && BSHIFT ==0) ? "little-endian" : "big-endian");
+	//init_memory_pool(MEMORY_POOL_SIZE, memory_pool);
 	
-	init_memory_pool(307200, memory_pool);
+	if (DEBUG)
+	{
+		rb->lcd_clear_display();
+		rb->lcd_update();
+		rb->splash(HZ/2, "Will load scene now...");
+	}
 	
-	rb->splash(HZ/2, "Will load scene now...");
 	load_scene(infile);
-	rb->close(infile);
-	rb->splash(HZ/2, "Scene loaded, rendering...");
+	
+	if (DEBUG)
+	{
+		rb->lcd_clear_display();
+		rb->lcd_update();
+		rb->splash(HZ/2, "Scene loaded, rendering...");
+	}
 
 	/* initialize the random number tables for the jitter */
 	rb->srand(*rb->current_tick);
 	for(i=0; i<NRAN; i++) urand[i].x = (double)rb->rand() / RAND_MAX - 0.5;
 	for(i=0; i<NRAN; i++) urand[i].y = (double)rb->rand() / RAND_MAX - 0.5;
-	for(i=0; i<NRAN; i++) irand[i] = (int)(NRAN * ((double)rb->rand() / RAND_MAX));
+	for(i=0; i<NRAN; i++) irand[i] = (uint32_t)(NRAN * ((double)rb->rand() / RAND_MAX));
 	
 	start_time = get_msec();
 	render(xres, yres, pixels, rays_per_pixel);
 	rend_time = get_msec() - start_time;
 	
 	/* output statistics */
+	rb->lcd_clear_display();
+	rb->lcd_update();
 	rb->splashf(HZ*3, "Rendering took: %lu seconds (%lu milliseconds)", rend_time / 1000, rend_time);
 
-
-	int W, H;
-	//static bool need_redraw = true;
-	
-	FOR_NB_SCREENS(i)
+	uint32_t W, H;
+	FOR_NB_SCREENS(j)
 	{
 #ifdef HAVE_LCD_COLOR
-		struct screen *display = rb->screens[i];
-		if (display->is_color)
-			display->set_background(LCD_BLACK);
+		struct screen *display = rb->screens[j];
 			
 		W = display->getwidth();
 		H = display->getheight();
+		
+		if (DEBUG)
+		{
+			rb->lcd_clear_display();
+			rb->lcd_update();
+			rb->splashf(HZ*2, "W = %lu, H = %lu, Screen number = %i", W, H, j);
+		}
 #endif
 	}
 
-	/* rb->splashf(HZ*2, "W = %i, H = %i", W, H); */
-
-	/* output the image */
+	/* output and draw the image */
+	rb->lcd_clear_display();
+	
 	rb->fdprintf(outfile, "P6\n%d %d\n255\n", xres, yres);
 	for (i = 0; i < xres*yres; i++) {
-	/*	fputc((pixels[i] >> RSHIFT) & 0xff, outfile);
+	/*	Original
+		fputc((pixels[i] >> RSHIFT) & 0xff, outfile);
 		fputc((pixels[i] >> GSHIFT) & 0xff, outfile);
 		fputc((pixels[i] >> BSHIFT) & 0xff, outfile);	*/
-		unsigned char temp;
-		struct line_color color;
 		
-		temp = (pixels[i] >> RSHIFT) & 0xff;
-		color.r = temp;
-		rb->write(outfile, &temp, 1);
+	/*	We need a buffer for write() call, so this is wrong
+	    rb->write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
+		rb->write(outfile, (pixels[i] >> GSHIFT) & 0xff, 1);
+		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);	*/
 		
-		temp = (pixels[i] >> GSHIFT) & 0xff;
-		color.g = temp;
-		rb->write(outfile, &temp, 1);
+		unsigned char tmp;
+		struct Color color;
 		
-		temp = (pixels[i] >> BSHIFT) & 0xff;
-		color.b = temp;
-		rb->write(outfile, &temp, 1);
+		tmp = (pixels[i] >> RSHIFT) & 0xff;
+		rb->write(outfile, &tmp, 1);
+		color.r = tmp;
+		
+		tmp = (pixels[i] >> GSHIFT) & 0xff;
+		rb->write(outfile, &tmp, 1);
+		color.g = tmp;
+		
+		tmp = (pixels[i] >> BSHIFT) & 0xff;
+		rb->write(outfile, &tmp, 1);
+		color.b = tmp;
 		
 		FOR_NB_SCREENS(j)
 		{
@@ -322,12 +377,9 @@ int plugin_main(void) {
 			color_apply(&color, display);
 			display->drawpixel(i % xres, i / xres);
 			
+			/* Too slow? */
 			//display->update();
 		}
-		
-	/*	rb->write(outfile, (pixels[i] >> RSHIFT) & 0xff, 1);
-		rb->write(outfile, (pixels[i] >> GSHIFT) & 0xff, 1);
-		rb->write(outfile, (pixels[i] >> BSHIFT) & 0xff, 1);	*/
 	}
 	
 	/* We don't have such thing on rockbox... */
@@ -341,9 +393,28 @@ int plugin_main(void) {
 		struct screen *display = rb->screens[j];
 		display->update();
 	}
-	rb->sleep(HZ*30);
 	
-	return PLUGIN_OK;
+	int action;
+    while (true)
+    {
+		rb->sleep(SLEEP_TIME);
+			
+		action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+									 plugin_contexts,
+									 NB_ACTION_CONTEXTS);
+		switch (action)
+		{
+			case PLA_QUIT:
+				cleanup(NULL);
+				return PLUGIN_OK;
+				
+			default:
+				if (rb->default_event_handler_ex(action, cleanup, NULL)
+					== SYS_USB_CONNECTED)
+					return PLUGIN_USB_CONNECTED;
+				break;
+        }
+    }
 }
 
 /* render a frame of xsz/ysz dimensions into the provided framebuffer */
@@ -624,8 +695,11 @@ int ray_sphere(const struct sphere *sph, struct ray ray, struct spoint *sp) {
 void load_scene(int fd) {
 	char line[256], *ptr, type;
 	char *store = NULL;
+	
+	//store = tlsf_malloc(256);
 
 	object_list = tlsf_malloc(sizeof(struct sphere));
+	
 	object_list->next = 0;
 	
 	while((rb->read_line(fd, line, 256)) > 0) {
@@ -647,7 +721,13 @@ void load_scene(int fd) {
 		}
 
 		if(type == 'l') {
-			rb->splash(HZ/2, "Light");
+			if (DEBUG)
+			{
+				rb->lcd_clear_display();
+				rb->lcd_update();
+				rb->splash(HZ/2, "Light");
+			}
+			
 			lights[lnum++] = pos;
 			continue;
 		}
@@ -661,7 +741,13 @@ void load_scene(int fd) {
 		}
 
 		if(type == 'c') {
-			rb->splash(HZ/2, "Camera");
+			if (DEBUG)
+			{
+				rb->lcd_clear_display();
+				rb->lcd_update();
+				rb->splash(HZ/2, "Camera");
+			}
+			
 			cam.pos = pos;
 			cam.targ = col;
 			cam.fov = rad;
@@ -675,7 +761,13 @@ void load_scene(int fd) {
 		refl = rb_atof(ptr);
 
 		if(type == 's') {
-			rb->splash(HZ/2, "Sphere");
+			if (DEBUG)
+			{
+				rb->lcd_clear_display();
+				rb->lcd_update();
+				rb->splash(HZ/2, "Sphere");
+			}
+			
 			struct sphere *sph = tlsf_malloc(sizeof *sph);
 			sph->next = object_list->next;
 			object_list->next = sph;
@@ -686,6 +778,10 @@ void load_scene(int fd) {
 			sph->mat.spow = spow;
 			sph->mat.refl = refl;
 		} else {
+			
+			rb->lcd_clear_display();
+			rb->lcd_update();
+			
 			rb->splashf(HZ*3, "unknown type: %c", type);
 		}
 	}
