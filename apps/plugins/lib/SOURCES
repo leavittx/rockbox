@@ -93,6 +93,7 @@ pluginlib_touchscreen.c
 
 #endif /* !SIMULATOR */
 
-#if defined(COWON_D2)
+#if defined(COWON_D2) || defined(IPOD_NANO) || defined(IPOD_VIDEO) \
+	|| defined(OLYMPUS_MROBE_500)
 pdbox-func.c
 #endif

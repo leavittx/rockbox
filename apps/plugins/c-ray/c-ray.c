@@ -43,8 +43,18 @@
 PLUGIN_HEADER
 
 #define SLEEP_TIME 10
-enum { xres = 40, yres = 30 };
 bool DEBUG = false;
+
+#ifdef COWON_D2
+enum { xres = 320, yres = 240 };
+//enum { xres = 40, yres = 30 }; /* takes 0 secs to render */
+#elif defined(IPOD_NANO)
+enum { xres = 176, yres = 132 };
+#elif defined(IPOD_VIDEO)
+enum { xres = 320, yres = 240 };
+#elif defined(OLYMPUS_MROBE_500)
+enum { xres = 640, yres = 480 };
+#endif
 
 struct vec3 {
 	double x, y, z;
@@ -118,9 +128,6 @@ unsigned long get_msec(void);
 } while(0);
 
 /* global state */
-/* not using this now
-int xres = 800;
-int yres = 600; */
 double aspect = 1.333333;
 struct sphere *object_list; /* obj_list -- name conflict with 'pdbox/PDa/src/m_pd.h' */
 struct vec3 lights[MAX_LIGHTS];
@@ -174,19 +181,23 @@ void color_apply(struct Color * color, struct screen * display)
 
 int plugin_main(void) {
 	int i, j;
+	int action;
 	unsigned long rend_time, start_time;
-	uint32_t *pixels;
 	int rays_per_pixel = 1;
 	int infile, outfile;
-	unsigned char *memory_pool;
+	uint32_t *pixels;
 	size_t size;
+	unsigned char *memory_pool;
 	
 	memory_pool = rb->plugin_get_audio_buffer(&size);
 	
 	if (DEBUG)
 		rb->splashf(HZ*5, "plugin_get_audio_buffer() allocated %lu bytes", size);
 		
-	//ALIGN(memory_pool, sizeof(uint32_t));
+	/* We need to do an alignment.
+	 * 'init_memory_pool (): mem_pool must be aligned to a word' */
+	//ALIGN(memory_pool, sizeof(uint32_t)); /* Strange macro */
+	/* Dumb way, but works */
 	while ((unsigned long)memory_pool & PTR_MASK)
 	{
 		memory_pool ++;
@@ -232,6 +243,10 @@ int plugin_main(void) {
 		rb->lcd_clear_display();
 		rb->lcd_update();
 		rb->splash(HZ/2, "Scene loaded, rendering...");
+	}
+	else
+	{
+		rb->splash(HZ/3, "Rendering started. You can go and drink a cup of tea or coffee. :P");
 	}
 
 	/* initialize the random number tables for the jitter */
@@ -299,9 +314,6 @@ int plugin_main(void) {
 		}
 	}
 	
-	/* We don't have such thing on rockbox... */
-	/* fflush(outfile); */
-
 	rb->close(infile);
 	rb->close(outfile);
 	
@@ -311,7 +323,6 @@ int plugin_main(void) {
 		display->update();
 	}
 	
-	int action;
     while (true)
     {
 		rb->sleep(SLEEP_TIME);
@@ -532,7 +543,6 @@ struct ray get_primary_ray(int x, int y, int sample) {
 	
 	return ray;
 }
-
 
 struct vec3 get_sample_pos(int x, int y, int sample) {
 	struct vec3 pt;
