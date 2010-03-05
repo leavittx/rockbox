@@ -26,14 +26,29 @@
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
 
+/* For math */
+#include "lib/pdbox-lib.h"
+
 /* This macros must always be included. Should be placed at the top by
    convention, although the actual position doesn't matter */
 PLUGIN_HEADER
 
-#define DEFAULT_WAIT_TIME 3
+#define SLEEP_TIME 3
+#define MAX_ITER 7
+#define SQRT3 1.7320508075689
+#define SQRT3BY2 0.86602540378444
 
-/* Key assignement */
-#define MY_QUIT PLA_QUIT
+#define DOT(a, b)	((a).x * (b).x + (a).y * (b).y)
+#define NORMALIZE(a)  do {\
+	double len = rb_sqrt(DOT(a, a));\
+	(a).x /= len; (a).y /= len;\
+    } while(0);
+
+int StartIter;
+
+struct vec2 {
+	double x, y;
+};
 
 const struct button_mapping *plugin_contexts[]
 = {generic_directions, generic_actions,
@@ -44,151 +59,181 @@ const struct button_mapping *plugin_contexts[]
 #define NB_ACTION_CONTEXTS \
     sizeof(plugin_contexts)/sizeof(struct button_mapping*)
 
-#ifdef HAVE_LCD_COLOR
-struct line_color
+struct Color
 {
-    int r,g,b;
-    int current_r,current_g,current_b;
+	uint32_t r,g,b;
 };
 #endif
 
 void cleanup(void *parameter)
 {
-    (void)parameter;
+	(void)parameter;
 
-    backlight_use_settings();
+	backlight_use_settings();
 #ifdef HAVE_REMOTE_LCD
-    remote_backlight_use_settings();
+	remote_backlight_use_settings();
 #endif
 }
 
 #ifdef HAVE_LCD_COLOR
-void color_randomize(struct line_color * color)
-{
-    color->r = rb->rand()%255;
-    color->g = rb->rand()%255;
-    color->b = rb->rand()%255;
-}
-
-void color_init(struct line_color * color)
-{
-    color_randomize(color);
-    color->current_r=color->r;
-    color->current_g=color->g;
-    color->current_b=color->b;
-}
-
-void color_change(struct line_color * color)
-{
-    if(color->current_r<color->r)
-        ++color->current_r;
-    else if(color->current_r>color->r)
-        --color->current_r;
-    if(color->current_g<color->g)
-        ++color->current_g;
-    else if(color->current_g>color->g)
-        --color->current_g;
-    if(color->current_b<color->b)
-        ++color->current_b;
-    else if(color->current_b>color->b)
-        --color->current_b;
-
-    if(color->current_r==color->r &&
-       color->current_g==color->g &&
-       color->current_b==color->b)
-        color_randomize(color);
-}
-
 #define COLOR_RGBPACK(color) \
-    LCD_RGBPACK((color)->current_r, (color)->current_g, (color)->current_b)
+	LCD_RGBPACK((color)->r, (color)->g, (color)->b)
 
-void color_apply(struct line_color * color, struct screen * display)
+void color_apply(struct Color * color, struct screen * display)
 {
-    if (display->is_color){
-        unsigned foreground=
-            SCREEN_COLOR_TO_NATIVE(display,COLOR_RGBPACK(color));
-        display->set_foreground(foreground);
-    }
+	if (display->is_color){
+		unsigned foreground=
+			SCREEN_COLOR_TO_NATIVE(display,COLOR_RGBPACK(color));
+		display->set_foreground(foreground);
+	}
 }
-#endif /* #ifdef HAVE_LCD_COLOR */
 
-/*
- * Main function
- */
+void DrawIter(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct screen *display)
+{
+    struct Color color;
+    
+    if (Iter < 0)
+        return;
+    
+    /*
+    static int W, H;
+    W = display->getwidth();
+    H = display->getheight();
+    
+    color.r = color.g = color.b = 255;
+    color_apply(&color, display);
+    display->drawline(0, 0, W, H);
+
+    color.r = 255;
+    color.g = color.b = 0;
+    color_apply(&color, display);
+    display->drawline(0, H, W, 0);
+    */
+    
+    color.r = 255;
+    color.g = color.b = 0;
+    color_apply(&color, display);
+    
+    struct vec2 s = {p2.x - p1.x, p2.y - p1.y};
+    struct vec2 m = {(p1.x + p2.x) / 2, (p1.y + p2.y) / 2};
+    struct vec2 n = {(p2.y - p1.y) * dir, (p1.x - p2.x) * dir};
+    
+    /* NORMALIZE
+    double len = rb_sqrt(n.x * n.x + n.y * n.y);
+    
+    n.x /= len;
+    n.y /= len;
+    */
+    NORMALIZE(n);
+    
+    double len = rb_sqrt(s.x * s.x + s.y * s.y) * SQRT3BY2;
+
+    n.x *= len;
+    n.y *= len;
+    
+    m.x += n.x;
+    m.y += n.y;
+    
+    /*
+    display->drawline(p1.x, p1.y, p2.x, p2.y);
+    display->drawline(p2.x, p2.y, m.x, m.y);
+    display->drawline(m.x, m.y, p1.x, p1.y);
+    */
+    if (Iter == StartIter)
+    {
+        display->drawline(p1.x, p1.y, p2.x, p2.y);
+        display->drawline(m.x, m.y, p1.x, p1.y);
+    }
+    display->drawline(p2.x, p2.y, m.x, m.y);
+    
+    s.x = (p1.x + m.x) / 2;
+    s.y = (p1.y + m.y) / 2;
+    DrawIter(Iter - 1, p1, s, dir * (-1), display);
+    
+    s.x = (p2.x + m.x) / 2;
+    s.y = (p2.y + m.y) / 2;
+    DrawIter(Iter - 1, p2, s, dir, display);
+    
+    s.x = (m.x + p2.x) / 2;
+    s.y = (m.y + p2.y) / 2;
+    DrawIter(Iter - 1, m, s, dir * (-1), display);
+}
 
 int plugin_main(void)
 {
     int action;
-    int sleep_time = DEFAULT_WAIT_TIME;
 	int i;
+    int W, H;
+    int Iter = 0;
+    bool need_redraw = true;
 	
     FOR_NB_SCREENS(i)
     {
-#ifdef HAVE_LCD_COLOR
         struct screen *display = rb->screens[i];
+        
+        W = display->getwidth();
+        H = display->getheight();
+        
         if (display->is_color)
             display->set_background(LCD_BLACK);
-#endif
     }
-    
-#ifdef HAVE_LCD_COLOR
-    struct line_color color;
-    color_init(&color);
-#endif
     
     while (true)
     {
         FOR_NB_SCREENS(i)
         {
             struct screen *display = rb->screens[i];
-            
-            for (i = 0; i < 1000; i ++)
-            {
-                display->drawline(rb->rand() % (display->getwidth()),
-                                  rb->rand() % (display->getheight()),
-                                  rb->rand() % (display->getwidth()),
-                                  rb->rand() % (display->getheight()));
-                
-#ifdef HAVE_LCD_COLOR
-                color_apply(&color, display);
-#endif
 
-                display->update();
-/*                
-#ifdef HAVE_LCD_COLOR
-                color_change(&color);
-#endif
-*/
-/* Random colors */
-#ifdef HAVE_LCD_COLOR
-                color_init(&color);
-#endif
-/* Some delay */
-                rb->sleep(DEFAULT_WAIT_TIME * 5); /* ? */
-                
-                /* Speed handling*/
-                if (sleep_time < 0) /* full speed */
-                    rb->yield();
-                else
-                    rb->sleep(sleep_time);
-                action = pluginlib_getaction(TIMEOUT_NOBLOCK,
-                                             plugin_contexts,
-                                             NB_ACTION_CONTEXTS);
-                switch (action)
-                {
-                    case MY_QUIT:
-                        cleanup(NULL);
-                        return PLUGIN_OK;
-                    default:
-                        if (rb->default_event_handler_ex(action, cleanup, NULL)
-                            == SYS_USB_CONNECTED)
-                            return PLUGIN_USB_CONNECTED;
-                        break;
-                }
-            }
+            //color_apply(&color, display);
             
-            rb->sleep(DEFAULT_WAIT_TIME * 300);
-            return PLUGIN_OK;
+            if (need_redraw)
+            {
+                struct vec2 p1, p2;
+    
+                p1.x = (W - H) / 2;
+                p1.y = H - 10;
+    
+                p2.x = W - (W - H) / 2;
+                p2.y = H - 10;
+                
+                rb->lcd_clear_display();
+                StartIter = Iter;
+                DrawIter(Iter, p1, p2, 1, display);
+                need_redraw = false;
+            }
+
+            display->update();
+
+            rb->sleep(SLEEP_TIME);
+
+            action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+                                         plugin_contexts,
+                                         NB_ACTION_CONTEXTS);
+            switch (action)
+            {
+                case PLA_QUIT:
+                    cleanup(NULL);
+                    return PLUGIN_OK;
+                case PLA_FIRE:
+                    if (Iter <= MAX_ITER)
+                    {
+                        Iter++;
+                        need_redraw = true;
+                    }
+                    break;
+                case PLA_START:
+                    if (Iter > 0)
+                    {
+                        Iter--;
+                        need_redraw = true;
+                    }
+                    break;
+                default:
+                    if (rb->default_event_handler_ex(action, cleanup, NULL)
+                        == SYS_USB_CONNECTED)
+                        return PLUGIN_USB_CONNECTED;
+                    break;
+            }
         }
     }
 }

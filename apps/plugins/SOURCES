@@ -252,6 +252,7 @@ test_viewports.c
 
 #if defined(COWON_D2)
 helloworld.c
+dumblines.c
 sierpinski.c
 circle.c
 testkeys.c
