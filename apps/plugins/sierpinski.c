@@ -44,6 +44,8 @@ PLUGIN_HEADER
 	(a).x /= len; (a).y /= len;\
     } while(0);
 
+/* By this we will determine, if the current iteration is first or not.
+ * Needed for optimization and avoiding draw collisions */
 int StartIter;
 
 struct vec2 {
@@ -59,6 +61,7 @@ const struct button_mapping *plugin_contexts[]
 #define NB_ACTION_CONTEXTS \
     sizeof(plugin_contexts)/sizeof(struct button_mapping*)
 
+#ifdef HAVE_LCD_COLOR
 struct Color
 {
 	uint32_t r,g,b;
@@ -87,6 +90,7 @@ void color_apply(struct Color * color, struct screen * display)
 		display->set_foreground(foreground);
 	}
 }
+#endif
 
 void DrawIter(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct screen *display)
 {
@@ -95,7 +99,8 @@ void DrawIter(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct screen *
     if (Iter < 0)
         return;
     
-    /*
+    /* Draw two lines, just test.
+     * Will be removed shortly.
     static int W, H;
     W = display->getwidth();
     H = display->getheight();
@@ -109,32 +114,34 @@ void DrawIter(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct screen *
     color_apply(&color, display);
     display->drawline(0, H, W, 0);
     */
-    
+
+    /* Set color to red.
+     * TODO: iteration-depending color handling */
     color.r = 255;
     color.g = color.b = 0;
     color_apply(&color, display);
     
+    /* Thanks to np3 for this math stuff */
     struct vec2 s = {p2.x - p1.x, p2.y - p1.y};
     struct vec2 m = {(p1.x + p2.x) / 2, (p1.y + p2.y) / 2};
     struct vec2 n = {(p2.y - p1.y) * dir, (p1.x - p2.x) * dir};
+    double len = rb_sqrt(s.x * s.x + s.y * s.y) * SQRT3BY2;
     
-    /* NORMALIZE
+    /* We need to normalize normal vector.
+     * Use macro instead of this code.
     double len = rb_sqrt(n.x * n.x + n.y * n.y);
-    
     n.x /= len;
-    n.y /= len;
-    */
+    n.y /= len; */
     NORMALIZE(n);
     
-    double len = rb_sqrt(s.x * s.x + s.y * s.y) * SQRT3BY2;
-
     n.x *= len;
     n.y *= len;
     
     m.x += n.x;
     m.y += n.y;
     
-    /*
+    /* This old code leads to some draw collisions.
+     * (Same lines drawed multiple times)
     display->drawline(p1.x, p1.y, p2.x, p2.y);
     display->drawline(p2.x, p2.y, m.x, m.y);
     display->drawline(m.x, m.y, p1.x, p1.y);
@@ -184,29 +191,28 @@ int plugin_main(void)
         {
             struct screen *display = rb->screens[i];
 
-            //color_apply(&color, display);
-            
             if (need_redraw)
             {
                 struct vec2 p1, p2;
     
                 p1.x = (W - H) / 2;
-                p1.y = H - 10;
+                p1.y = H - 15;
     
                 p2.x = W - (W - H) / 2;
-                p2.y = H - 10;
+                p2.y = H - 15;
                 
                 rb->lcd_clear_display();
+                
                 StartIter = Iter;
                 DrawIter(Iter, p1, p2, 1, display);
                 need_redraw = false;
+                
+                display->update();
             }
-
-            display->update();
 
             rb->sleep(SLEEP_TIME);
 
-            action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+            action = pluginlib_getaction(TIMEOUT_NOBLOCK, 
                                          plugin_contexts,
                                          NB_ACTION_CONTEXTS);
             switch (action)
@@ -214,6 +220,7 @@ int plugin_main(void)
                 case PLA_QUIT:
                     cleanup(NULL);
                     return PLUGIN_OK;
+                    
                 case PLA_FIRE:
                     if (Iter <= MAX_ITER)
                     {
@@ -221,6 +228,7 @@ int plugin_main(void)
                         need_redraw = true;
                     }
                     break;
+                    
                 case PLA_START:
                     if (Iter > 0)
                     {
@@ -228,6 +236,7 @@ int plugin_main(void)
                         need_redraw = true;
                     }
                     break;
+                    
                 default:
                     if (rb->default_event_handler_ex(action, cleanup, NULL)
                         == SYS_USB_CONNECTED)
