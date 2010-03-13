@@ -21,9 +21,4 @@ OTHER_SRC += $(C-RAY_SRC)
 $(C-RAYBUILDDIR)/c-ray.rock: $(C-RAY_OBJ) $(CODECDIR)/libtlsf.a
 
 ##C-RAYFLAGS = $(PLUGINFLAGS) \
-##             -DFIXEDPOINT -DSTATIC -DPD -DUSEAPI_ROCKBOX 
-
-# Compile PDBox with extra flags (adapted from ZXBox)
-##$(C-RAYBUILDDIR)/%.o: $(C-RAYSRCDIR)/%.c $(C-RAYSRCDIR)/c-ray.make
-##	$(SILENT)mkdir -p $(dir $@)
-##	$(call PRINTS,CC $(subst $(ROOTDIR)/,,$<))$(CC) -I$(dir $<) $(C-RAYFLAGS) -c $< -o $@
+##             -DFIXEDPOINT -DSTATIC -DPD -DUSEAPI_ROCKBOX

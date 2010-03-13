@@ -45,6 +45,9 @@ PLUGIN_HEADER
 #define SLEEP_TIME 10
 bool DEBUG = false;
 
+enum { xres = LCD_WIDTH, yres = LCD_HEIGHT };
+
+#if 0
 #ifdef COWON_D2
 enum { xres = 320, yres = 240 };
 //enum { xres = 40, yres = 30 }; /* takes 0 secs to render */
@@ -54,6 +57,7 @@ enum { xres = 176, yres = 132 };
 enum { xres = 320, yres = 240 };
 #elif defined(OLYMPUS_MROBE_500)
 enum { xres = 640, yres = 480 };
+#endif
 #endif
 
 struct vec3 {
