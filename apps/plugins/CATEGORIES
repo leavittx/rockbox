@@ -126,9 +126,11 @@ wormlet,games
 xobox,games
 zxbox,viewers
 
-curves,demos
 helloworld,demos
+dumblines,demos
 circle,demos
 gef,demos
 testkeys,demos
 c-ray,demos
+curves,demos
+battleship,games
