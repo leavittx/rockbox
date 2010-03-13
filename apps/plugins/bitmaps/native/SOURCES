@@ -886,5 +886,8 @@ pitch_notes.128x64x1.bmp
 #endif
 #endif /* Complex condition for pitch detector */
 
+#if defined(COWON_D2)
+battleship_huy.80x80x16.bmp
+#endif
 
 #endif /* HAVE_LCD_BITMAP */
