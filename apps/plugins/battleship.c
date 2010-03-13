@@ -28,6 +28,28 @@
 
 /* Bitmaps */
 #include "pluginbitmaps/battleship_huy.h"
+#include "pluginbitmaps/battleship_map.h"
+#include "pluginbitmaps/battleship_placeships.h"
+#include "pluginbitmaps/battleship_player1.h"
+#include "pluginbitmaps/battleship_player2.h"
+#include "pluginbitmaps/battleship_n0.h"
+#include "pluginbitmaps/battleship_n1.h"
+#include "pluginbitmaps/battleship_n2.h"
+#include "pluginbitmaps/battleship_n3.h"
+#include "pluginbitmaps/battleship_n4.h"
+#include "pluginbitmaps/battleship_n5.h"
+#include "pluginbitmaps/battleship_n6.h"
+#include "pluginbitmaps/battleship_n7.h"
+#include "pluginbitmaps/battleship_n8.h"
+#include "pluginbitmaps/battleship_n9.h"
+#include "pluginbitmaps/battleship_nsep.h"
+
+unsigned short const * const numbersbitmaps[] = { 	battleship_n0, battleship_n1,
+								battleship_n2, battleship_n3,
+								battleship_n4, battleship_n5,
+								battleship_n6, battleship_n7,
+								battleship_n8, battleship_n9 };
+
 
 /* For math */
 #include "lib/pdbox-lib.h"
@@ -88,13 +110,16 @@ void color_apply(struct Color * color, struct screen * display)
 
 /* Code */
 
+unsigned long get_sec(void) {
+	return *rb->current_tick / HZ;
+}
+
 int plugin_main(void)
 {
     int action;
 	int i;
 	bool need_redraw = true;
-	int x, y;
-	int dirx = 1, diry = -1;
+	unsigned long startsec, prevsec = 0, sec, min;
 	
     FOR_NB_SCREENS(i)
     {
@@ -103,12 +128,19 @@ int plugin_main(void)
         if (display->is_color)
             display->set_background(LCD_BLACK);
     }
-    
-    x = rb->rand() % (LCD_WIDTH - BMPWIDTH_battleship_huy);
-    y = rb->rand() % (LCD_HEIGHT - BMPHEIGHT_battleship_huy);
+
+	startsec = get_sec();
 
     while (true)
     {
+		sec = get_sec() - startsec;
+		if (sec != prevsec)
+		{
+			min = sec / 60;
+			sec -= min * 60;
+			need_redraw = true;
+		}
+		
 		if (need_redraw)
 		{
 			FOR_NB_SCREENS(i)
@@ -117,20 +149,40 @@ int plugin_main(void)
 				
 				rb->lcd_clear_display();
 				
-				display->bitmap(battleship_huy, x, y, BMPWIDTH_battleship_huy, BMPHEIGHT_battleship_huy);
+				display->bitmap(battleship_map,
+								0,
+								0,
+								BMPWIDTH_battleship_map,
+								BMPHEIGHT_battleship_map);
+				
+				display->bitmap(battleship_player1,
+								BMPWIDTH_battleship_map,
+								0,
+								BMPWIDTH_battleship_player1,
+								BMPHEIGHT_battleship_player1);
+								
+				display->bitmap(battleship_placeships,
+								BMPWIDTH_battleship_map,
+								BMPHEIGHT_battleship_player1,
+								BMPWIDTH_battleship_placeships,
+								BMPHEIGHT_battleship_placeships);
+								
+				display->bitmap(numbersbitmaps[sec / 10],
+								BMPWIDTH_battleship_map + (LCD_WIDTH - BMPWIDTH_battleship_map) / 6,
+								LCD_HEIGHT - BMPHEIGHT_battleship_n0 - 5,
+								BMPWIDTH_battleship_n0,
+								BMPHEIGHT_battleship_n0);
+								
+				display->bitmap(numbersbitmaps[sec % 10],
+								BMPWIDTH_battleship_map + (LCD_WIDTH - BMPWIDTH_battleship_map) / 6 + BMPWIDTH_battleship_n0,
+								LCD_HEIGHT - BMPHEIGHT_battleship_n0 - 5,
+								BMPWIDTH_battleship_n0,
+								BMPHEIGHT_battleship_n0);
 				
 				display->update();
 			}
-			//need_redraw = false;
+			need_redraw = false;
 		}
-		
-		if (x + BMPWIDTH_battleship_huy == LCD_WIDTH || x == 0)
-			dirx *= -1;
-		if (y + BMPHEIGHT_battleship_huy == LCD_HEIGHT || y == 0)
-			diry *= -1;
-		
-		x += dirx;
-		y += diry;
 		
 		//rb->sleep(SLEEP_TIME);
 		rb->yield();
