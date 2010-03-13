@@ -10,6 +10,7 @@
  * Copyright (C) 2010 Lev Panov
  * 
  * GEF demo plugin
+ * Code is ugly :P
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

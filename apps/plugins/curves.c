@@ -81,12 +81,22 @@ void DrawIterST1(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct Color
 void DrawIterST2(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct Color color, struct screen *display);        /* Sierpinski triangle, type 2 */
 
 /* Default start and points */
+#define DEFAULT_P1  {(LCD_WIDTH - LCD_HEIGHT) / 2, LCD_HEIGHT - LCD_HEIGHT / 16}
+#define DEFAULT_P2  {LCD_WIDTH - (LCD_WIDTH - LCD_HEIGHT) / 2, LCD_HEIGHT - LCD_HEIGHT / 16}
+#define LEVI_P1     {(LCD_WIDTH - LCD_HEIGHT) + 5, LCD_HEIGHT / 3.4}
+#define LEVI_P2     {LCD_HEIGHT - 5, LCD_HEIGHT / 3.4}
+#define DRAGON_P1   {LCD_WIDTH - LCD_HEIGHT + 10, LCD_HEIGHT - LCD_HEIGHT / 3.4}
+#define DRAGON_P2   {LCD_WIDTH - 10, LCD_HEIGHT - LCD_HEIGHT / 3.4}
+#define FLOWER2_P1  {(LCD_WIDTH - LCD_HEIGHT) / 2, LCD_HEIGHT * 3 / 4}
+#define FLOWER2_P2  {LCD_WIDTH - (LCD_WIDTH - LCD_HEIGHT) / 2, LCD_HEIGHT * 3 / 4}
+/*
 #define DEFAULT_P1 {(LCD_WIDTH - LCD_HEIGHT) / 2, LCD_HEIGHT - 15}
 #define DEFAULT_P2 {LCD_WIDTH - (LCD_WIDTH - LCD_HEIGHT) / 2, LCD_HEIGHT - 15}
 #define LEVI_P1 {(LCD_WIDTH - LCD_HEIGHT) + 5, 70}
 #define LEVI_P2 {LCD_HEIGHT - 5, 70}
 #define DRAGON_P1 {LCD_WIDTH - LCD_HEIGHT + 10, LCD_HEIGHT - 70}
 #define DRAGON_P2 {LCD_WIDTH - 10, LCD_HEIGHT - 70}
+*/
 
 /* TODO: different colors */
 #define RED     {255,   0,   0}
@@ -95,18 +105,18 @@ void DrawIterST2(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct Color
 #define PINK    {234,  91, 219}
 #define ORANGE  {231,  58,  34}
 #define YELLOW  {209, 237,  18}
-#define BIRUZ   { 39, 236, 215}
+#define CYAN    { 39, 236, 215}
 
 Curve Curves[] = {
     {true,  "Sierpinski triangle 2",  8, 0,  1, DEFAULT_P1, DEFAULT_P2, RED,    DrawIterST2},
     {true,  "Sierpinski triangle 1",  8, 0,  1, DEFAULT_P1, DEFAULT_P2, GREEN,  DrawIterST1},
-    {true,  "beautiful flower 1",     7, 0,  1, DEFAULT_P1, DEFAULT_P2, BLUE,   DrawIterFlower1},
-    {true,  "beautiful flower 2",     8, 0,  1, DEFAULT_P1, DEFAULT_P2, PINK,   DrawIterFlower2},
+    {false, "beautiful flower 1",     7, 0,  1, DEFAULT_P1, DEFAULT_P2, BLUE,   DrawIterFlower1},
+    {true,  "beautiful flower 2",     8, 0,  1, FLOWER2_P1, FLOWER2_P2, PINK,   DrawIterFlower2},
     {true,  "Koch curve",             5, 0,  1, DEFAULT_P1, DEFAULT_P2, ORANGE, DrawIterKC},
     {false, "blood effect 1",         6, 0,  1, DEFAULT_P1, DEFAULT_P2, RED,    DrawIterB1},
     {false, "blood effect 2",         6, 0,  1, DEFAULT_P1, DEFAULT_P2, RED,    DrawIterB2},
     {true,  "dragon curve",          15, 0,  1, DRAGON_P1,  DRAGON_P2,  YELLOW, DrawIterDC},
-    {true,  "Lévy C curve",          15, 0, -1, LEVI_P1,    LEVI_P2,    BIRUZ,   DrawIterLC},
+    {true,  "Lévy C curve",          15, 0, -1, LEVI_P1,    LEVI_P2,    CYAN,   DrawIterLC},
     {false, "triangle effect",       10, 0,  1, DEFAULT_P1, DEFAULT_P2, GREEN,  DrawIterTrian}
     };
 
@@ -160,12 +170,12 @@ int plugin_main(void)
 
     while (true)
     {
-        FOR_NB_SCREENS(i)
+        if (need_redraw)
         {
-            struct screen *display = rb->screens[i];
-
-            if (need_redraw)
+            FOR_NB_SCREENS(i)
             {
+                struct screen *display = rb->screens[i];
+                
                 rb->lcd_clear_display();
                 
                 StartIter = Curves[CType].CurIter;
@@ -174,55 +184,55 @@ int plugin_main(void)
                                        Curves[CType].p1, Curves[CType].p2,
                                        Curves[CType].StartDir, Curves[CType].color, display);
                                        
-                need_redraw = false;
                 display->update();
             }
+            need_redraw = false;
+        }
 
-            rb->sleep(SLEEP_TIME);
+        rb->sleep(SLEEP_TIME);
 
-            action = pluginlib_getaction(TIMEOUT_NOBLOCK,
-                                         plugin_contexts,
-                                         NB_ACTION_CONTEXTS);
-            switch (action)
-            {
-                case PLA_QUIT:
-                    cleanup(NULL);
-                    return PLUGIN_OK;
-                    
-                case PLA_FIRE:
-                    if (Curves[CType].CurIter <= Curves[CType].MaxIter)
-                    {
-                        Curves[CType].CurIter++;
-                        need_redraw = true;
-                    }
-                    break;
-                    
-                case PLA_START:
-                    if (Curves[CType].CurIter > 0)
-                    {
-                        Curves[CType].CurIter--;
-                        need_redraw = true;
-                    }
-                    break;
-                    
-                case PLA_MENU:
-                    do
-                    {
-                        if ((unsigned int)CType < ARRAYLEN(Curves) - 1)
-                            CType++;
-                        else
-                            CType = 0;
-                    } while (!Curves[CType].IsShow);
-                    
+        action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+                                     plugin_contexts,
+                                     NB_ACTION_CONTEXTS);
+        switch (action)
+        {
+            case PLA_QUIT:
+                cleanup(NULL);
+                return PLUGIN_OK;
+                
+            case PLA_FIRE:
+                if (Curves[CType].CurIter <= Curves[CType].MaxIter)
+                {
+                    Curves[CType].CurIter++;
                     need_redraw = true;
-                    break;
-                    
-                default:
-                    if (rb->default_event_handler_ex(action, cleanup, NULL)
-                        == SYS_USB_CONNECTED)
-                        return PLUGIN_USB_CONNECTED;
-                    break;
-            }
+                }
+                break;
+                
+            case PLA_START:
+                if (Curves[CType].CurIter > 0)
+                {
+                    Curves[CType].CurIter--;
+                    need_redraw = true;
+                }
+                break;
+                
+            case PLA_MENU:
+                do
+                {
+                    if ((unsigned int)CType < ARRAYLEN(Curves) - 1)
+                        CType++;
+                    else
+                        CType = 0;
+                } while (!Curves[CType].IsShow);
+                
+                need_redraw = true;
+                break;
+                
+            default:
+                if (rb->default_event_handler_ex(action, cleanup, NULL)
+                    == SYS_USB_CONNECTED)
+                    return PLUGIN_USB_CONNECTED;
+                break;
         }
     }
 }
@@ -489,6 +499,9 @@ void DrawIterFlower1(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct C
     
     color_apply(&color, display);
     
+    if (Iter == 0)
+        display->drawline(p1.x, p1.y, p2.x, p2.y);
+    
     struct vec2 s = {p2.x - p1.x, p2.y - p1.y};
     struct vec2 m = {(p1.x + p2.x) / 2, (p1.y + p2.y) / 2};
     struct vec2 n = {(p2.y - p1.y) * dir, (p1.x - p2.x) * dir};
@@ -502,9 +515,6 @@ void DrawIterFlower1(int Iter, struct vec2 p1, struct vec2 p2, int dir, struct C
     
     m.x += n.x;
     m.y += n.y;
-    
-    if (Iter == 0)
-        display->drawline(p1.x, p1.y, p2.x, p2.y);
     
     s.x = (p1.x + m.x) / 2;
     s.y = (p1.y + m.y) / 2;
