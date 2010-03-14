@@ -260,18 +260,13 @@ void InitFields(void)
 								battlefield_p1[6][6] = SHIP;
 }
 
-int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships, bool *aim)
+int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 {	
 	int i, j, k;
 	int alivedecks = 0;
-	/* This doesn't work (anything not changes) */
-	//Ships ships = *shipsp;
-	/* Debug */
-	//int m;FOR_NB_SCREENS(m){struct screen *display = rb->screens[m];rb->splashf(HZ*2, "Number of decks: %i, Current deck: %i, Alive decks: %i", NUM_OF_D_S4, k + 1, alivedecks);display->update();}
 	
 	if (bf[xpos][ypos] == FREE)
 	{
-		aim = false;
 		bf[xpos][ypos] = SHOTWATER;
 		
 		return MISSED;
@@ -279,7 +274,6 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships, bool *aim)
 	if (bf[xpos][ypos] == SHIP)
 	{
 		bf[xpos][ypos] = SHOTSHIP;
-		aim = false;
 		
 		for (i = 0; i < NUM_OF_S1; i++)
 		{
@@ -497,7 +491,6 @@ int plugin_main(void)
 	unsigned long startsec, prevsec = 0, sec, min = 0, delay = 0; /* Time stuff */
 	int xpos, ypos;
 	int xdir, ydir;
-	bool aim = true;
 	Orientation orientation = HORIZ;
 	
     FOR_NB_SCREENS(n)
@@ -687,8 +680,7 @@ int plugin_main(void)
 									BMPHEIGHT_battleship_player1,
 									BMPWIDTH_battleship_yourturn,
 									BMPHEIGHT_battleship_yourturn);
-					if (aim)
-						rb->lcd_bitmap_transparent(battleship_aim,
+					display->bitmap(battleship_aim,
 									XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_aim) / 2,
 									YOFFSET + ypos * SQSIZE + (SQSIZE - BMPHEIGHT_battleship_aim) / 2,
 									BMPWIDTH_battleship_aim,
@@ -816,7 +808,6 @@ int plugin_main(void)
 						ypos = FLD_LEN - 1;
 					else
 						ypos--;
-					aim = true;
 				}
 				break;
 				
@@ -854,7 +845,6 @@ int plugin_main(void)
 						ypos = 0;
 					else
 						ypos++;
-					aim = true;
 				}
 				break;
 			
@@ -892,7 +882,6 @@ int plugin_main(void)
 						xpos = 0;
 					else
 						xpos++;
-					aim = true;
 				}
 				break;
 			
@@ -930,7 +919,6 @@ int plugin_main(void)
 						xpos = FLD_LEN - 1;
 					else
 						xpos--;
-					aim = true;
 				}
 				break;
 			
@@ -1013,7 +1001,7 @@ int plugin_main(void)
 				}
 				else if (State == TURN_PLAYER1)
 				{
-					shotres = Shoot(xpos, ypos, battlefield_p2, &ships_p2, &aim);
+					shotres = Shoot(xpos, ypos, battlefield_p2, &ships_p2);
 					
 					if (shotres == MISSED)
 					{
@@ -1032,7 +1020,7 @@ int plugin_main(void)
 				}
 				else if (State == TURN_PLAYER2)
 				{
-					shotres = Shoot(xpos, ypos, battlefield_p1, &ships_p1, &aim);
+					shotres = Shoot(xpos, ypos, battlefield_p1, &ships_p1);
 					
 					if (shotres == MISSED)
 					{
@@ -1076,12 +1064,6 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 				}
-				/* TODO: clean this */
-				/*else
-				{
-					if (battlefield_p1[xpos][ypos] == FREE)
-						battlefield_p1[xpos][ypos] = SHIP;
-				}*/
 				break;
 				
 			default:
