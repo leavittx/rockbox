@@ -906,7 +906,8 @@ battleship_n8.20x20x16.bmp
 battleship_n9.20x20x16.bmp
 battleship_nsep.10x20x16.bmp
 battleship_aim.10x10x16.bmp
-battleship_missed.15x15x16.bmp
+battleship_missed.10x10x16.bmp
+battleship_shipone_notplaced.22x22x16.bmp
 battleship_shipone.22x22x16.bmp
 battleship_shiponedead.22x22x16.bmp
 battleship_noships.10x10x16.bmp
