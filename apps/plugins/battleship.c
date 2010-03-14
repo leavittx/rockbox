@@ -36,7 +36,9 @@ PLUGIN_HEADER
 #include "pluginbitmaps/battleship_huy.h"
 #include "pluginbitmaps/battleship_map.h"
 #include "pluginbitmaps/battleship_placeships.h"
+#include "pluginbitmaps/battleship_yourturn.h"
 #include "pluginbitmaps/battleship_player1.h"
+//#include "pluginbitmaps/battleship_player1_transp.h"
 #include "pluginbitmaps/battleship_player2.h"
 #include "pluginbitmaps/battleship_n0.h"
 #include "pluginbitmaps/battleship_n1.h"
@@ -63,11 +65,19 @@ unsigned short const *numbitmaps[] = {
 	battleship_n8, battleship_n9
 };
 
-enum { 
+/* States of game */
+enum {
+	WAIT_FOR_PLAYER1_TO_PLACE_SHIPS,
 	PLACE_SHIPS_PLAYER1,
+	WAIT_FOR_PLAYER2_TO_PLACE_SHIPS,
 	PLACE_SHIPS_PLAYER2,
-	PLAYER1,
-	PLAYER2 
+	WAIT_FOR_PLAYER1_TO_MAKE_A_TURN,
+	TURN_PLAYER1,
+	SHOW_FIELD_AFTER_TURN_OF_PLAYER1,
+	WAIT_FOR_PLAYER2_TO_MAKE_A_TURN,
+	TURN_PLAYER2,
+	SHOW_FIELD_AFTER_TURN_OF_PLAYER2,
+	GAME_OVER
 } State;
 
 typedef enum {
@@ -75,6 +85,7 @@ typedef enum {
 	HORIZ
 } Orientation;
 
+/* Square type */
 typedef enum { 
 	FREE, 		/* Nothing */
 	SHIP, 		/* A bit of ship */
@@ -111,6 +122,7 @@ typedef enum {
 #define NUM_OF_S3 2
 #define NUM_OF_S4 1
 
+/* Everything about ships of player */
 typedef struct {
 	int nS1, nS2, nS3, nS4;
 	int S1[NUM_OF_S1][1][2], S2[NUM_OF_S2][2][2], S3[NUM_OF_S3][3][2], S4[NUM_OF_S4][4][2];
@@ -120,17 +132,30 @@ typedef struct {
 	Orientation /*oriS1[NUM_OF_S1],*/ oriS2[NUM_OF_S2], oriS3[NUM_OF_S3], oriS4[NUM_OF_S4];
 } Ships;
 
+/* Shot result */
+enum { 
+	MISSED,
+	GOT,
+	DUMB 
+} shotres;
+
+/* Field length */
 #define FLD_LEN 10
+/* X-axis field offest in pixels */
 #define XOFFSET 20
+/* Y-axis field offest in pixels */
 #define YOFFSET 20
+/* Length of square in pixels */
 #define SQSIZE 	22
+/* Delay after each turn in seconds */
+#define DELAY_AFTER_TURN 2
 
 Sqtype battlefield_p1[FLD_LEN][FLD_LEN];
 Sqtype battlefield_p2[FLD_LEN][FLD_LEN];
-
 Ships ships_p1;
 Ships ships_p2;
 
+/* For buttons */
 const struct button_mapping *plugin_contexts[]
 = {generic_directions, generic_actions,
 #if defined(HAVE_REMOTE_LCD)
@@ -150,7 +175,9 @@ void cleanup(void *parameter)
 #endif
 }
 
-/* Main code */
+/* 
+ * Main code 
+ */
 
 unsigned long get_sec(void) {
 	return *rb->current_tick / HZ;
@@ -233,13 +260,243 @@ void InitFields(void)
 								battlefield_p1[6][6] = SHIP;
 }
 
+int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships, bool *aim)
+{	
+	int i, j, k;
+	int alivedecks = 0;
+	/* This doesn't work (anything not changes) */
+	//Ships ships = *shipsp;
+	/* Debug */
+	//int m;FOR_NB_SCREENS(m){struct screen *display = rb->screens[m];rb->splashf(HZ*2, "Number of decks: %i, Current deck: %i, Alive decks: %i", NUM_OF_D_S4, k + 1, alivedecks);display->update();}
+	
+	if (bf[xpos][ypos] == FREE)
+	{
+		aim = false;
+		bf[xpos][ypos] = SHOTWATER;
+		
+		return MISSED;
+	}
+	if (bf[xpos][ypos] == SHIP)
+	{
+		bf[xpos][ypos] = SHOTSHIP;
+		aim = false;
+		
+		for (i = 0; i < NUM_OF_S1; i++)
+		{
+			if (!ships->issunkS1[i] && ships->S1[i][D1][X] == xpos && ships->S1[i][D1][Y] == ypos)
+			{
+				ships->issunkS1[i] = true;
+				
+				if (xpos != 0)
+				{
+					if (bf[xpos - 1][ypos] == FREE)
+						bf[xpos - 1][ypos] = NOSHIPS;
+					if (ypos != 0)
+						if (bf[xpos - 1][ypos - 1] == FREE)
+							bf[xpos - 1][ypos - 1] = NOSHIPS;
+					if (ypos != FLD_LEN - 1)
+						if (bf[xpos - 1][ypos + 1] == FREE)
+							bf[xpos - 1][ypos + 1] = NOSHIPS;
+				}
+				if (xpos != FLD_LEN - 1)
+				{
+					if (bf[xpos + 1][ypos] == FREE)
+						bf[xpos + 1][ypos] = NOSHIPS;
+					if (ypos != 0)
+						if (bf[xpos + 1][ypos - 1] == FREE)
+							bf[xpos + 1][ypos - 1] = NOSHIPS;
+					if (ypos != FLD_LEN - 1)
+						if (bf[xpos + 1][ypos + 1] == FREE)
+							bf[xpos + 1][ypos + 1] = NOSHIPS;
+				}
+				if (ypos != 0)
+					if (bf[xpos][ypos - 1] == FREE)
+						bf[xpos][ypos - 1] = NOSHIPS;
+				if (ypos != FLD_LEN - 1)
+					if (bf[xpos][ypos + 1] == FREE)
+						bf[xpos][ypos + 1] = NOSHIPS;
+						
+				return GOT;
+			}
+		}
+		
+		for (i = 0; i < NUM_OF_S2; i++)
+		{
+			if (!ships->issunkS2[i])
+				for (j = 0; j < NUM_OF_D_S2; j++)
+					if (ships->S2[i][j][X] == xpos && ships->S2[i][j][Y] == ypos)
+					{
+						ships->isshotS2[i][j] = true;
+						
+						for (k = 0; k < NUM_OF_D_S2; k++)
+						{
+							if (!ships->isshotS2[i][k])
+								alivedecks++;
+						}
+						
+						if (!alivedecks)
+						{
+							ships->issunkS2[i] = true;
+							
+							for (k = 0; k < NUM_OF_D_S2; k++)
+							{
+								if (ships->S2[i][k][X] != 0)
+								{
+									if (bf[ships->S2[i][k][X] - 1][ships->S2[i][k][Y]] == FREE)
+										bf[ships->S2[i][k][X] - 1][ships->S2[i][k][Y]] = NOSHIPS;
+									if (ships->S2[i][k][Y] != 0)
+										if (bf[ships->S2[i][k][X] - 1][ships->S2[i][k][Y] - 1] == FREE)
+											bf[ships->S2[i][k][X] - 1][ships->S2[i][k][Y] - 1] = NOSHIPS;
+									if (ships->S2[i][k][Y] != FLD_LEN - 1)
+										if (bf[ships->S2[i][k][X] - 1][ships->S2[i][k][Y] + 1] == FREE)
+											bf[ships->S2[i][k][X] - 1][ships->S2[i][k][Y] + 1] = NOSHIPS;
+								}
+								if (ships->S2[i][k][X] != FLD_LEN - 1)
+								{
+									if (bf[ships->S2[i][k][X] + 1][ships->S2[i][k][Y]] == FREE)
+										bf[ships->S2[i][k][X] + 1][ships->S2[i][k][Y]] = NOSHIPS;
+									if (ships->S2[i][k][Y] != 0)
+										if (bf[ships->S2[i][k][X] + 1][ships->S2[i][k][Y] - 1] == FREE)
+											bf[ships->S2[i][k][X] + 1][ships->S2[i][k][Y] - 1] = NOSHIPS;
+									if (ships->S2[i][k][Y] != FLD_LEN - 1)
+										if (bf[ships->S2[i][k][X] + 1][ships->S2[i][k][Y] + 1] == FREE)
+											bf[ships->S2[i][k][X] + 1][ships->S2[i][k][Y] + 1] = NOSHIPS;
+								}
+								if (ships->S2[i][k][Y] != 0)
+									if (bf[ships->S2[i][k][X]][ships->S2[i][k][Y] - 1] == FREE)
+										bf[ships->S2[i][k][X]][ships->S2[i][k][Y] - 1] = NOSHIPS;
+								if (ships->S2[i][k][Y] != FLD_LEN - 1)
+									if (bf[ships->S2[i][k][X]][ships->S2[i][k][Y] + 1] == FREE)
+										bf[ships->S2[i][k][X]][ships->S2[i][k][Y] + 1] = NOSHIPS;
+							}
+						}
+						
+						return GOT;
+					}
+		}
+		
+		for (i = 0; i < NUM_OF_S3; i++)
+		{
+			if (!ships->issunkS3[i])
+				for (j = 0; j < NUM_OF_D_S3; j++)
+					if (ships->S3[i][j][X] == xpos && ships->S3[i][j][Y] == ypos)
+					{
+						ships->isshotS3[i][j] = true;
+						
+						for (k = 0; k < NUM_OF_D_S3; k++)
+						{
+							if (!ships->isshotS3[i][k])
+								alivedecks++;
+						}
+						
+						if (!alivedecks)
+						{
+							ships->issunkS3[i] = true;
+							
+							for (k = 0; k < NUM_OF_D_S3; k++)
+							{
+								if (ships->S3[i][k][X] != 0)
+								{
+									if (bf[ships->S3[i][k][X] - 1][ships->S3[i][k][Y]] == FREE)
+										bf[ships->S3[i][k][X] - 1][ships->S3[i][k][Y]] = NOSHIPS;
+									if (ships->S3[i][k][Y] != 0)
+										if (bf[ships->S3[i][k][X] - 1][ships->S3[i][k][Y] - 1] == FREE)
+											bf[ships->S3[i][k][X] - 1][ships->S3[i][k][Y] - 1] = NOSHIPS;
+									if (ships->S3[i][k][Y] != FLD_LEN - 1)
+										if (bf[ships->S3[i][k][X] - 1][ships->S3[i][k][Y] + 1] == FREE)
+											bf[ships->S3[i][k][X] - 1][ships->S3[i][k][Y] + 1] = NOSHIPS;
+								}
+								if (ships->S3[i][k][X] != FLD_LEN - 1)
+								{
+									if (bf[ships->S3[i][k][X] + 1][ships->S3[i][k][Y]] == FREE)
+										bf[ships->S3[i][k][X] + 1][ships->S3[i][k][Y]] = NOSHIPS;
+									if (ships->S3[i][k][Y] != 0)
+										if (bf[ships->S3[i][k][X] + 1][ships->S3[i][k][Y] - 1] == FREE)
+											bf[ships->S3[i][k][X] + 1][ships->S3[i][k][Y] - 1] = NOSHIPS;
+									if (ships->S3[i][k][Y] != FLD_LEN - 1)
+										if (bf[ships->S3[i][k][X] + 1][ships->S3[i][k][Y] + 1] == FREE)
+											bf[ships->S3[i][k][X] + 1][ships->S3[i][k][Y] + 1] = NOSHIPS;
+								}
+								if (ships->S3[i][k][Y] != 0)
+									if (bf[ships->S3[i][k][X]][ships->S3[i][k][Y] - 1] == FREE)
+										bf[ships->S3[i][k][X]][ships->S3[i][k][Y] - 1] = NOSHIPS;
+								if (ships->S3[i][k][Y] != FLD_LEN - 1)
+									if (bf[ships->S3[i][k][X]][ships->S3[i][k][Y] + 1] == FREE)
+										bf[ships->S3[i][k][X]][ships->S3[i][k][Y] + 1] = NOSHIPS;
+							}
+						}
+						
+						return GOT;
+					}
+		}
+	
+		for (i = 0; i < NUM_OF_S4; i++)
+		{
+			if (!ships->issunkS4[i])
+				for (j = 0; j < NUM_OF_D_S4; j++)
+					if (ships->S4[i][j][X] == xpos && ships->S4[i][j][Y] == ypos)
+					{				
+						ships->isshotS4[i][j] = true;
+						
+						for (k = 0; k < NUM_OF_D_S4; k++)
+						{
+							if (!ships->isshotS4[i][k])
+								alivedecks++;
+						}
+						
+						if (!alivedecks)
+						{
+							ships->issunkS4[i] = true;
+							
+							for (k = 0; k < NUM_OF_D_S4; k++)
+							{
+								if (ships->S4[i][k][X] != 0)
+								{
+									if (bf[ships->S4[i][k][X] - 1][ships->S4[i][k][Y]] == FREE)
+										bf[ships->S4[i][k][X] - 1][ships->S4[i][k][Y]] = NOSHIPS;
+									if (ships->S4[i][k][Y] != 0)
+										if (bf[ships->S4[i][k][X] - 1][ships->S4[i][k][Y] - 1] == FREE)
+											bf[ships->S4[i][k][X] - 1][ships->S4[i][k][Y] - 1] = NOSHIPS;
+									if (ships->S4[i][k][Y] != FLD_LEN - 1)
+										if (bf[ships->S4[i][k][X] - 1][ships->S4[i][k][Y] + 1] == FREE)
+											bf[ships->S4[i][k][X] - 1][ships->S4[i][k][Y] + 1] = NOSHIPS;
+								}
+								if (ships->S4[i][k][X] != FLD_LEN - 1)
+								{
+									if (bf[ships->S4[i][k][X] + 1][ships->S4[i][k][Y]] == FREE)
+										bf[ships->S4[i][k][X] + 1][ships->S4[i][k][Y]] = NOSHIPS;
+									if (ships->S4[i][k][Y] != 0)
+										if (bf[ships->S4[i][k][X] + 1][ships->S4[i][k][Y] - 1] == FREE)
+											bf[ships->S4[i][k][X] + 1][ships->S4[i][k][Y] - 1] = NOSHIPS;
+									if (ships->S4[i][k][Y] != FLD_LEN - 1)
+										if (bf[ships->S4[i][k][X] + 1][ships->S4[i][k][Y] + 1] == FREE)
+											bf[ships->S4[i][k][X] + 1][ships->S4[i][k][Y] + 1] = NOSHIPS;
+								}
+								if (ships->S4[i][k][Y] != 0)
+									if (bf[ships->S4[i][k][X]][ships->S4[i][k][Y] - 1] == FREE)
+										bf[ships->S4[i][k][X]][ships->S4[i][k][Y] - 1] = NOSHIPS;
+								if (ships->S4[i][k][Y] != FLD_LEN - 1)
+									if (bf[ships->S4[i][k][X]][ships->S4[i][k][Y] + 1] == FREE)
+										bf[ships->S4[i][k][X]][ships->S4[i][k][Y] + 1] = NOSHIPS;
+							}
+						}
+						
+						return GOT;
+					}
+		}
+	}
+	
+	return DUMB;
+}
+
 int plugin_main(void)
 {
     int action;
-	int i, j, k, n;
+	int i, j, n;
 	bool need_redraw = true; /* Do we need redraw field? */
-	unsigned long startsec, prevsec = 0, sec, min = 0; /* Time stuff */
-	int xpos = 0, ypos = 0;
+	unsigned long startsec, prevsec = 0, sec, min = 0, delay = 0; /* Time stuff */
+	int xpos, ypos;
+	int xdir, ydir;
 	bool aim = true;
 	Orientation orientation = HORIZ;
 	
@@ -253,26 +510,31 @@ int plugin_main(void)
 
 	/* Set all squares free */
 	InitFields();
-	
-	State = PLACE_SHIPS_PLAYER1;
+
+	State = WAIT_FOR_PLAYER1_TO_PLACE_SHIPS;	
+	xpos = XOFFSET + 1;
+	ypos = YOFFSET + 1;
+	xdir = 1;
+	ydir = -1;
 	
 	/* Get start second */
 	startsec = get_sec();
 
+	/* Main loop */
     while (true)
     {
 		/* Measure time */
 		sec = get_sec() - startsec;
-		/* Update display in this case */
+		/* Update display once a second */
 		if (sec != prevsec)
 		{
 			min = sec / 60;
 			sec -= min * 60;
-			/* > 60 min */
-			min %= 60;
+			min %= 60; /* > 60 minutes */
 			need_redraw = true;
 		}
 		
+		/* Draw everything */
 		if (need_redraw)
 		{
 			FOR_NB_SCREENS(n)
@@ -288,59 +550,152 @@ int plugin_main(void)
 								BMPWIDTH_battleship_map,
 								BMPHEIGHT_battleship_map);
 				
-				/* Player's name */
-				display->bitmap(battleship_player1,
-								BMPWIDTH_battleship_map,
-								0,
-								BMPWIDTH_battleship_player1,
-								BMPHEIGHT_battleship_player1);
-				
-				/* Place your ships please */
-				display->bitmap(battleship_placeships,
-								BMPWIDTH_battleship_map,
-								BMPHEIGHT_battleship_player1,
-								BMPWIDTH_battleship_placeships,
-								BMPHEIGHT_battleship_placeships);
-								
-				/* Objects on field */
-				for (i = 0; i < FLD_LEN; i++)
-					for (j = 0; j < FLD_LEN; j++)
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS ||
+					State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					display->bitmap(battleship_player1,
+									xpos,
+									ypos,
+									BMPWIDTH_battleship_player1,
+									BMPHEIGHT_battleship_player1);
+					/*
+					rb->lcd_bitmap_transparent(battleship_player1_transp,
+									xpos,
+									ypos,
+									BMPWIDTH_battleship_player1_transp,
+									BMPHEIGHT_battleship_player1_transp);
+					*/
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS ||
+						 State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					display->bitmap(battleship_player2,
+									xpos,
+									ypos,
+									BMPWIDTH_battleship_player2,
+									BMPHEIGHT_battleship_player2);
+				}
+				else
+				{
+					/* Player's name */
+					if (State == PLACE_SHIPS_PLAYER1 ||
+						State == TURN_PLAYER1 ||
+						State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1)
 					{
-						if (battlefield_p1[i][j] == SHOTWATER)
-							display->bitmap(battleship_missed,
-											XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
-											YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
-											BMPWIDTH_battleship_missed,
-											BMPHEIGHT_battleship_missed);
-						else if (battlefield_p1[i][j] == SHIP)
-							display->bitmap(battleship_shipone,
-											XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
-											YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
-											BMPWIDTH_battleship_shipone,
-											BMPHEIGHT_battleship_shipone);
-						else if (battlefield_p1[i][j] == SHOTSHIP)
-							display->bitmap(battleship_shiponedead,
-											XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
-											YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
-											BMPWIDTH_battleship_shiponedead,
-											BMPHEIGHT_battleship_shiponedead);
-						else if (battlefield_p1[i][j] == NOSHIPS)
-							display->bitmap(battleship_noships,
-											XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
-											YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
-											BMPWIDTH_battleship_noships,
-											BMPHEIGHT_battleship_noships);
+						display->bitmap(battleship_player1,
+										BMPWIDTH_battleship_map,
+										0,
+										BMPWIDTH_battleship_player1,
+										BMPHEIGHT_battleship_player1);
+					}
+					else if (State == PLACE_SHIPS_PLAYER2 ||
+							 State == TURN_PLAYER2 ||
+							 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
+					{
+						display->bitmap(battleship_player2,
+										BMPWIDTH_battleship_map,
+										0,
+										BMPWIDTH_battleship_player2,
+										BMPHEIGHT_battleship_player2);
+					}
+
+					/* Place your ships please */					
+					if (State == PLACE_SHIPS_PLAYER1 ||
+						State == PLACE_SHIPS_PLAYER2)
+					{
+						display->bitmap(battleship_placeships,
+										BMPWIDTH_battleship_map,
+										BMPHEIGHT_battleship_player1,
+										BMPWIDTH_battleship_placeships,
+										BMPHEIGHT_battleship_placeships);
 					}
 					
+					/* Objects on field */
+					for (i = 0; i < FLD_LEN; i++)
+						for (j = 0; j < FLD_LEN; j++)
+						{
+							if (State == TURN_PLAYER1 ||
+								State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1)
+							{
+								if (battlefield_p2[i][j] == SHOTWATER)
+									display->bitmap(battleship_missed,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+													BMPWIDTH_battleship_missed,
+													BMPHEIGHT_battleship_missed);
+								else if (battlefield_p2[i][j] == SHOTSHIP)
+									display->bitmap(battleship_shiponedead,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+													BMPWIDTH_battleship_shiponedead,
+													BMPHEIGHT_battleship_shiponedead);
+								else if (battlefield_p2[i][j] == NOSHIPS)
+									display->bitmap(battleship_noships,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+													BMPWIDTH_battleship_noships,
+													BMPHEIGHT_battleship_noships);
+							}
+							else if (State == TURN_PLAYER2 ||
+								State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
+							{
+								if (battlefield_p1[i][j] == SHOTWATER)
+									display->bitmap(battleship_missed,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+													BMPWIDTH_battleship_missed,
+													BMPHEIGHT_battleship_missed);
+								else if (battlefield_p1[i][j] == SHOTSHIP)
+									display->bitmap(battleship_shiponedead,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+													BMPWIDTH_battleship_shiponedead,
+													BMPHEIGHT_battleship_shiponedead);
+								else if (battlefield_p1[i][j] == NOSHIPS)
+									display->bitmap(battleship_noships,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+													BMPWIDTH_battleship_noships,
+													BMPHEIGHT_battleship_noships);
+							}
+							else if (State == PLACE_SHIPS_PLAYER1)
+							{
+								if (battlefield_p1[i][j] == SHIP)
+									display->bitmap(battleship_shipone,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+													BMPWIDTH_battleship_shipone,
+													BMPHEIGHT_battleship_shipone);
+							}
+							else if (State == PLACE_SHIPS_PLAYER2)
+							{
+								if (battlefield_p2[i][j] == SHIP)
+									display->bitmap(battleship_shipone,
+													XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+													YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+													BMPWIDTH_battleship_shipone,
+													BMPHEIGHT_battleship_shipone);
+							}
+						}
+					
 				/* Aim */
-				if (aim)
-					rb->lcd_bitmap_transparent(battleship_aim,
-								XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_aim) / 2,
-								YOFFSET + ypos * SQSIZE + (SQSIZE - BMPHEIGHT_battleship_aim) / 2,
-								BMPWIDTH_battleship_aim,
-								BMPHEIGHT_battleship_aim);
+				if (State == TURN_PLAYER1 ||
+					State == TURN_PLAYER2)
+				{
+					display->bitmap(battleship_yourturn,
+									BMPWIDTH_battleship_map,
+									BMPHEIGHT_battleship_player1,
+									BMPWIDTH_battleship_yourturn,
+									BMPHEIGHT_battleship_yourturn);
+					if (aim)
+						rb->lcd_bitmap_transparent(battleship_aim,
+									XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_aim) / 2,
+									YOFFSET + ypos * SQSIZE + (SQSIZE - BMPHEIGHT_battleship_aim) / 2,
+									BMPWIDTH_battleship_aim,
+									BMPHEIGHT_battleship_aim);
+				}
 				
-				/* Timer */
+				/* Time */
 				display->bitmap(numbitmaps[min / 10],
 								BMPWIDTH_battleship_map,
 								LCD_HEIGHT - BMPHEIGHT_battleship_n0 - 5,
@@ -370,11 +725,50 @@ int plugin_main(void)
 								LCD_HEIGHT - BMPHEIGHT_battleship_n0 - 5,
 								BMPWIDTH_battleship_n0,
 								BMPHEIGHT_battleship_n0);
+				}
 				
 				display->update();
 			}
+			
 			need_redraw = false;
 		}
+		
+		if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS ||
+			State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS ||
+			State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN ||
+			State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+		{
+			if (xpos == XOFFSET || xpos + BMPWIDTH_battleship_player1 == XOFFSET + SQSIZE * FLD_LEN)
+				xdir *= -1;
+			if (ypos == YOFFSET || ypos + BMPHEIGHT_battleship_player1 == YOFFSET + SQSIZE * FLD_LEN)
+				ydir *= -1;
+			xpos += xdir;
+			ypos += ydir;
+			need_redraw = true;
+		}
+		else if (State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1)
+		{
+			if (get_sec() - delay >= DELAY_AFTER_TURN)
+			{
+				State = WAIT_FOR_PLAYER2_TO_MAKE_A_TURN;
+				xpos = XOFFSET + 1;
+				ypos = YOFFSET + 1;
+				xdir = 1;
+				ydir = -1;
+			}
+		}
+		else if (State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
+		{
+			if (get_sec() - delay >= DELAY_AFTER_TURN)
+			{
+				State = WAIT_FOR_PLAYER1_TO_MAKE_A_TURN;
+				xpos = XOFFSET + 1;
+				ypos = YOFFSET + 1;
+				xdir = 1;
+				ydir = -1;
+			}
+		}
+		
 		
 		rb->sleep(SLEEP_TIME);
 		//rb->yield();
@@ -389,278 +783,305 @@ int plugin_main(void)
 				return PLUGIN_OK;
 				
 			case PLA_UP:
-				if (ypos == 0)
-					ypos = FLD_LEN - 1;
-				else
-					ypos--;
-				aim = true;
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == TURN_PLAYER1 ||
+						 State == TURN_PLAYER2 ||
+						 State == PLACE_SHIPS_PLAYER1 ||
+						 State == PLACE_SHIPS_PLAYER2)
+				{
+					if (ypos == 0)
+						ypos = FLD_LEN - 1;
+					else
+						ypos--;
+					aim = true;
+				}
 				break;
 				
 			case PLA_DOWN:
-				if (ypos == FLD_LEN - 1)
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER1;
+					xpos = 0;
 					ypos = 0;
-				else
-					ypos++;
-				aim = true;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == TURN_PLAYER1 ||
+						 State == TURN_PLAYER2 ||
+						 State == PLACE_SHIPS_PLAYER1 ||
+						 State == PLACE_SHIPS_PLAYER2)
+				{
+					if (ypos == FLD_LEN - 1)
+						ypos = 0;
+					else
+						ypos++;
+					aim = true;
+				}
 				break;
 			
 			case PLA_RIGHT:
-				if (xpos == FLD_LEN - 1)
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER1;
 					xpos = 0;
-				else
-					xpos++;
-				aim = true;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == TURN_PLAYER1 ||
+						 State == TURN_PLAYER2 ||
+						 State == PLACE_SHIPS_PLAYER1 ||
+						 State == PLACE_SHIPS_PLAYER2)
+				{	
+					if (xpos == FLD_LEN - 1)
+						xpos = 0;
+					else
+						xpos++;
+					aim = true;
+				}
 				break;
 			
 			case PLA_LEFT:
-				if (xpos == 0)
-					xpos = FLD_LEN - 1;
-				else
-					xpos--;
-				aim = true;
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == TURN_PLAYER1 ||
+						 State == TURN_PLAYER2 ||
+						 State == PLACE_SHIPS_PLAYER1 ||
+						 State == PLACE_SHIPS_PLAYER2)
+				{	
+					if (xpos == 0)
+						xpos = FLD_LEN - 1;
+					else
+						xpos--;
+					aim = true;
+				}
 				break;
 			
-			case PLA_MENU: /* Change ship orientation */
-				if (State == PLACE_SHIPS_PLAYER1 || State == PLACE_SHIPS_PLAYER2)
+			case PLA_MENU:
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == PLACE_SHIPS_PLAYER1 ||
+						 State == PLACE_SHIPS_PLAYER2)
+				{
 					orientation = orientation == VERT ? HORIZ : VERT;
+				}
 				break;
 			
 			case PLA_FIRE: /* Shoot / place a ship */
-				if (battlefield_p1[xpos][ypos] == FREE)
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
 				{
-					aim = false;
-					battlefield_p1[xpos][ypos] = SHOTWATER;
+					State = PLACE_SHIPS_PLAYER1;
+					xpos = 0;
+					ypos = 0;
 				}
-				else if (battlefield_p1[xpos][ypos] == SHIP)
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
-					bool found = false;
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == PLACE_SHIPS_PLAYER1)
+				{
+					/* TODO: place a ship */
 					
-					aim = false;
-					battlefield_p1[xpos][ypos] = SHOTSHIP;
+					State = WAIT_FOR_PLAYER2_TO_PLACE_SHIPS;
+					xpos = XOFFSET + 1;
+					ypos = YOFFSET + 1;
+					xdir = 1;
+					ydir = -1;
+				}
+				else if (State == PLACE_SHIPS_PLAYER2)
+				{
+					/* TODO: place a ship */
 					
-					for (i = 0; i < NUM_OF_S1; i++)
+					State = WAIT_FOR_PLAYER1_TO_MAKE_A_TURN;
+					xpos = XOFFSET + 1;
+					ypos = YOFFSET + 1;
+					xdir = 1;
+					ydir = -1;
+				}
+				else if (State == TURN_PLAYER1)
+				{
+					shotres = Shoot(xpos, ypos, battlefield_p2, &ships_p2, &aim);
+					
+					if (shotres == MISSED)
 					{
-						if (!ships_p1.issunkS1[i] && ships_p1.S1[i][D1][X] == xpos && ships_p1.S1[i][D1][Y] == ypos)
-						{
-							found = true;
-							ships_p1.issunkS1[i] = true;
-							
-							if (xpos != 0)
-							{
-								if (battlefield_p1[xpos - 1][ypos] == FREE)
-									battlefield_p1[xpos - 1][ypos] = NOSHIPS;
-								if (ypos != 0)
-									if (battlefield_p1[xpos - 1][ypos - 1] == FREE)
-										battlefield_p1[xpos - 1][ypos - 1] = NOSHIPS;
-								if (ypos != FLD_LEN - 1)
-									if (battlefield_p1[xpos - 1][ypos + 1] == FREE)
-										battlefield_p1[xpos - 1][ypos + 1] = NOSHIPS;
-							}
-							if (xpos != FLD_LEN - 1)
-							{
-								if (battlefield_p1[xpos + 1][ypos] == FREE)
-									battlefield_p1[xpos + 1][ypos] = NOSHIPS;
-								if (ypos != 0)
-									if (battlefield_p1[xpos + 1][ypos - 1] == FREE)
-										battlefield_p1[xpos + 1][ypos - 1] = NOSHIPS;
-								if (ypos != FLD_LEN - 1)
-									if (battlefield_p1[xpos + 1][ypos + 1] == FREE)
-										battlefield_p1[xpos + 1][ypos + 1] = NOSHIPS;
-							}
-							if (ypos != 0)
-								if (battlefield_p1[xpos][ypos - 1] == FREE)
-									battlefield_p1[xpos][ypos - 1] = NOSHIPS;
-							if (ypos != FLD_LEN - 1)
-								if (battlefield_p1[xpos][ypos + 1] == FREE)
-									battlefield_p1[xpos][ypos + 1] = NOSHIPS;
-									
-							break; /* There is only one ship in square */
-						}
+						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER1;
+						delay = get_sec();
 					}
-					
-					if (!found)
-					for (i = 0; i < NUM_OF_S2; i++)
+					else if (shotres == GOT)
 					{
-						if (!ships_p1.issunkS2[i])
-							for (j = 0; j < NUM_OF_D_S2; j++)
-								if (ships_p1.S2[i][j][X] == xpos && ships_p1.S2[i][j][Y] == ypos)
-								{
-									int alivedecks = 0;
-									
-									found = true;
-									ships_p1.isshotS2[i][j] = true;
-									
-									for (k = 0; k < NUM_OF_D_S2; k++)
-									{
-										if (!ships_p1.isshotS2[i][k])
-											alivedecks++;
-									}
-									
-									if (!alivedecks)
-									{
-										ships_p1.issunkS2[i] = true;
-										
-										for (k = 0; k < NUM_OF_D_S2; k++)
-										{
-											if (ships_p1.S2[i][k][X] != 0)
-											{
-												if (battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y]] == FREE)
-													battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y]] = NOSHIPS;
-												if (ships_p1.S2[i][k][Y] != 0)
-													if (battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] - 1] == FREE)
-														battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] - 1] = NOSHIPS;
-												if (ships_p1.S2[i][k][Y] != FLD_LEN - 1)
-													if (battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] + 1] == FREE)
-														battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] + 1] = NOSHIPS;
-											}
-											if (ships_p1.S2[i][k][X] != FLD_LEN - 1)
-											{
-												if (battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y]] == FREE)
-													battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y]] = NOSHIPS;
-												if (ships_p1.S2[i][k][Y] != 0)
-													if (battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] - 1] == FREE)
-														battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] - 1] = NOSHIPS;
-												if (ships_p1.S2[i][k][Y] != FLD_LEN - 1)
-													if (battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] + 1] == FREE)
-														battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] + 1] = NOSHIPS;
-											}
-											if (ships_p1.S2[i][k][Y] != 0)
-												if (battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] - 1] == FREE)
-													battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] - 1] = NOSHIPS;
-											if (ships_p1.S2[i][k][Y] != FLD_LEN - 1)
-												if (battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] + 1] == FREE)
-													battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] + 1] = NOSHIPS;
-										}
-									}
-									
-									break; /* There is only one ship in square */
-								}
+						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER1;
+						delay = get_sec();
 					}
-					
-					if (!found)
-					for (i = 0; i < NUM_OF_S3; i++)
+					else if (shotres == DUMB)
 					{
-						if (!ships_p1.issunkS3[i])
-							for (j = 0; j < NUM_OF_D_S3; j++)
-								if (ships_p1.S3[i][j][X] == xpos && ships_p1.S3[i][j][Y] == ypos)
-								{
-									int alivedecks = 0;
-									
-									found = true;
-									ships_p1.isshotS3[i][j] = true;
-									
-									for (k = 0; k < NUM_OF_D_S3; k++)
-									{
-										if (!ships_p1.isshotS3[i][k])
-											alivedecks++;
-									}
-									
-									if (!alivedecks)
-									{
-										ships_p1.issunkS3[i] = true;
-										
-										for (k = 0; k < NUM_OF_D_S3; k++)
-										{
-											if (ships_p1.S3[i][k][X] != 0)
-											{
-												if (battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y]] == FREE)
-													battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y]] = NOSHIPS;
-												if (ships_p1.S3[i][k][Y] != 0)
-													if (battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] - 1] == FREE)
-														battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] - 1] = NOSHIPS;
-												if (ships_p1.S3[i][k][Y] != FLD_LEN - 1)
-													if (battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] + 1] == FREE)
-														battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] + 1] = NOSHIPS;
-											}
-											if (ships_p1.S3[i][k][X] != FLD_LEN - 1)
-											{
-												if (battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y]] == FREE)
-													battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y]] = NOSHIPS;
-												if (ships_p1.S3[i][k][Y] != 0)
-													if (battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] - 1] == FREE)
-														battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] - 1] = NOSHIPS;
-												if (ships_p1.S3[i][k][Y] != FLD_LEN - 1)
-													if (battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] + 1] == FREE)
-														battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] + 1] = NOSHIPS;
-											}
-											if (ships_p1.S3[i][k][Y] != 0)
-												if (battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] - 1] == FREE)
-													battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] - 1] = NOSHIPS;
-											if (ships_p1.S3[i][k][Y] != FLD_LEN - 1)
-												if (battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] + 1] == FREE)
-													battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] + 1] = NOSHIPS;
-										}
-									}
-									
-									break; /* There is only one ship in square */
-								}
+						/* Do nothing, shoot again! */
 					}
+				}
+				else if (State == TURN_PLAYER2)
+				{
+					shotres = Shoot(xpos, ypos, battlefield_p1, &ships_p1, &aim);
 					
-					if (!found)
-					for (i = 0; i < NUM_OF_S4; i++)
+					if (shotres == MISSED)
 					{
-						if (!ships_p1.issunkS4[i])
-							for (j = 0; j < NUM_OF_D_S4; j++)
-								if (ships_p1.S4[i][j][X] == xpos && ships_p1.S4[i][j][Y] == ypos)
-								{
-									int alivedecks = 0;
-									
-									found = true;
-									ships_p1.isshotS4[i][j] = true;
-									
-									for (k = 0; k < NUM_OF_D_S4; k++)
-									{
-										if (!ships_p1.isshotS4[i][k])
-											alivedecks++;
-									}
-									
-									if (!alivedecks)
-									{
-										ships_p1.issunkS4[i] = true;
-										
-										for (k = 0; k < NUM_OF_D_S4; k++)
-										{
-											if (ships_p1.S4[i][k][X] != 0)
-											{
-												if (battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y]] == FREE)
-													battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y]] = NOSHIPS;
-												if (ships_p1.S4[i][k][Y] != 0)
-													if (battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] - 1] == FREE)
-														battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] - 1] = NOSHIPS;
-												if (ships_p1.S4[i][k][Y] != FLD_LEN - 1)
-													if (battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] + 1] == FREE)
-														battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] + 1] = NOSHIPS;
-											}
-											if (ships_p1.S4[i][k][X] != FLD_LEN - 1)
-											{
-												if (battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y]] == FREE)
-													battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y]] = NOSHIPS;
-												if (ships_p1.S4[i][k][Y] != 0)
-													if (battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] - 1] == FREE)
-														battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] - 1] = NOSHIPS;
-												if (ships_p1.S4[i][k][Y] != FLD_LEN - 1)
-													if (battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] + 1] == FREE)
-														battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] + 1] = NOSHIPS;
-											}
-											if (ships_p1.S4[i][k][Y] != 0)
-												if (battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] - 1] == FREE)
-													battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] - 1] = NOSHIPS;
-											if (ships_p1.S4[i][k][Y] != FLD_LEN - 1)
-												if (battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] + 1] == FREE)
-													battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] + 1] = NOSHIPS;
-										}
-									}
-									
-									break; /* There is only one ship in square */
-								}
+						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER2;
+						delay = get_sec();
 					}
-						
+					else if (shotres == GOT)
+					{
+						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER2;
+						delay = get_sec();
+					}
+					else if (shotres == DUMB)
+					{
+						/* Do nothing, shoot again! */
+					}
 				}
 				break;
 				
 			case PLA_START:
-				if (battlefield_p1[xpos][ypos] == FREE)
-					battlefield_p1[xpos][ypos] = SHIP;
+				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
+				{
+					State = PLACE_SHIPS_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER1;
+					xpos = 0;
+					ypos = 0;
+				}
+				else if (State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				{
+					State = TURN_PLAYER2;
+					xpos = 0;
+					ypos = 0;
+				}
+				/* TODO: clean this */
+				/*else
+				{
+					if (battlefield_p1[xpos][ypos] == FREE)
+						battlefield_p1[xpos][ypos] = SHIP;
+				}*/
 				break;
 				
 			default:
@@ -695,3 +1116,248 @@ enum plugin_status plugin_start(const void* parameter)
 }
 
 #endif /* #ifdef HAVE_LCD_BITMAP */
+
+
+
+
+
+
+
+
+
+
+/* 
+ * Some pieces of code
+ */
+
+#if 0
+if (battlefield_p1[xpos][ypos] == FREE)
+					{
+						aim = false;
+						battlefield_p1[xpos][ypos] = SHOTWATER;
+					}
+					else if (battlefield_p1[xpos][ypos] == SHIP)
+					{
+						bool found = false;
+						
+						aim = false;
+						battlefield_p1[xpos][ypos] = SHOTSHIP;
+						
+						for (i = 0; i < NUM_OF_S1; i++)
+						{
+							if (!ships_p1.issunkS1[i] && ships_p1.S1[i][D1][X] == xpos && ships_p1.S1[i][D1][Y] == ypos)
+							{
+								found = true;
+								ships_p1.issunkS1[i] = true;
+								
+								if (xpos != 0)
+								{
+									if (battlefield_p1[xpos - 1][ypos] == FREE)
+										battlefield_p1[xpos - 1][ypos] = NOSHIPS;
+									if (ypos != 0)
+										if (battlefield_p1[xpos - 1][ypos - 1] == FREE)
+											battlefield_p1[xpos - 1][ypos - 1] = NOSHIPS;
+									if (ypos != FLD_LEN - 1)
+										if (battlefield_p1[xpos - 1][ypos + 1] == FREE)
+											battlefield_p1[xpos - 1][ypos + 1] = NOSHIPS;
+								}
+								if (xpos != FLD_LEN - 1)
+								{
+									if (battlefield_p1[xpos + 1][ypos] == FREE)
+										battlefield_p1[xpos + 1][ypos] = NOSHIPS;
+									if (ypos != 0)
+										if (battlefield_p1[xpos + 1][ypos - 1] == FREE)
+											battlefield_p1[xpos + 1][ypos - 1] = NOSHIPS;
+									if (ypos != FLD_LEN - 1)
+										if (battlefield_p1[xpos + 1][ypos + 1] == FREE)
+											battlefield_p1[xpos + 1][ypos + 1] = NOSHIPS;
+								}
+								if (ypos != 0)
+									if (battlefield_p1[xpos][ypos - 1] == FREE)
+										battlefield_p1[xpos][ypos - 1] = NOSHIPS;
+								if (ypos != FLD_LEN - 1)
+									if (battlefield_p1[xpos][ypos + 1] == FREE)
+										battlefield_p1[xpos][ypos + 1] = NOSHIPS;
+										
+								break; /* There is only one ship in square */
+							}
+						}
+						
+						if (!found)
+						for (i = 0; i < NUM_OF_S2; i++)
+						{
+							if (!ships_p1.issunkS2[i])
+								for (j = 0; j < NUM_OF_D_S2; j++)
+									if (ships_p1.S2[i][j][X] == xpos && ships_p1.S2[i][j][Y] == ypos)
+									{
+										int alivedecks = 0;
+										
+										found = true;
+										ships_p1.isshotS2[i][j] = true;
+										
+										for (k = 0; k < NUM_OF_D_S2; k++)
+										{
+											if (!ships_p1.isshotS2[i][k])
+												alivedecks++;
+										}
+										
+										if (!alivedecks)
+										{
+											ships_p1.issunkS2[i] = true;
+											
+											for (k = 0; k < NUM_OF_D_S2; k++)
+											{
+												if (ships_p1.S2[i][k][X] != 0)
+												{
+													if (battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y]] == FREE)
+														battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y]] = NOSHIPS;
+													if (ships_p1.S2[i][k][Y] != 0)
+														if (battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] - 1] == FREE)
+															battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] - 1] = NOSHIPS;
+													if (ships_p1.S2[i][k][Y] != FLD_LEN - 1)
+														if (battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] + 1] == FREE)
+															battlefield_p1[ships_p1.S2[i][k][X] - 1][ships_p1.S2[i][k][Y] + 1] = NOSHIPS;
+												}
+												if (ships_p1.S2[i][k][X] != FLD_LEN - 1)
+												{
+													if (battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y]] == FREE)
+														battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y]] = NOSHIPS;
+													if (ships_p1.S2[i][k][Y] != 0)
+														if (battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] - 1] == FREE)
+															battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] - 1] = NOSHIPS;
+													if (ships_p1.S2[i][k][Y] != FLD_LEN - 1)
+														if (battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] + 1] == FREE)
+															battlefield_p1[ships_p1.S2[i][k][X] + 1][ships_p1.S2[i][k][Y] + 1] = NOSHIPS;
+												}
+												if (ships_p1.S2[i][k][Y] != 0)
+													if (battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] - 1] == FREE)
+														battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] - 1] = NOSHIPS;
+												if (ships_p1.S2[i][k][Y] != FLD_LEN - 1)
+													if (battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] + 1] == FREE)
+														battlefield_p1[ships_p1.S2[i][k][X]][ships_p1.S2[i][k][Y] + 1] = NOSHIPS;
+											}
+										}
+										
+										break; /* There is only one ship in square */
+									}
+						}
+						
+						if (!found)
+						for (i = 0; i < NUM_OF_S3; i++)
+						{
+							if (!ships_p1.issunkS3[i])
+								for (j = 0; j < NUM_OF_D_S3; j++)
+									if (ships_p1.S3[i][j][X] == xpos && ships_p1.S3[i][j][Y] == ypos)
+									{
+										int alivedecks = 0;
+										
+										found = true;
+										ships_p1.isshotS3[i][j] = true;
+										
+										for (k = 0; k < NUM_OF_D_S3; k++)
+										{
+											if (!ships_p1.isshotS3[i][k])
+												alivedecks++;
+										}
+										
+										if (!alivedecks)
+										{
+											ships_p1.issunkS3[i] = true;
+											
+											for (k = 0; k < NUM_OF_D_S3; k++)
+											{
+												if (ships_p1.S3[i][k][X] != 0)
+												{
+													if (battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y]] == FREE)
+														battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y]] = NOSHIPS;
+													if (ships_p1.S3[i][k][Y] != 0)
+														if (battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] - 1] == FREE)
+															battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] - 1] = NOSHIPS;
+													if (ships_p1.S3[i][k][Y] != FLD_LEN - 1)
+														if (battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] + 1] == FREE)
+															battlefield_p1[ships_p1.S3[i][k][X] - 1][ships_p1.S3[i][k][Y] + 1] = NOSHIPS;
+												}
+												if (ships_p1.S3[i][k][X] != FLD_LEN - 1)
+												{
+													if (battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y]] == FREE)
+														battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y]] = NOSHIPS;
+													if (ships_p1.S3[i][k][Y] != 0)
+														if (battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] - 1] == FREE)
+															battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] - 1] = NOSHIPS;
+													if (ships_p1.S3[i][k][Y] != FLD_LEN - 1)
+														if (battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] + 1] == FREE)
+															battlefield_p1[ships_p1.S3[i][k][X] + 1][ships_p1.S3[i][k][Y] + 1] = NOSHIPS;
+												}
+												if (ships_p1.S3[i][k][Y] != 0)
+													if (battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] - 1] == FREE)
+														battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] - 1] = NOSHIPS;
+												if (ships_p1.S3[i][k][Y] != FLD_LEN - 1)
+													if (battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] + 1] == FREE)
+														battlefield_p1[ships_p1.S3[i][k][X]][ships_p1.S3[i][k][Y] + 1] = NOSHIPS;
+											}
+										}
+										
+										break; /* There is only one ship in square */
+									}
+						}
+						
+						if (!found)
+						for (i = 0; i < NUM_OF_S4; i++)
+						{
+							if (!ships_p1.issunkS4[i])
+								for (j = 0; j < NUM_OF_D_S4; j++)
+									if (ships_p1.S4[i][j][X] == xpos && ships_p1.S4[i][j][Y] == ypos)
+									{
+										int alivedecks = 0;
+										
+										found = true;
+										ships_p1.isshotS4[i][j] = true;
+										
+										for (k = 0; k < NUM_OF_D_S4; k++)
+										{
+											if (!ships_p1.isshotS4[i][k])
+												alivedecks++;
+										}
+										
+										if (!alivedecks)
+										{
+											ships_p1.issunkS4[i] = true;
+											
+											for (k = 0; k < NUM_OF_D_S4; k++)
+											{
+												if (ships_p1.S4[i][k][X] != 0)
+												{
+													if (battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y]] == FREE)
+														battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y]] = NOSHIPS;
+													if (ships_p1.S4[i][k][Y] != 0)
+														if (battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] - 1] == FREE)
+															battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] - 1] = NOSHIPS;
+													if (ships_p1.S4[i][k][Y] != FLD_LEN - 1)
+														if (battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] + 1] == FREE)
+															battlefield_p1[ships_p1.S4[i][k][X] - 1][ships_p1.S4[i][k][Y] + 1] = NOSHIPS;
+												}
+												if (ships_p1.S4[i][k][X] != FLD_LEN - 1)
+												{
+													if (battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y]] == FREE)
+														battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y]] = NOSHIPS;
+													if (ships_p1.S4[i][k][Y] != 0)
+														if (battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] - 1] == FREE)
+															battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] - 1] = NOSHIPS;
+													if (ships_p1.S4[i][k][Y] != FLD_LEN - 1)
+														if (battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] + 1] == FREE)
+															battlefield_p1[ships_p1.S4[i][k][X] + 1][ships_p1.S4[i][k][Y] + 1] = NOSHIPS;
+												}
+												if (ships_p1.S4[i][k][Y] != 0)
+													if (battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] - 1] == FREE)
+														battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] - 1] = NOSHIPS;
+												if (ships_p1.S4[i][k][Y] != FLD_LEN - 1)
+													if (battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] + 1] == FREE)
+														battlefield_p1[ships_p1.S4[i][k][X]][ships_p1.S4[i][k][Y] + 1] = NOSHIPS;
+											}
+										}
+										
+										break; /* There is only one ship in square */
+									}
+						}
+					}
+#endif
