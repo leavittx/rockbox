@@ -911,6 +911,7 @@ battleship_shipone_notplaced.22x22x16.bmp
 battleship_shipone.22x22x16.bmp
 battleship_shiponedead.22x22x16.bmp
 battleship_noships.10x10x16.bmp
+battleship_gameover.80x60x16.bmp
 #endif
 
 #endif /* HAVE_LCD_BITMAP */

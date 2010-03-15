@@ -57,6 +57,7 @@ PLUGIN_HEADER
 #include "pluginbitmaps/battleship_shipone.h"
 #include "pluginbitmaps/battleship_shiponedead.h"
 #include "pluginbitmaps/battleship_noships.h"
+#include "pluginbitmaps/battleship_gameover.h"
 
 unsigned short const *numbitmaps[] = {
 	battleship_n0, battleship_n1,
@@ -78,7 +79,8 @@ enum {
 	WAIT_FOR_PLAYER2_TO_MAKE_A_TURN,
 	TURN_PLAYER2,
 	SHOW_FIELD_AFTER_TURN_OF_PLAYER2,
-	GAME_OVER
+	GAMEOVER_WON_PLAYER1,
+	GAMEOVER_WON_PLAYER2
 } State;
 
 typedef enum {
@@ -200,6 +202,11 @@ void InitFields(void)
 	
 	ClearField(battlefield_p1);
 	ClearField(battlefield_p2);
+	
+	ships_p1.nS1 = 0;
+	ships_p1.nS2 = 0;
+	ships_p1.nS3 = 0;
+	ships_p1.nS4 = 0;
 		
 	for (i = 0; i < NUM_OF_S1; i++)
 	{
@@ -403,7 +410,7 @@ void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*b
 	}
 }
 
-bool CorrectPosition(int xpos, int ypos, Orientation ori, int len, Sqtype (*bf)[FLD_LEN])
+bool IsCorrectPosition(int xpos, int ypos, Orientation ori, int len, Sqtype (*bf)[FLD_LEN])
 {
 	int i;
 	int xdir, ydir;
@@ -504,6 +511,7 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 			if (!ships->issunkS1[i] && ships->S1[i][D1][X] == xpos && ships->S1[i][D1][Y] == ypos)
 			{
 				ships->issunkS1[i] = true;
+				ships->nS1--;
 				
 				if (xpos != 0)
 				{
@@ -555,6 +563,7 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 						if (!alivedecks)
 						{
 							ships->issunkS2[i] = true;
+							ships->nS2--;
 							
 							for (k = 0; k < NUM_OF_D_S2; k++)
 							{
@@ -610,6 +619,7 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 						if (!alivedecks)
 						{
 							ships->issunkS3[i] = true;
+							ships->nS3--;
 							
 							for (k = 0; k < NUM_OF_D_S3; k++)
 							{
@@ -665,6 +675,7 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 						if (!alivedecks)
 						{
 							ships->issunkS4[i] = true;
+							ships->nS4--;
 							
 							for (k = 0; k < NUM_OF_D_S4; k++)
 							{
@@ -707,6 +718,14 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 	return DUMB;
 }
 
+bool IsGameover(Ships *ships)
+{
+	if (!(ships->nS1 + ships->nS2 + ships->nS3 + ships->nS4))
+		return true;
+		
+	return false;
+}
+
 int plugin_main(void)
 {
     int action;
@@ -717,6 +736,7 @@ int plugin_main(void)
 	int xdir, ydir;
 	Orientation ori = HORIZ;
 	int curlen, curnum;
+	int nshots_p1 = 0, nshots_p2 = 0;
 	
     FOR_NB_SCREENS(n)
     {
@@ -798,7 +818,8 @@ int plugin_main(void)
 					/* Player's name */
 					if (State == PLACE_SHIPS_PLAYER1 ||
 						State == TURN_PLAYER1 ||
-						State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1)
+						State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1 ||
+						State == GAMEOVER_WON_PLAYER1)
 					{
 						display->bitmap(battleship_player1,
 										BMPWIDTH_battleship_map,
@@ -808,7 +829,8 @@ int plugin_main(void)
 					}
 					else if (State == PLACE_SHIPS_PLAYER2 ||
 							 State == TURN_PLAYER2 ||
-							 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
+							 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2 ||
+							 State == GAMEOVER_WON_PLAYER2)
 					{
 						display->bitmap(battleship_player2,
 										BMPWIDTH_battleship_map,
@@ -927,6 +949,16 @@ int plugin_main(void)
 										BMPHEIGHT_battleship_yourturn);
 					}
 					
+					if (State == GAMEOVER_WON_PLAYER1 ||
+						State == GAMEOVER_WON_PLAYER2)
+					{
+						display->bitmap(battleship_gameover,
+										xpos,
+										ypos,
+										BMPWIDTH_battleship_gameover,
+										BMPHEIGHT_battleship_gameover);
+					}
+					
 					/* Time */
 					display->bitmap(numbitmaps[min / 10],
 									BMPWIDTH_battleship_map,
@@ -973,6 +1005,17 @@ int plugin_main(void)
 			if (xpos == XOFFSET || xpos + BMPWIDTH_battleship_player1 == XOFFSET + SQSIZE * FLD_LEN)
 				xdir *= -1;
 			if (ypos == YOFFSET || ypos + BMPHEIGHT_battleship_player1 == YOFFSET + SQSIZE * FLD_LEN)
+				ydir *= -1;
+			xpos += xdir;
+			ypos += ydir;
+			need_redraw = true;
+		}
+		else if (State == GAMEOVER_WON_PLAYER1 ||
+				 State == GAMEOVER_WON_PLAYER2)
+		{
+			if (xpos == XOFFSET || xpos + BMPWIDTH_battleship_gameover == XOFFSET + SQSIZE * FLD_LEN)
+				xdir *= -1;
+			if (ypos == YOFFSET || ypos + BMPHEIGHT_battleship_gameover == YOFFSET + SQSIZE * FLD_LEN)
 				ydir *= -1;
 			xpos += xdir;
 			ypos += ydir;
@@ -1382,7 +1425,7 @@ int plugin_main(void)
 				}
 				else if (State == PLACE_SHIPS_PLAYER1)
 				{
-					if (CorrectPosition(xpos, ypos, ori, curlen, battlefield_p1))
+					if (IsCorrectPosition(xpos, ypos, ori, curlen, battlefield_p1))
 					{
 						PlaceShipToBF(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
 						if (NextThing(&curlen, &curnum))
@@ -1397,7 +1440,7 @@ int plugin_main(void)
 				}
 				else if (State == PLACE_SHIPS_PLAYER2)
 				{
-					if (CorrectPosition(xpos, ypos, ori, curlen, battlefield_p2))
+					if (IsCorrectPosition(xpos, ypos, ori, curlen, battlefield_p2))
 					{
 						PlaceShipToBF(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
 						if (NextThing(&curlen, &curnum))
@@ -1416,15 +1459,25 @@ int plugin_main(void)
 					
 					if (shotres == MISSED)
 					{
+						nshots_p1++;
 						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER1;
 						delay = get_sec();
 					}
 					else if (shotres == GOT)
 					{
+						nshots_p1++;
 						/*
 						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER1;
 						delay = get_sec();
 						*/
+						if (IsGameover(&ships_p2))
+						{
+							State = GAMEOVER_WON_PLAYER1;
+							xpos = XOFFSET + 1;
+							ypos = YOFFSET + 1;
+							xdir = 1;
+							ydir = -1;
+						}
 						/* Ok, nice shot, make one more */
 					}
 					else if (shotres == DUMB)
@@ -1438,15 +1491,25 @@ int plugin_main(void)
 					
 					if (shotres == MISSED)
 					{
+						nshots_p2++;
 						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER2;
 						delay = get_sec();
 					}
 					else if (shotres == GOT)
 					{
+						nshots_p2++;
 						/*
 						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER2;
 						delay = get_sec();
 						*/
+						if (IsGameover(&ships_p1))
+						{
+							State = GAMEOVER_WON_PLAYER2;
+							xpos = XOFFSET + 1;
+							ypos = YOFFSET + 1;
+							xdir = 1;
+							ydir = -1;
+						}
 						/* Ok, nice shot, make one more */
 					}
 					else if (shotres == DUMB)
