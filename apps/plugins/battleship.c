@@ -1320,11 +1320,35 @@ int plugin_main(void)
 				else if (State == PLACE_SHIPS_PLAYER1 ||
 						 State == PLACE_SHIPS_PLAYER2)
 				{
-					ori = ori == VERT ? HORIZ : VERT;
+					//ori = ori == VERT ? HORIZ : VERT;
+					/*
+					if (ori == VERT)
+					{
+						if (xpos + curlen <= FLD_LEN)
+							ori = HORIZ;
+					}
+					else
+					{
+						if (ypos + curlen <= FLD_LEN)
+							ori = VERT;
+					}
+					 */
+					if (ori == VERT)
+					{
+						if (xpos + curlen > FLD_LEN)
+							xpos = FLD_LEN - curlen;
+						ori = HORIZ;
+					}
+					else
+					{
+						if (ypos + curlen > FLD_LEN)
+							ypos = FLD_LEN - curlen;
+						ori = VERT;
+					}
 				}
 				break;
 			
-			case PLA_FIRE: /* Shoot / place a ship */
+			case PLA_FIRE:
 				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
 				{
 					State = PLACE_SHIPS_PLAYER1;
@@ -1467,8 +1491,7 @@ int plugin_main(void)
 				break;
 				
 			default:
-				if (rb->default_event_handler_ex(action, cleanup, NULL)
-					== SYS_USB_CONNECTED)
+				if (rb->default_event_handler_ex(action, cleanup, NULL) == SYS_USB_CONNECTED)
 					return PLUGIN_USB_CONNECTED;
 				break;
 		}
