@@ -728,7 +728,7 @@ int plugin_main(void)
 	/* Set all squares free */
 	InitFields();
 
-	State = WAIT_FOR_PLAYER1_TO_PLACE_SHIPS;	
+	State = WAIT_FOR_PLAYER1_TO_PLACE_SHIPS;
 	xpos = XOFFSET + 1;
 	ypos = YOFFSET + 1;
 	xdir = 1;
@@ -1396,8 +1396,11 @@ int plugin_main(void)
 					}
 					else if (shotres == GOT)
 					{
+						/*
 						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER1;
 						delay = get_sec();
+						*/
+						/* Ok, nice shot, make one more */
 					}
 					else if (shotres == DUMB)
 					{
@@ -1415,8 +1418,11 @@ int plugin_main(void)
 					}
 					else if (shotres == GOT)
 					{
+						/*
 						State = SHOW_FIELD_AFTER_TURN_OF_PLAYER2;
 						delay = get_sec();
+						*/
+						/* Ok, nice shot, make one more */
 					}
 					else if (shotres == DUMB)
 					{
