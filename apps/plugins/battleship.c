@@ -126,11 +126,12 @@ typedef enum {
 /* Everything about ships of player */
 typedef struct {
 	int nS1, nS2, nS3, nS4;
-	int S1[NUM_OF_S1][1][2], S2[NUM_OF_S2][2][2], S3[NUM_OF_S3][3][2], S4[NUM_OF_S4][4][2];
-	bool issunkS1[NUM_OF_S1], issunkS2[NUM_OF_S2], issunkS3[NUM_OF_S3], issunkS4[NUM_OF_S4];
-	bool isshotS1[NUM_OF_S1][NUM_OF_D_S1], isshotS2[NUM_OF_S2][NUM_OF_D_S2],
+	int S1[NUM_OF_S1][NUM_OF_D_S1][2], S2[NUM_OF_S2][NUM_OF_D_S2][2],
+		S3[NUM_OF_S3][NUM_OF_D_S3][2], S4[NUM_OF_S4][NUM_OF_D_S4][2];
+	bool issunkS1[NUM_OF_S1], issunkS2[NUM_OF_S2],
+		 issunkS3[NUM_OF_S3], issunkS4[NUM_OF_S4];
+	bool /*isshotS1[NUM_OF_S1][NUM_OF_D_S1], */isshotS2[NUM_OF_S2][NUM_OF_D_S2],
 		 isshotS3[NUM_OF_S3][NUM_OF_D_S3], isshotS4[NUM_OF_S4][NUM_OF_D_S4];
-	Orientation /*oriS1[NUM_OF_S1],*/ oriS2[NUM_OF_S2], oriS3[NUM_OF_S3], oriS4[NUM_OF_S4];
 } Ships;
 
 /* Shot result */
@@ -157,14 +158,14 @@ Ships ships_p1;
 Ships ships_p2;
 
 /* For buttons */
-const struct button_mapping *plugin_contexts[]
-= {generic_directions, generic_actions,
+const struct button_mapping *plugin_contexts[] = 
+	{ generic_directions, generic_actions,
 #if defined(HAVE_REMOTE_LCD)
     remote_directions
 #endif
 };
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+    sizeof(plugin_contexts) / sizeof(struct button_mapping*)
 
 void cleanup(void *parameter)
 {
@@ -334,7 +335,7 @@ void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*b
 		ships->S1[num][D1][X] = xpos;
 		ships->S1[num][D1][Y] = ypos;
 		ships->issunkS1[num] = false;
-		ships->isshotS1[num][D1] = false;
+		//ships->isshotS1[num][D1] = false; /* Only one deck, unneeded */
 		//ships->nS1 = num + 1;
 	}
 	else if (len == NUM_OF_D_S2)
