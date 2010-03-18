@@ -203,11 +203,18 @@ void InitFields(void)
 	ClearField(battlefield_p1);
 	ClearField(battlefield_p2);
 	
+	/* Global variables are filled by zeros by default,
+	 * needed for understanding the process */
 	ships_p1.nS1 = 0;
 	ships_p1.nS2 = 0;
 	ships_p1.nS3 = 0;
 	ships_p1.nS4 = 0;
-		
+	
+	ships_p2.nS1 = 0;
+	ships_p2.nS2 = 0;
+	ships_p2.nS3 = 0;
+	ships_p2.nS4 = 0;
+	
 	for (i = 0; i < NUM_OF_S1; i++)
 	{
 		ships_p1.issunkS1[i] = true;
@@ -223,7 +230,7 @@ void InitFields(void)
 			ships_p2.isshotS2[i][j] = true;
 		}
 	}
-	for (i = 0; i < NUM_OF_S3; i ++)
+	for (i = 0; i < NUM_OF_S3; i++)
 	{
 		ships_p1.issunkS3[i] = true;
 		ships_p2.issunkS3[i] = true;
@@ -233,7 +240,7 @@ void InitFields(void)
 			ships_p2.isshotS3[i][j] = true;
 		}
 	}
-	for (i = 0; i < NUM_OF_S4; i ++)
+	for (i = 0; i < NUM_OF_S4; i++)
 	{
 		ships_p1.issunkS4[i] = true;
 		ships_p2.issunkS4[i] = true;
@@ -426,7 +433,7 @@ bool IsCorrectPosition(int xpos, int ypos, Orientation ori, int len, Sqtype (*bf
 						bf[xpos + xdir][ypos + i + ydir] != FREE)
 							return false;
 				}
-				else		
+				else /* HORIZ */
 				{
 					if (xpos + i + xdir >= 0 && xpos + i + xdir < FLD_LEN &&
 						ypos + ydir >= 0 && ypos + ydir < FLD_LEN &&
@@ -502,6 +509,7 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 		
 		return MISSED;
 	}
+	
 	if (bf[xpos][ypos] == SHIP)
 	{
 		bf[xpos][ypos] = SHOTSHIP;
@@ -555,10 +563,8 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 						ships->isshotS2[i][j] = true;
 						
 						for (k = 0; k < NUM_OF_D_S2; k++)
-						{
 							if (!ships->isshotS2[i][k])
 								alivedecks++;
-						}
 						
 						if (!alivedecks)
 						{
@@ -611,10 +617,8 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 						ships->isshotS3[i][j] = true;
 						
 						for (k = 0; k < NUM_OF_D_S3; k++)
-						{
 							if (!ships->isshotS3[i][k])
 								alivedecks++;
-						}
 						
 						if (!alivedecks)
 						{
@@ -657,20 +661,18 @@ int Shoot(int xpos, int ypos, Sqtype (*bf)[FLD_LEN], Ships *ships)
 						return GOT;
 					}
 		}
-	
+
 		for (i = 0; i < NUM_OF_S4; i++)
 		{
 			if (!ships->issunkS4[i])
 				for (j = 0; j < NUM_OF_D_S4; j++)
 					if (ships->S4[i][j][X] == xpos && ships->S4[i][j][Y] == ypos)
-					{				
+					{
 						ships->isshotS4[i][j] = true;
 						
 						for (k = 0; k < NUM_OF_D_S4; k++)
-						{
 							if (!ships->isshotS4[i][k])
 								alivedecks++;
-						}
 						
 						if (!alivedecks)
 						{
@@ -734,7 +736,7 @@ int plugin_main(void)
 	unsigned long startsec, prevsec = 0, sec, min = 0, delay = 0; /* Time stuff */
 	int xpos, ypos;
 	int xdir, ydir;
-	Orientation ori = HORIZ;
+	Orientation ori;
 	int curlen, curnum;
 	int nshots_p1 = 0, nshots_p2 = 0;
 	
@@ -746,8 +748,10 @@ int plugin_main(void)
             display->set_background(LCD_BLACK);
     }
 
+	/* TODO: figure out if this really needed or not,
+	 * it seems to me that not */
 	/* Set all squares free */
-	InitFields();
+	//InitFields();
 
 	State = WAIT_FOR_PLAYER1_TO_PLACE_SHIPS;
 	xpos = XOFFSET + 1;
@@ -866,7 +870,7 @@ int plugin_main(void)
 													BMPHEIGHT_battleship_noships);
 							}
 							else if (State == TURN_PLAYER2 ||
-								State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
+									 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
 							{
 								if (battlefield_p1[i][j] == SHOTWATER)
 									display->bitmap(battleship_missed,
@@ -1064,9 +1068,10 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
+					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					ClearField(battlefield_p1);
-					RegenField(battlefield_p1, &ships_p1);
+					//ClearField(battlefield_p1);
+					//RegenField(battlefield_p1, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1077,8 +1082,8 @@ int plugin_main(void)
 					ypos = 0;
 					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					ClearField(battlefield_p2);
-					RegenField(battlefield_p2, &ships_p2);
+					//ClearField(battlefield_p2);
+					//RegenField(battlefield_p2, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1124,9 +1129,10 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
+					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					ClearField(battlefield_p1);
-					RegenField(battlefield_p1, &ships_p1);
+					//ClearField(battlefield_p1);
+					//RegenField(battlefield_p1, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1137,8 +1143,8 @@ int plugin_main(void)
 					ypos = 0;
 					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					ClearField(battlefield_p2);
-					RegenField(battlefield_p2, &ships_p2);
+					//ClearField(battlefield_p2);
+					//RegenField(battlefield_p2, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1200,9 +1206,10 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
+					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					ClearField(battlefield_p1);
-					RegenField(battlefield_p1, &ships_p1);
+					//ClearField(battlefield_p1);
+					//RegenField(battlefield_p1, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1213,8 +1220,8 @@ int plugin_main(void)
 					ypos = 0;
 					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					ClearField(battlefield_p2);
-					RegenField(battlefield_p2, &ships_p2);
+					//ClearField(battlefield_p2);
+					//RegenField(battlefield_p2, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1276,9 +1283,10 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
+					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					ClearField(battlefield_p1);
-					RegenField(battlefield_p1, &ships_p1);
+					//ClearField(battlefield_p1);
+					//RegenField(battlefield_p1, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1289,8 +1297,8 @@ int plugin_main(void)
 					ypos = 0;
 					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					ClearField(battlefield_p2);
-					RegenField(battlefield_p2, &ships_p2);
+					//ClearField(battlefield_p2);
+					//RegenField(battlefield_p2, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1336,6 +1344,7 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
+					ori = HORIZ;
 					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
@@ -1388,6 +1397,11 @@ int plugin_main(void)
 							ypos = FLD_LEN - curlen;
 						ori = VERT;
 					}
+					
+					if (State == PLACE_SHIPS_PLAYER1)
+						PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					else /* PLACE_SHIPS_PLAYER2 */
+						PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
 				}
 				break;
 			
