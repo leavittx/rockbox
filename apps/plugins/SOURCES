@@ -267,4 +267,5 @@ dumblines.c
 gef.c
 circle.c
 curves.c
+battleship.c
 #endif

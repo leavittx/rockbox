@@ -103,7 +103,7 @@ unsigned short const *numbitmaps_p2[] = {
 	battleship_n8_p2, battleship_n9_p2
 };
 
-/* States of game */
+/* State of game */
 enum {
 	WAIT_FOR_PLAYER1_TO_PLACE_SHIPS,
 	PLACE_SHIPS_PLAYER1,
@@ -161,15 +161,16 @@ typedef enum {
 #define NUM_OF_S3 2
 #define NUM_OF_S4 1
 
-/* Everything about ships of player */
+/* Everything about ships of a single player */
 typedef struct {
 	int nS1, nS2, nS3, nS4;
 	int S1[NUM_OF_S1][NUM_OF_D_S1][2], S2[NUM_OF_S2][NUM_OF_D_S2][2],
 		S3[NUM_OF_S3][NUM_OF_D_S3][2], S4[NUM_OF_S4][NUM_OF_D_S4][2];
 	bool issunkS1[NUM_OF_S1], issunkS2[NUM_OF_S2],
 		 issunkS3[NUM_OF_S3], issunkS4[NUM_OF_S4];
-	bool /*isshotS1[NUM_OF_S1][NUM_OF_D_S1], */isshotS2[NUM_OF_S2][NUM_OF_D_S2],
-		 isshotS3[NUM_OF_S3][NUM_OF_D_S3], isshotS4[NUM_OF_S4][NUM_OF_D_S4];
+	bool isshotS2[NUM_OF_S2][NUM_OF_D_S2],
+		 isshotS3[NUM_OF_S3][NUM_OF_D_S3],
+		 isshotS4[NUM_OF_S4][NUM_OF_D_S4];
 } Ships;
 
 /* Shot result */
@@ -182,14 +183,17 @@ enum {
 /* Field length */
 #define FLD_LEN 10
 /* X-axis field offest in pixels */
-#define XOFFSET 20
+//#define XOFFSET 20
+#define XOFFSET (BMPWIDTH_battleship_map / 12)
 /* Y-axis field offest in pixels */
-#define YOFFSET 20
+//#define YOFFSET 20
+#define YOFFSET (BMPHEIGHT_battleship_map / 12)
 /* Length of square in pixels */
-#define SQSIZE 	22
+//#define SQSIZE 	22
+#define SQSIZE ((int)((BMPHEIGHT_battleship_map - YOFFSET) / FLD_LEN))
 /* Delay after each turn in seconds */
 #define DELAY_AFTER_TURN 2
-
+/* Y-axis offset for time */
 #define TIME_POSITION_OFFSET 1
 
 Sqtype battlefield_p1[FLD_LEN][FLD_LEN];
@@ -197,7 +201,6 @@ Sqtype battlefield_p2[FLD_LEN][FLD_LEN];
 Ships ships_p1;
 Ships ships_p2;
 
-/* For buttons */
 const struct button_mapping *plugin_contexts[] = 
 	{ generic_directions, generic_actions,
 #if defined(HAVE_REMOTE_LCD)
@@ -225,97 +228,6 @@ unsigned long get_sec(void) {
 	return *rb->current_tick / HZ;
 }
 
-void ClearField(Sqtype (*bf)[FLD_LEN])
-{
-	int i, j;
-	
-	for (i = 0; i < FLD_LEN; i++)
-		for (j = 0; j < FLD_LEN; j++)
-			bf[i][j] = FREE;
-}
-
-void InitFields(void)
-{
-	int i, j;
-	
-	ClearField(battlefield_p1);
-	ClearField(battlefield_p2);
-	
-	/* Global variables are filled by zeros by default,
-	 * needed for understanding the process */
-	ships_p1.nS1 = 0;
-	ships_p1.nS2 = 0;
-	ships_p1.nS3 = 0;
-	ships_p1.nS4 = 0;
-	
-	ships_p2.nS1 = 0;
-	ships_p2.nS2 = 0;
-	ships_p2.nS3 = 0;
-	ships_p2.nS4 = 0;
-	
-	for (i = 0; i < NUM_OF_S1; i++)
-	{
-		ships_p1.issunkS1[i] = true;
-		ships_p2.issunkS1[i] = true;
-	}
-	for (i = 0; i < NUM_OF_S2; i++)
-	{
-		ships_p1.issunkS2[i] = true;
-		ships_p2.issunkS2[i] = true;
-		for (j = 0; j < NUM_OF_D_S2; j++)
-		{
-			ships_p1.isshotS2[i][j] = true;
-			ships_p2.isshotS2[i][j] = true;
-		}
-	}
-	for (i = 0; i < NUM_OF_S3; i++)
-	{
-		ships_p1.issunkS3[i] = true;
-		ships_p2.issunkS3[i] = true;
-		for (j = 0; j < NUM_OF_D_S3; j++)
-		{
-			ships_p1.isshotS3[i][j] = true;
-			ships_p2.isshotS3[i][j] = true;
-		}
-	}
-	for (i = 0; i < NUM_OF_S4; i++)
-	{
-		ships_p1.issunkS4[i] = true;
-		ships_p2.issunkS4[i] = true;
-		for (j = 0; j < NUM_OF_D_S4; j++)
-		{
-			ships_p1.isshotS4[i][j] = true;
-			ships_p2.isshotS4[i][j] = true;
-		}
-	}
-}
-
-void RegenField(Sqtype (*bf)[FLD_LEN], Ships *ships)
-{
-	int i;
-	
-	for (i = 0; i < ships->nS1; i++)
-		bf[ships->S1[i][D1][X]][ships->S1[i][D1][Y]] = SHIP;
-	for (i = 0; i < ships->nS2; i++)
-	{
-		bf[ships->S2[i][D1][X]][ships->S1[i][D1][Y]] = SHIP;
-		bf[ships->S2[i][D2][X]][ships->S1[i][D2][Y]] = SHIP;
-	}
-	for (i = 0; i < ships->nS3; i++)
-	{
-		bf[ships->S3[i][D1][X]][ships->S3[i][D1][Y]] = SHIP;
-		bf[ships->S3[i][D2][X]][ships->S3[i][D2][Y]] = SHIP;
-		bf[ships->S3[i][D3][X]][ships->S3[i][D3][Y]] = SHIP;
-	}
-	for (i = 0; i < ships->nS4; i++)
-	{
-		bf[ships->S4[i][D1][X]][ships->S4[i][D1][Y]] = SHIP;
-		bf[ships->S4[i][D2][X]][ships->S4[i][D2][Y]] = SHIP;
-		bf[ships->S4[i][D3][X]][ships->S4[i][D3][Y]] = SHIP;
-		bf[ships->S4[i][D4][X]][ships->S4[i][D4][Y]] = SHIP;
-	}
-}
-
 void PlaceShipToBF(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*bf)[FLD_LEN], Ships *ships)
 {
 	int i;
@@ -330,13 +242,9 @@ void PlaceShipToBF(int xpos, int ypos, Orientation ori, int len, int num, Sqtype
 		for (i = 0; i < len; i++)
 		{
 			if (ori == VERT)
-			{
 				bf[xpos][ypos + i] = SHIP;
-			}
 			else /* HORIZ */
-			{
 				bf[xpos + i][ypos] = SHIP;
-			}
 		}
 		ships->nS2 = num + 1;
 	}
@@ -345,13 +253,9 @@ void PlaceShipToBF(int xpos, int ypos, Orientation ori, int len, int num, Sqtype
 		for (i = 0; i < len; i++)
 		{
 			if (ori == VERT)
-			{
 				bf[xpos][ypos + i] = SHIP;
-			}
 			else /* HORIZ */
-			{
 				bf[xpos + i][ypos] = SHIP;
-			}
 		}
 		ships->nS3 = num + 1;
 	}
@@ -360,35 +264,23 @@ void PlaceShipToBF(int xpos, int ypos, Orientation ori, int len, int num, Sqtype
 		for (i = 0; i < len; i++)
 		{
 			if (ori == VERT)
-			{
 				bf[xpos][ypos + i] = SHIP;
-			}
 			else /* HORIZ */
-			{
 				bf[xpos + i][ypos] = SHIP;
-			}
 		}
 		ships->nS4 = num + 1;
 	}
 }
 
-void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*bf)[FLD_LEN], Ships *ships)
+void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Ships *ships)
 {
 	int i;
 	
-	/* Avoid compiler warning about unused parameter.
-	 * TODO: remove this parameter
-	 */
-	(void)bf;
-	
 	if (len == NUM_OF_D_S1)
 	{
-		//bf[xpos][ypos] = SHIP;
 		ships->S1[num][D1][X] = xpos;
 		ships->S1[num][D1][Y] = ypos;
 		ships->issunkS1[num] = false;
-		//ships->isshotS1[num][D1] = false; /* Only one deck, unneeded */
-		//ships->nS1 = num + 1;
 	}
 	else if (len == NUM_OF_D_S2)
 	{
@@ -396,20 +288,17 @@ void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*b
 		{
 			if (ori == VERT)
 			{
-				//bf[xpos][ypos + i] = SHIP;
 				ships->S2[num][i][X] = xpos;
 				ships->S2[num][i][Y] = ypos + i;
 			}
 			else /* HORIZ */
 			{
-				//bf[xpos + i][ypos] = SHIP;
 				ships->S2[num][i][X] = xpos + i;
 				ships->S2[num][i][Y] = ypos;
 			}
 			ships->isshotS2[num][i] = false;
 		}
 		ships->issunkS2[num] = false;
-		//ships->nS2 = num + 1;
 	}
 	else if (len == NUM_OF_D_S3)
 	{
@@ -417,20 +306,17 @@ void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*b
 		{
 			if (ori == VERT)
 			{
-				//bf[xpos][ypos + i] = SHIP;
 				ships->S3[num][i][X] = xpos;
 				ships->S3[num][i][Y] = ypos + i;
 			}
 			else /* HORIZ */
 			{
-				//bf[xpos + i][ypos] = SHIP;
 				ships->S3[num][i][X] = xpos + i;
 				ships->S3[num][i][Y] = ypos;
 			}
 			ships->isshotS3[num][i] = false;
 		}
 		ships->issunkS3[num] = false;
-		//ships->nS3 = num + 1;
 	}
 	else /* NUM_OF_D_S4 */
 	{
@@ -438,20 +324,17 @@ void PlaceShip(int xpos, int ypos, Orientation ori, int len, int num, Sqtype (*b
 		{
 			if (ori == VERT)
 			{
-				//bf[xpos][ypos + i] = SHIP;
 				ships->S4[num][i][X] = xpos;
 				ships->S4[num][i][Y] = ypos + i;
 			}
 			else /* HORIZ */
 			{
-				//bf[xpos + i][ypos] = SHIP;
 				ships->S4[num][i][X] = xpos + i;
 				ships->S4[num][i][Y] = ypos;
 			}
 			ships->isshotS4[num][i] = false;
 		}
 		ships->issunkS4[num] = false;
-		//ships->nS4 = num + 1;
 	}
 }
 
@@ -469,14 +352,18 @@ bool IsCorrectPosition(int xpos, int ypos, Orientation ori, int len, Sqtype (*bf
 					if (xpos + xdir >= 0 && xpos + xdir < FLD_LEN &&
 						ypos + i + ydir >= 0 && ypos + i + ydir < FLD_LEN &&
 						bf[xpos + xdir][ypos + i + ydir] != FREE)
+					{
 							return false;
+					}
 				}
 				else /* HORIZ */
 				{
 					if (xpos + i + xdir >= 0 && xpos + i + xdir < FLD_LEN &&
 						ypos + ydir >= 0 && ypos + ydir < FLD_LEN &&
 						bf[xpos + i + xdir][ypos + ydir] != FREE)
+					{
 							return false;
+					}
 				}
 			}
 	
@@ -768,13 +655,13 @@ bool IsGameover(Ships *ships)
 
 int plugin_main(void)
 {
-    int action;
+    int action; /* Key action */
 	int i, j, n;
 	bool need_redraw = true; /* Do we need redraw field? */
 	unsigned long startsec, prevsec = 0, sec, min = 0, delay = 0; /* Time stuff */
 	int xpos, ypos;
 	int xdir, ydir;
-	Orientation ori;
+	Orientation ori = HORIZ; /* Defining ori is needed only to avoid compiler warning */
 	int curlen, curnum;
 	int nshots_p1 = 0, nshots_p2 = 0;
 	
@@ -785,11 +672,6 @@ int plugin_main(void)
         if (display->is_color)
             display->set_background(LCD_BLACK);
     }
-
-	/* TODO: figure out if this really needed or not,
-	 * it seems to me that not */
-	/* Set all squares free */
-	//InitFields();
 
 	State = WAIT_FOR_PLAYER1_TO_PLACE_SHIPS;
 	xpos = XOFFSET + 1;
@@ -1003,27 +885,28 @@ int plugin_main(void)
 					}
 					
 					/* Some stats */
+					/* four-deck ships */
 					display->bitmap(numbitmaps_p1[ships_p1.nS4],
 									BMPWIDTH_battleship_map,
 									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
 									BMPWIDTH_battleship_n0,
 									BMPHEIGHT_battleship_n0);
 									
-					/* Separator 1 */
+					/* <Separator 1> */
 									
-					display->bitmap(numbitmaps[NUM_OF_D_S4],
-									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
-									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-									BMPWIDTH_battleship_n0,
-									BMPHEIGHT_battleship_n0);
-					
 					display->bitmap(battleship_shipone,
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 1 - 4 * 2,
 									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
 									BMPWIDTH_battleship_shipone,
 									BMPHEIGHT_battleship_shipone);
 									
-					/* Separator 2 */
+					display->bitmap(numbitmaps[NUM_OF_D_S4],
+									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
+									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+									BMPWIDTH_battleship_n0,
+									BMPHEIGHT_battleship_n0);
+									
+					/* <Separator> 2 */
 									
 					display->bitmap(numbitmaps_p2[ships_p2.nS4],
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 2 + BMPWIDTH_battleship_shipone - 5 * 2,
@@ -1043,20 +926,14 @@ int plugin_main(void)
 									BMPWIDTH_battleship_nsep,
 									BMPHEIGHT_battleship_nsep);
 									
-					/*  */
+					/* three-deck ships */
 					display->bitmap(numbitmaps_p1[ships_p1.nS3],
 									BMPWIDTH_battleship_map,
 									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 1 + 3 * 2,
 									BMPWIDTH_battleship_n0,
 									BMPHEIGHT_battleship_n0);
 									
-					/* Separator 1 */
-									
-					display->bitmap(numbitmaps[NUM_OF_D_S3],
-									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
-									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 1 + 3 * 2,
-									BMPWIDTH_battleship_n0,
-									BMPHEIGHT_battleship_n0);
+					/* <Separator 1> */
 					
 					display->bitmap(battleship_shipone,
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 1 - 4 * 2,
@@ -1064,7 +941,13 @@ int plugin_main(void)
 									BMPWIDTH_battleship_shipone,
 									BMPHEIGHT_battleship_shipone);
 									
-					/* Separator 2 */
+					display->bitmap(numbitmaps[NUM_OF_D_S3],
+									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
+									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 1 + 3 * 2,
+									BMPWIDTH_battleship_n0,
+									BMPHEIGHT_battleship_n0);
+									
+					/* <Separator 2> */
 									
 					display->bitmap(numbitmaps_p2[ships_p2.nS3],
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 2 + BMPWIDTH_battleship_shipone - 5 * 2,
@@ -1084,20 +967,14 @@ int plugin_main(void)
 									BMPWIDTH_battleship_nsep,
 									BMPHEIGHT_battleship_nsep);
 					
-					/*  */
+					/* two-deck ships */
 					display->bitmap(numbitmaps_p1[ships_p1.nS2],
 									BMPWIDTH_battleship_map,
 									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 2 + 3 * 3,
 									BMPWIDTH_battleship_n0,
 									BMPHEIGHT_battleship_n0);
 									
-					/* Separator 1 */
-									
-					display->bitmap(numbitmaps[NUM_OF_D_S2],
-									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
-									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 2 + 3 * 3,
-									BMPWIDTH_battleship_n0,
-									BMPHEIGHT_battleship_n0);
+					/* <Separator 1> */
 					
 					display->bitmap(battleship_shipone,
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 1 - 4 * 2,
@@ -1105,7 +982,13 @@ int plugin_main(void)
 									BMPWIDTH_battleship_shipone,
 									BMPHEIGHT_battleship_shipone);
 									
-					/* Separator 2 */
+					display->bitmap(numbitmaps[NUM_OF_D_S2],
+									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
+									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 2 + 3 * 3,
+									BMPWIDTH_battleship_n0,
+									BMPHEIGHT_battleship_n0);
+									
+					/* <Separator 2> */
 									
 					display->bitmap(numbitmaps_p2[ships_p2.nS2],
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 2 + BMPWIDTH_battleship_shipone - 5 * 2,
@@ -1125,20 +1008,14 @@ int plugin_main(void)
 									BMPWIDTH_battleship_nsep,
 									BMPHEIGHT_battleship_nsep);
 									
-					/*  */
+					/* one-deck ships */
 					display->bitmap(numbitmaps_p1[ships_p1.nS1],
 									BMPWIDTH_battleship_map,
 									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 3 + 3 * 4,
 									BMPWIDTH_battleship_n0,
 									BMPHEIGHT_battleship_n0);
 									
-					/* Separator 1 */
-									
-					display->bitmap(numbitmaps[NUM_OF_D_S1],
-									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
-									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 3 + 3 * 4,
-									BMPWIDTH_battleship_n0,
-									BMPHEIGHT_battleship_n0);
+					/* <Separator 1> */
 					
 					display->bitmap(battleship_shipone,
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 1 - 4 * 2,
@@ -1146,7 +1023,13 @@ int plugin_main(void)
 									BMPWIDTH_battleship_shipone,
 									BMPHEIGHT_battleship_shipone);
 									
-					/* Separator 2 */
+					display->bitmap(numbitmaps[NUM_OF_D_S1],
+									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 1 + BMPWIDTH_battleship_nsep * 1 - 2,
+									BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + BMPHEIGHT_battleship_n0 * 3 + 3 * 4,
+									BMPWIDTH_battleship_n0,
+									BMPHEIGHT_battleship_n0);
+									
+					/* <Separator 2> */
 									
 					display->bitmap(numbitmaps_p2[ships_p2.nS1],
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 2 + BMPWIDTH_battleship_shipone - 5 * 2,
@@ -1179,7 +1062,7 @@ int plugin_main(void)
 									BMPWIDTH_battleship_n0,
 									BMPHEIGHT_battleship_n0);
 					
-					/* Separator */
+					/* <Separator> */
 					
 					display->bitmap(numbitmaps_p2[nshots_p2 / 10],
 									BMPWIDTH_battleship_map + BMPWIDTH_battleship_n0 * 2 + BMPWIDTH_battleship_nsep * 1 - 4,
@@ -1305,9 +1188,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					//ClearField(battlefield_p1);
-					//RegenField(battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1317,9 +1198,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					//ClearField(battlefield_p2);
-					//RegenField(battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1346,14 +1225,14 @@ int plugin_main(void)
 					if (ypos > 0)
 						ypos--;
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == PLACE_SHIPS_PLAYER2)
 				{	
 					if (ypos > 0)
 						ypos--;
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				break;
 				
@@ -1366,9 +1245,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					//ClearField(battlefield_p1);
-					//RegenField(battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1378,9 +1255,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					//ClearField(battlefield_p2);
-					//RegenField(battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1415,7 +1290,7 @@ int plugin_main(void)
 							ypos++;
 					}
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == PLACE_SHIPS_PLAYER2)
 				{
@@ -1430,7 +1305,7 @@ int plugin_main(void)
 							ypos++;
 					}
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				break;
 			
@@ -1443,9 +1318,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					//ClearField(battlefield_p1);
-					//RegenField(battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1455,9 +1328,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					//ClearField(battlefield_p2);
-					//RegenField(battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1492,7 +1363,7 @@ int plugin_main(void)
 							xpos++;
 					}
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == PLACE_SHIPS_PLAYER2)
 				{
@@ -1507,7 +1378,7 @@ int plugin_main(void)
 							xpos++;
 					}
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				break;
 			
@@ -1520,9 +1391,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
-					//ClearField(battlefield_p1);
-					//RegenField(battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1532,9 +1401,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
-					//ClearField(battlefield_p2);
-					//RegenField(battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1561,14 +1428,14 @@ int plugin_main(void)
 					if (xpos > 0)
 						xpos--;
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == PLACE_SHIPS_PLAYER2)
 				{
 					if (xpos > 0)
 						xpos--;
 					
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				break;
 			
@@ -1581,7 +1448,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1591,7 +1458,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1635,9 +1502,9 @@ int plugin_main(void)
 					}
 					
 					if (State == PLACE_SHIPS_PLAYER1)
-						PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+						PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 					else /* PLACE_SHIPS_PLAYER2 */
-						PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+						PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				break;
 			
@@ -1649,7 +1516,7 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1659,7 +1526,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{
@@ -1777,7 +1644,7 @@ int plugin_main(void)
 					curnum = N1;
 					xpos = 0;
 					ypos = 0;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p1, &ships_p1);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p1);
 				}
 				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS)
 				{
@@ -1787,7 +1654,7 @@ int plugin_main(void)
 					xpos = 0;
 					ypos = 0;
 					ori = HORIZ;
-					PlaceShip(xpos, ypos, ori, curlen, curnum, battlefield_p2, &ships_p2);
+					PlaceShip(xpos, ypos, ori, curlen, curnum, &ships_p2);
 				}
 				else if (State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 				{

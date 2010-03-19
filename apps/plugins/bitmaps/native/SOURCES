@@ -886,6 +886,7 @@ pitch_notes.128x64x1.bmp
 #endif
 #endif /* Complex condition for pitch detector */
 
+/* Battleship */
 #if defined(COWON_D2)
 battleship_huy.80x80x16.bmp
 battleship_map.240x240x16.bmp
@@ -932,6 +933,51 @@ battleship_n6_p2.20x20x16.bmp
 battleship_n7_p2.20x20x16.bmp
 battleship_n8_p2.20x20x16.bmp
 battleship_n9_p2.20x20x16.bmp
+#elif defined(IPOD_NANO)
+battleship_map.132x132x16.bmp
+battleship_placeships.44x44x16.bmp
+battleship_yourturn.44x44x16.bmp
+battleship_player1.44x11x16.bmp
+battleship_player2.44x11x16.bmp
+battleship_n0.13x13x16.bmp
+battleship_n1.13x13x16.bmp
+battleship_n2.13x13x16.bmp
+battleship_n3.13x13x16.bmp
+battleship_n4.13x13x16.bmp
+battleship_n5.13x13x16.bmp
+battleship_n6.13x13x16.bmp
+battleship_n7.13x13x16.bmp
+battleship_n8.13x13x16.bmp
+battleship_n9.13x13x16.bmp
+battleship_nsep.3x12x16.bmp
+battleship_aim.10x10x16.bmp
+battleship_missed.10x10x16.bmp
+battleship_shipone_notplaced.13x13x16.bmp
+battleship_shipone.13x13x16.bmp
+battleship_shiponedead.13x13x16.bmp
+battleship_noships.10x10x16.bmp
+battleship_gameover.80x60x16.bmp
+battleship_n0_p1.13x13x16.bmp
+battleship_n1_p1.13x13x16.bmp
+battleship_n2_p1.13x13x16.bmp
+battleship_n3_p1.13x13x16.bmp
+battleship_n4_p1.13x13x16.bmp
+battleship_n5_p1.13x13x16.bmp
+battleship_n6_p1.13x13x16.bmp
+battleship_n7_p1.13x13x16.bmp
+battleship_n8_p1.13x13x16.bmp
+battleship_n9_p1.13x13x16.bmp
+battleship_n0_p2.13x13x16.bmp
+battleship_n1_p2.13x13x16.bmp
+battleship_n2_p2.13x13x16.bmp
+battleship_n3_p2.13x13x16.bmp
+battleship_n4_p2.13x13x16.bmp
+battleship_n5_p2.13x13x16.bmp
+battleship_n6_p2.13x13x16.bmp
+battleship_n7_p2.13x13x16.bmp
+battleship_n8_p2.13x13x16.bmp
+battleship_n9_p2.13x13x16.bmp
 #endif
+ 
 
 #endif /* HAVE_LCD_BITMAP */
