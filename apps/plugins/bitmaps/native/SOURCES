@@ -902,6 +902,7 @@ battleship_aim.10x10x16.bmp
 battleship_missed.10x10x16.bmp
 battleship_shipone_notplaced.22x22x16.bmp
 battleship_shipone.22x22x16.bmp
+battleship_shipone_transparent.22x22x16.bmp
 battleship_shiponedead.22x22x16.bmp
 battleship_noships.10x10x16.bmp
 battleship_gameover.80x60x16.bmp
@@ -919,6 +920,7 @@ battleship_aim.10x10x16.bmp
 battleship_missed.10x10x16.bmp
 battleship_shipone_notplaced.13x13x16.bmp
 battleship_shipone.13x13x16.bmp
+battleship_shipone_transparent.13x13x16.bmp
 battleship_shiponedead.13x13x16.bmp
 battleship_noships.10x10x16.bmp
 battleship_gameover.80x60x16.bmp

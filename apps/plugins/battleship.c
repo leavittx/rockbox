@@ -47,6 +47,7 @@ PLUGIN_HEADER
 #include "pluginbitmaps/battleship_missed.h"
 #include "pluginbitmaps/battleship_shipone_notplaced.h"
 #include "pluginbitmaps/battleship_shipone.h"
+#include "pluginbitmaps/battleship_shipone_transparent.h"
 #include "pluginbitmaps/battleship_shiponedead.h"
 #include "pluginbitmaps/battleship_noships.h"
 #include "pluginbitmaps/battleship_gameover.h"
@@ -614,7 +615,7 @@ bool IsGameover(Ships *ships)
 int plugin_main(void)
 {
     int action; /* Key action */
-	int i, j, n;
+	int i, j;
 	bool need_redraw = true; /* Do we need redraw field? */
 	unsigned long startsec, prevsec = 0, sec, min = 0, delay = 0; /* Time stuff */
 	int xpos, ypos;
@@ -625,14 +626,7 @@ int plugin_main(void)
 	
 	//rb->splashf(HZ*3, "%i %i", LCD_WIDTH, LCD_HEIGHT);
 	
-    FOR_NB_SCREENS(n)
-    {
-        struct screen *display = rb->screens[n];
-
-        if (display->is_color)
-            display->set_background(LCD_BLACK);
-            
-    }
+    rb->lcd_set_background(LCD_BLACK);
 
 	State = WAIT_FOR_PLAYER1_TO_PLACE_SHIPS;
 	xpos = XOFFSET + 1;
@@ -660,512 +654,530 @@ int plugin_main(void)
 		/* Draw everything */
 		if (need_redraw)
 		{
-			FOR_NB_SCREENS(n)
+			rb->lcd_clear_display();
+			
+			/* Battle map */
+			rb->lcd_bitmap(battleship_map,
+				0,
+				0,
+				BMPWIDTH_battleship_map,
+				BMPHEIGHT_battleship_map);
+			
+			if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS ||
+				State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
 			{
-				struct screen *display = rb->screens[n];
-				
-				rb->lcd_clear_display();
-				
-				/* Battle map */
-				display->bitmap(battleship_map,
-					0,
-					0,
-					BMPWIDTH_battleship_map,
-					BMPHEIGHT_battleship_map);
-				
-				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS ||
-					State == WAIT_FOR_PLAYER1_TO_MAKE_A_TURN)
+				rb->lcd_bitmap_transparent(battleship_player1,
+					xpos,
+					ypos,
+					BMPWIDTH_battleship_player1,
+					BMPHEIGHT_battleship_player1);
+			}
+			else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS ||
+					 State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+			{
+				rb->lcd_bitmap_transparent(battleship_player2,
+					xpos,
+					ypos,
+					BMPWIDTH_battleship_player2,
+					BMPHEIGHT_battleship_player2);
+			}
+			else
+			{
+				/* Player's name */
+				if (State == PLACE_SHIPS_PLAYER1 ||
+					State == TURN_PLAYER1 ||
+					State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1 ||
+					State == GAMEOVER_WON_PLAYER1)
 				{
-					display->bitmap(battleship_player1,
-						xpos,
-						ypos,
+					rb->lcd_bitmap_transparent(battleship_player1,
+						BMPWIDTH_battleship_map,
+						0,
 						BMPWIDTH_battleship_player1,
 						BMPHEIGHT_battleship_player1);
 				}
-				else if (State == WAIT_FOR_PLAYER2_TO_PLACE_SHIPS ||
-						 State == WAIT_FOR_PLAYER2_TO_MAKE_A_TURN)
+				else if (State == PLACE_SHIPS_PLAYER2 ||
+						 State == TURN_PLAYER2 ||
+						 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2 ||
+						 State == GAMEOVER_WON_PLAYER2)
 				{
-					display->bitmap(battleship_player2,
-						xpos,
-						ypos,
+					rb->lcd_bitmap_transparent(battleship_player2,
+						BMPWIDTH_battleship_map,
+						0,
 						BMPWIDTH_battleship_player2,
 						BMPHEIGHT_battleship_player2);
 				}
-				else
+
+				/* Objects on field */
+				for (i = 0; i < FLD_LEN; i++)
+					for (j = 0; j < FLD_LEN; j++)
+					{
+						if (State == TURN_PLAYER1 ||
+							State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1)
+						{
+							if (battlefield_p2[i][j] == SHOTWATER)
+								rb->lcd_bitmap(battleship_missed,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+									BMPWIDTH_battleship_missed,
+									BMPHEIGHT_battleship_missed);
+							else if (battlefield_p2[i][j] == SHOTSHIP)
+								rb->lcd_bitmap(battleship_shiponedead,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+									BMPWIDTH_battleship_shiponedead,
+									BMPHEIGHT_battleship_shiponedead);
+							else if (battlefield_p2[i][j] == NOSHIPS)
+								rb->lcd_bitmap(battleship_noships,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+									BMPWIDTH_battleship_noships,
+									BMPHEIGHT_battleship_noships);
+						}
+						else if (State == TURN_PLAYER2 ||
+								 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
+						{
+							if (battlefield_p1[i][j] == SHOTWATER)
+								rb->lcd_bitmap(battleship_missed,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
+									BMPWIDTH_battleship_missed,
+									BMPHEIGHT_battleship_missed);
+							else if (battlefield_p1[i][j] == SHOTSHIP)
+								rb->lcd_bitmap(battleship_shiponedead,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
+									BMPWIDTH_battleship_shiponedead,
+									BMPHEIGHT_battleship_shiponedead);
+							else if (battlefield_p1[i][j] == NOSHIPS)
+								rb->lcd_bitmap(battleship_noships,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
+									BMPWIDTH_battleship_noships,
+									BMPHEIGHT_battleship_noships);
+						}
+						else if (State == PLACE_SHIPS_PLAYER1)
+						{
+							if (battlefield_p1[i][j] == SHIP)
+								rb->lcd_bitmap(battleship_shipone,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+									BMPWIDTH_battleship_shipone,
+									BMPHEIGHT_battleship_shipone);
+						}
+						else if (State == PLACE_SHIPS_PLAYER2)
+						{
+							if (battlefield_p2[i][j] == SHIP)
+								rb->lcd_bitmap(battleship_shipone,
+									XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+									YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
+									BMPWIDTH_battleship_shipone,
+									BMPHEIGHT_battleship_shipone);
+						}
+					}
+				
+				/* Ships placing is in progress... */					
+				if (State == PLACE_SHIPS_PLAYER1 ||
+					State == PLACE_SHIPS_PLAYER2)
 				{
-					/* Player's name */
-					if (State == PLACE_SHIPS_PLAYER1 ||
-						State == TURN_PLAYER1 ||
-						State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1 ||
-						State == GAMEOVER_WON_PLAYER1)
+					rb->lcd_bitmap(battleship_placeships,
+						BMPWIDTH_battleship_map,
+						BMPHEIGHT_battleship_player1,
+						BMPWIDTH_battleship_placeships,
+						BMPHEIGHT_battleship_placeships);
+					for (i = 0; i < curlen; i++)
 					{
-						display->bitmap(battleship_player1,
-							BMPWIDTH_battleship_map,
-							0,
-							BMPWIDTH_battleship_player1,
-							BMPHEIGHT_battleship_player1);
+						if (ori == VERT)
+							rb->lcd_bitmap(battleship_shipone_notplaced,
+								XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
+								YOFFSET + (ypos + i) * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
+								BMPWIDTH_battleship_shipone_notplaced,
+								BMPHEIGHT_battleship_shipone_notplaced);
+						else
+							rb->lcd_bitmap(battleship_shipone_notplaced,
+								XOFFSET + (xpos + i) * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
+								YOFFSET + ypos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
+								BMPWIDTH_battleship_shipone_notplaced,
+								BMPHEIGHT_battleship_shipone_notplaced);
 					}
-					else if (State == PLACE_SHIPS_PLAYER2 ||
-							 State == TURN_PLAYER2 ||
-							 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2 ||
-							 State == GAMEOVER_WON_PLAYER2)
-					{
-						display->bitmap(battleship_player2,
-							BMPWIDTH_battleship_map,
-							0,
-							BMPWIDTH_battleship_player2,
-							BMPHEIGHT_battleship_player2);
-					}
-
-					/* Objects on field */
-					for (i = 0; i < FLD_LEN; i++)
-						for (j = 0; j < FLD_LEN; j++)
-						{
-							if (State == TURN_PLAYER1 ||
-								State == SHOW_FIELD_AFTER_TURN_OF_PLAYER1)
-							{
-								if (battlefield_p2[i][j] == SHOTWATER)
-									display->bitmap(battleship_missed,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
-										BMPWIDTH_battleship_missed,
-										BMPHEIGHT_battleship_missed);
-								else if (battlefield_p2[i][j] == SHOTSHIP)
-									display->bitmap(battleship_shiponedead,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
-										BMPWIDTH_battleship_shiponedead,
-										BMPHEIGHT_battleship_shiponedead);
-								else if (battlefield_p2[i][j] == NOSHIPS)
-									display->bitmap(battleship_noships,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
-										BMPWIDTH_battleship_noships,
-										BMPHEIGHT_battleship_noships);
-							}
-							else if (State == TURN_PLAYER2 ||
-									 State == SHOW_FIELD_AFTER_TURN_OF_PLAYER2)
-							{
-								if (battlefield_p1[i][j] == SHOTWATER)
-									display->bitmap(battleship_missed,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_missed) / 2,
-										BMPWIDTH_battleship_missed,
-										BMPHEIGHT_battleship_missed);
-								else if (battlefield_p1[i][j] == SHOTSHIP)
-									display->bitmap(battleship_shiponedead,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shiponedead) / 2,
-										BMPWIDTH_battleship_shiponedead,
-										BMPHEIGHT_battleship_shiponedead);
-								else if (battlefield_p1[i][j] == NOSHIPS)
-									display->bitmap(battleship_noships,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_noships) / 2,
-										BMPWIDTH_battleship_noships,
-										BMPHEIGHT_battleship_noships);
-							}
-							else if (State == PLACE_SHIPS_PLAYER1)
-							{
-								if (battlefield_p1[i][j] == SHIP)
-									display->bitmap(battleship_shipone,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
-										BMPWIDTH_battleship_shipone,
-										BMPHEIGHT_battleship_shipone);
-							}
-							else if (State == PLACE_SHIPS_PLAYER2)
-							{
-								if (battlefield_p2[i][j] == SHIP)
-									display->bitmap(battleship_shipone,
-										XOFFSET + i * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
-										YOFFSET + j * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone) / 2,
-										BMPWIDTH_battleship_shipone,
-										BMPHEIGHT_battleship_shipone);
-							}
-						}
-					
-					/* Ships placing is in progress... */					
-					if (State == PLACE_SHIPS_PLAYER1 ||
-						State == PLACE_SHIPS_PLAYER2)
-					{
-						display->bitmap(battleship_placeships,
-							BMPWIDTH_battleship_map,
-							BMPHEIGHT_battleship_player1,
-							BMPWIDTH_battleship_placeships,
-							BMPHEIGHT_battleship_placeships);
-						for (i = 0; i < curlen; i++)
-						{
-							if (ori == VERT)
-								display->bitmap(battleship_shipone_notplaced,
-									XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
-									YOFFSET + (ypos + i) * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
-									BMPWIDTH_battleship_shipone_notplaced,
-									BMPHEIGHT_battleship_shipone_notplaced);
-							else
-								display->bitmap(battleship_shipone_notplaced,
-									XOFFSET + (xpos + i) * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
-									YOFFSET + ypos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_shipone_notplaced) / 2,
-									BMPWIDTH_battleship_shipone_notplaced,
-									BMPHEIGHT_battleship_shipone_notplaced);
-						}
-					}
-					
-					/* Aim, your turn */
-					if (State == TURN_PLAYER1 ||
-						State == TURN_PLAYER2)
-					{
-						display->bitmap(battleship_aim,
-							XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_aim) / 2,
-							YOFFSET + ypos * SQSIZE + (SQSIZE - BMPHEIGHT_battleship_aim) / 2,
-							BMPWIDTH_battleship_aim,
-							BMPHEIGHT_battleship_aim);
-						display->bitmap(battleship_yourturn,
-							BMPWIDTH_battleship_map,
-							BMPHEIGHT_battleship_player1,
-							BMPWIDTH_battleship_yourturn,
-							BMPHEIGHT_battleship_yourturn);
-					}
-					
-					/* Gameover */
-					if (State == GAMEOVER_WON_PLAYER1 ||
-						State == GAMEOVER_WON_PLAYER2)
-					{
-						display->bitmap(battleship_gameover,
-							xpos,
-							ypos,
-							BMPWIDTH_battleship_gameover,
-							BMPHEIGHT_battleship_gameover);
-					}
-
-					/* Some stats */
-					/* four-deck ships */
-					display->bitmap_part(battleship_numbers_p1, 0,
-						NUMBER_P1_HEIGHT * ships_p1.nS4,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+				}
+				
+				/* Aim, your turn */
+				if (State == TURN_PLAYER1 ||
+					State == TURN_PLAYER2)
+				{
+					rb->lcd_bitmap_transparent(battleship_aim,
+						XOFFSET + xpos * SQSIZE + (SQSIZE - BMPWIDTH_battleship_aim) / 2,
+						YOFFSET + ypos * SQSIZE + (SQSIZE - BMPHEIGHT_battleship_aim) / 2,
+						BMPWIDTH_battleship_aim,
+						BMPHEIGHT_battleship_aim);
+					rb->lcd_bitmap(battleship_yourturn,
 						BMPWIDTH_battleship_map,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-						NUMBER_P1_WIDTH,
-						NUMBER_P1_HEIGHT);
-									
-					/* <Separator 1> */
-
-					display->bitmap(battleship_shipone,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-						BMPWIDTH_battleship_shipone,
-						BMPHEIGHT_battleship_shipone);
-					
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * NUM_OF_D_S4,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1 +
-							BMPWIDTH_battleship_nsep * 1 - 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-										
-					/* <Separator> 2 */
-					
-					display->bitmap_part(battleship_numbers_p2, 0,
-						NUMBER_P2_HEIGHT * ships_p2.nS4,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1 +
-							NUMBER_WIDTH * 1 +
-							BMPWIDTH_battleship_nsep * 2 +
-							BMPWIDTH_battleship_shipone - 5 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-						NUMBER_P2_WIDTH,
-						NUMBER_P2_HEIGHT);
-									
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 +
-							BMPWIDTH_battleship_shipone - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-									
-					/* three-deck ships */
-					display->bitmap_part(battleship_numbers_p1, 0,
-						NUMBER_P1_HEIGHT * ships_p1.nS3,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
-						BMPWIDTH_battleship_map,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
-						NUMBER_P1_WIDTH,
-						NUMBER_P1_HEIGHT);
-									
-					/* <Separator 1> */
-					
-					display->bitmap(battleship_shipone,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
-						BMPWIDTH_battleship_shipone,
-						BMPHEIGHT_battleship_shipone);
-					
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * NUM_OF_D_S3,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1 +
-							BMPWIDTH_battleship_nsep * 1 - 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-									
-					/* <Separator 2> */
-									
-					display->bitmap_part(battleship_numbers_p2, 0,
-						NUMBER_P2_HEIGHT * ships_p2.nS3,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 2 +
-							BMPWIDTH_battleship_shipone - 5 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
-						NUMBER_P2_WIDTH,
-						NUMBER_P2_HEIGHT);
-									
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 +
-							BMPWIDTH_battleship_shipone - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					/* two-deck ships */
-					display->bitmap_part(battleship_numbers_p1, 0,
-						NUMBER_P2_HEIGHT * ships_p1.nS2,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
-						BMPWIDTH_battleship_map,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
-						NUMBER_P1_WIDTH,
-						NUMBER_P1_HEIGHT);
-									
-					/* <Separator 1> */
-					
-					display->bitmap(battleship_shipone,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
-						BMPWIDTH_battleship_shipone,
-						BMPHEIGHT_battleship_shipone);
-					
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * NUM_OF_D_S2,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1 +
-							BMPWIDTH_battleship_nsep * 1 - 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-									
-					/* <Separator 2> */
-
-					display->bitmap_part(battleship_numbers_p2, 0,
-						NUMBER_P2_HEIGHT * ships_p2.nS2,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 2 +
-							BMPWIDTH_battleship_shipone - 5 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
-						NUMBER_P2_WIDTH,
-						NUMBER_P2_HEIGHT);
-									
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 +
-							BMPWIDTH_battleship_shipone - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-									
-					/* one-deck ships */
-					display->bitmap_part(battleship_numbers_p1, 0,
-						NUMBER_P1_HEIGHT * ships_p1.nS1,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
-						BMPWIDTH_battleship_map,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
-						NUMBER_P1_WIDTH,
-						NUMBER_P1_HEIGHT);
-									
-					/* <Separator 1> */
-					
-					display->bitmap(battleship_shipone,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
-						BMPWIDTH_battleship_shipone,
-						BMPHEIGHT_battleship_shipone);
-									
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * NUM_OF_D_S1,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1 +
-							BMPWIDTH_battleship_nsep * 1 - 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-									
-					/* <Separator 2> */
-									
-					display->bitmap_part(battleship_numbers_p2, 0,
-						NUMBER_P2_HEIGHT * ships_p2.nS1,
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 2 +
-							BMPWIDTH_battleship_shipone - 5 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
-						NUMBER_P2_WIDTH,
-						NUMBER_P2_HEIGHT);
-									
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 +
-							BMPWIDTH_battleship_shipone - 4 * 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					/* Shoots counter */
-					display->bitmap_part(battleship_numbers_p1, 0,
-						NUMBER_P1_HEIGHT * (nshots_p1 / 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
-						BMPWIDTH_battleship_map,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
-						NUMBER_P1_WIDTH,
-						NUMBER_P1_HEIGHT);
-									
-					display->bitmap_part(battleship_numbers_p1, 0,
-						NUMBER_P1_HEIGHT * (nshots_p1 % 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 1 - 2,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
-						NUMBER_P1_WIDTH,
-						NUMBER_P1_HEIGHT);
-					
-					/* <Separator> */
-					
-					display->bitmap_part(battleship_numbers_p2, 0,
-						NUMBER_P2_HEIGHT * (nshots_p2 / 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 +
-							BMPWIDTH_battleship_nsep * 1 - 4,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
-						NUMBER_P2_WIDTH,
-						NUMBER_P2_HEIGHT);
-					
-					display->bitmap_part(battleship_numbers_p2, 0,
-						NUMBER_P2_HEIGHT * (nshots_p2 % 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
-						BMPWIDTH_battleship_map + NUMBER_P1_WIDTH * 3 + BMPWIDTH_battleship_nsep * 1 - 6,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
-						NUMBER_P2_WIDTH,
-						NUMBER_P2_HEIGHT);
-									
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_P1_WIDTH * 2 - 4,
-						BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-
-					/* Time */
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * (min / 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map,
-						LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-					
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * (min % 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_WIDTH - 2,
-						LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-					
-					display->bitmap(battleship_nsep,
-						BMPWIDTH_battleship_map +
-							NUMBER_WIDTH * 2 - 4,
-						LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
-						BMPWIDTH_battleship_nsep,
-						BMPHEIGHT_battleship_nsep);
-					
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * (sec / 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_WIDTH * 2 - 4 +
-							BMPWIDTH_battleship_nsep,
-						LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
-									
-					display->bitmap_part(battleship_numbers, 0,
-						NUMBER_HEIGHT * (sec % 10),
-						STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
-						BMPWIDTH_battleship_map +
-							NUMBER_WIDTH * 3 - 6 +
-							BMPWIDTH_battleship_nsep,
-						LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
-						NUMBER_WIDTH,
-						NUMBER_HEIGHT);
+						BMPHEIGHT_battleship_player1,
+						BMPWIDTH_battleship_yourturn,
+						BMPHEIGHT_battleship_yourturn);
+				}
+				
+				/* Gameover */
+				if (State == GAMEOVER_WON_PLAYER1 ||
+					State == GAMEOVER_WON_PLAYER2)
+				{
+					rb->lcd_bitmap(battleship_gameover,
+						xpos,
+						ypos,
+						BMPWIDTH_battleship_gameover,
+						BMPHEIGHT_battleship_gameover);
 				}
 
-				display->update();
+				/* Some stats */
+				/* four-deck ships */
+				/* 1 */
+				rb->lcd_bitmap_part(battleship_numbers_p1, 0,
+					NUMBER_P1_HEIGHT * ships_p1.nS4,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+					BMPWIDTH_battleship_map,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+					NUMBER_P1_WIDTH,
+					NUMBER_P1_HEIGHT);
+				
+				/* 3 */				
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * NUM_OF_D_S4,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1 +
+						BMPWIDTH_battleship_nsep * 1 - 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
+				
+				/* 4 */
+				rb->lcd_bitmap_transparent(battleship_shipone_transparent,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+					BMPWIDTH_battleship_shipone,
+					BMPHEIGHT_battleship_shipone);
+						
+				/* 6 */			
+				rb->lcd_bitmap_part(battleship_numbers_p2, 0,
+					NUMBER_P2_HEIGHT * ships_p2.nS4,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1 +
+						NUMBER_WIDTH * 1 +
+						BMPWIDTH_battleship_nsep * 2 +
+						BMPWIDTH_battleship_shipone - 5 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+					NUMBER_P2_WIDTH,
+					NUMBER_P2_HEIGHT);
+				
+				/* 2 */		
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				/* 5 */
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 +
+						BMPWIDTH_battleship_shipone - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + 3,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+								
+				/* three-deck ships */
+				/* 1 */
+				rb->lcd_bitmap_part(battleship_numbers_p1, 0,
+					NUMBER_P1_HEIGHT * ships_p1.nS3,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+					BMPWIDTH_battleship_map,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
+					NUMBER_P1_WIDTH,
+					NUMBER_P1_HEIGHT);
+
+				/* 3 */
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * NUM_OF_D_S3,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1 +
+						BMPWIDTH_battleship_nsep * 1 - 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
+
+				/* 4 */
+				rb->lcd_bitmap_transparent(battleship_shipone_transparent,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
+					BMPWIDTH_battleship_shipone,
+					BMPHEIGHT_battleship_shipone);
+				
+				/* 6 */
+				rb->lcd_bitmap_part(battleship_numbers_p2, 0,
+					NUMBER_P2_HEIGHT * ships_p2.nS3,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 2 +
+						BMPWIDTH_battleship_shipone - 5 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
+					NUMBER_P2_WIDTH,
+					NUMBER_P2_HEIGHT);
+								
+				/* 2 */
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				/* 5 */
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 +
+						BMPWIDTH_battleship_shipone - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 1 + 3 * 2,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				/* two-deck ships */
+				/* 1 */
+				rb->lcd_bitmap_part(battleship_numbers_p1, 0,
+					NUMBER_P2_HEIGHT * ships_p1.nS2,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+					BMPWIDTH_battleship_map,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
+					NUMBER_P1_WIDTH,
+					NUMBER_P1_HEIGHT);
+								
+				/* 3 */
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * NUM_OF_D_S2,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1 +
+						BMPWIDTH_battleship_nsep * 1 - 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
+				
+				/* 4 */
+				rb->lcd_bitmap_transparent(battleship_shipone_transparent,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
+					BMPWIDTH_battleship_shipone,
+					BMPHEIGHT_battleship_shipone);
+								
+				/* 6 */
+				rb->lcd_bitmap_part(battleship_numbers_p2, 0,
+					NUMBER_P2_HEIGHT * ships_p2.nS2,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 2 +
+						BMPWIDTH_battleship_shipone - 5 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
+					NUMBER_P2_WIDTH,
+					NUMBER_P2_HEIGHT);
+								
+				/* 2 */
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				/* 5 */
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 +
+						BMPWIDTH_battleship_shipone - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 2 + 3 * 3,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+								
+				/* one-deck ships */
+				/* 1 */
+				rb->lcd_bitmap_part(battleship_numbers_p1, 0,
+					NUMBER_P1_HEIGHT * ships_p1.nS1,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+					BMPWIDTH_battleship_map,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
+					NUMBER_P1_WIDTH,
+					NUMBER_P1_HEIGHT);
+
+				/* 3 */
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * NUM_OF_D_S1,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1 +
+						BMPWIDTH_battleship_nsep * 1 - 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);				
+								
+				/* 4 */
+				rb->lcd_bitmap_transparent(battleship_shipone_transparent,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
+					BMPWIDTH_battleship_shipone,
+					BMPHEIGHT_battleship_shipone);
+								
+				/* 6 */
+				rb->lcd_bitmap_part(battleship_numbers_p2, 0,
+					NUMBER_P2_HEIGHT * ships_p2.nS1,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 2 +
+						BMPWIDTH_battleship_shipone - 5 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
+					NUMBER_P2_WIDTH,
+					NUMBER_P2_HEIGHT);
+				
+				/* 2 */			
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				/* 5 */
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 +
+						BMPWIDTH_battleship_shipone - 4 * 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 3 + 3 * 4,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				/* Shoot counter */
+				/* 1 */
+				rb->lcd_bitmap_part(battleship_numbers_p1, 0,
+					NUMBER_P1_HEIGHT * (nshots_p1 / 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+					BMPWIDTH_battleship_map,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
+					NUMBER_P1_WIDTH,
+					NUMBER_P1_HEIGHT);
+					
+				/* 2 */											
+				rb->lcd_bitmap_part(battleship_numbers_p1, 0,
+					NUMBER_P1_HEIGHT * (nshots_p1 % 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p1, BMPHEIGHT_battleship_numbers_p1),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 1 - 2,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
+					NUMBER_P1_WIDTH,
+					NUMBER_P1_HEIGHT);
+				
+				/* 4 */
+				rb->lcd_bitmap_part(battleship_numbers_p2, 0,
+					NUMBER_P2_HEIGHT * (nshots_p2 / 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 +
+						BMPWIDTH_battleship_nsep * 1 - 4,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
+					NUMBER_P2_WIDTH,
+					NUMBER_P2_HEIGHT);
+				
+				/* 5 */
+				rb->lcd_bitmap_part(battleship_numbers_p2, 0,
+					NUMBER_P2_HEIGHT * (nshots_p2 % 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers_p2, BMPHEIGHT_battleship_numbers_p2),
+					BMPWIDTH_battleship_map + NUMBER_P1_WIDTH * 3 + BMPWIDTH_battleship_nsep * 1 - 6,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
+					NUMBER_P2_WIDTH,
+					NUMBER_P2_HEIGHT);
+				
+				/* 3 */			
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_P1_WIDTH * 2 - 4,
+					BMPHEIGHT_battleship_player1 + BMPHEIGHT_battleship_yourturn + NUMBER_P1_HEIGHT * 4 + 3 * 5,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+
+				/* Time */
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * (min / 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map,
+					LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
+				
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * (min % 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_WIDTH - 2,
+					LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
+				
+				rb->lcd_bitmap(battleship_nsep,
+					BMPWIDTH_battleship_map +
+						NUMBER_WIDTH * 2 - 4,
+					LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
+					BMPWIDTH_battleship_nsep,
+					BMPHEIGHT_battleship_nsep);
+				
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * (sec / 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_WIDTH * 2 - 4 +
+						BMPWIDTH_battleship_nsep,
+					LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
+								
+				rb->lcd_bitmap_part(battleship_numbers, 0,
+					NUMBER_HEIGHT * (sec % 10),
+					STRIDE(SCREEN_MAIN, BMPWIDTH_battleship_numbers, BMPHEIGHT_battleship_numbers),
+					BMPWIDTH_battleship_map +
+						NUMBER_WIDTH * 3 - 6 +
+						BMPWIDTH_battleship_nsep,
+					LCD_HEIGHT - NUMBER_HEIGHT - TIME_POSITION_OFFSET,
+					NUMBER_WIDTH,
+					NUMBER_HEIGHT);
 			}
-			
+			/*
+			rb->lcd_bitmap_transparent(brickmania_gameover,
+				0,
+				0,
+				BMPWIDTH_brickmania_gameover,
+				BMPHEIGHT_brickmania_gameover);
+				
+			rb->lcd_bitmap_transparent(battleship_player1_transp,
+				0,
+				0,
+				BMPWIDTH_battleship_player1_transp,
+				BMPHEIGHT_battleship_player1_transp);
+			*/
+			rb->lcd_update();
+
 			need_redraw = false;
 		}
 		
