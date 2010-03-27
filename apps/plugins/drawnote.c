@@ -24,6 +24,7 @@
 
 #ifdef HAVE_LCD_BITMAP
 #include "lib/pluginlib_actions.h"
+#include "lib/pluginlib_touchscreen.c"
 #include "lib/helper.h"
 
 /* This macros must always be included. Should be placed at the top by
@@ -77,83 +78,54 @@ void color_apply(struct Color * color)
 
 int plugin_main(void)
 {
-    int action; /* Key action */
-	bool need_redraw = true; /* Do we need redraw? */
-    int x = LCD_WIDTH / 2, y = LCD_HEIGHT / 2;
+    int action, button; /* Key/touchscreen actions */
+    short x = LCD_WIDTH / 2, y = LCD_HEIGHT / 2, oldx = x, oldy = y;
     struct Color Red = {255, 0, 0};
 
 	//rb->splashf(HZ*3, "%i %i", LCD_WIDTH, LCD_HEIGHT);
 	
     //rb->lcd_set_background(LCD_BLACK);
     rb->lcd_clear_display();
+    rb->lcd_update();
 
     color_apply(&Red);
+
+    rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
 
 	/* Main loop */
     while (true)
     {
-		/* Draw everything */
-		if (need_redraw)
-		{
-			//rb->lcd_clear_display();
+        action = rb->get_action(CONTEXT_STD, HZ);
+        
+        if (action == BUTTON_POWER)
+        {
+            cleanup(NULL);
+            return PLUGIN_OK;
+        }
+        else if (action == ACTION_TOUCHSCREEN)
+        {
+            button = rb->action_get_touchscreen_press(&x, &y);
             
-            rb->lcd_drawpixel(x, y);
-			
-			rb->lcd_update();
-			need_redraw = false;
-		}
-		
+            if (button == BUTTON_TOUCHSCREEN)
+            {
+                //rb->lcd_drawpixel(x, y);
+                //rb->lcd_update();
+                
+                oldx = x;
+                oldy = y;
+            }
+            else if (button == BUTTON_REPEAT)
+            {
+                rb->lcd_drawline(oldx, oldy, x, y);
+                rb->lcd_update();
+                
+                oldx = x;
+                oldy = y;
+            }
+        }
 				
 		rb->sleep(SLEEP_TIME);
 		//rb->yield();
-
-		action = pluginlib_getaction(TIMEOUT_NOBLOCK,
-									 plugin_contexts,
-									 NB_ACTION_CONTEXTS);
-		switch (action)
-		{
-			case PLA_QUIT:
-				cleanup(NULL);
-				return PLUGIN_OK;
-				
-			case PLA_UP:
-                if (y > 0)
-                    y--;
-                need_redraw = true;
-				break;
-				
-			case PLA_DOWN:
-                if (y < LCD_HEIGHT - 1)
-                    y++;
-                need_redraw = true;
-				break;
-			
-			case PLA_RIGHT:
-                if (x < LCD_WIDTH - 1)
-                    x++;
-                need_redraw = true;
-				break;
-			
-			case PLA_LEFT:
-                if (x > 0)
-                    x--;
-                need_redraw = true;
-				break;
-			
-			case PLA_MENU:
-				break;
-			
-			case PLA_FIRE:
-				break;
-				
-			case PLA_START:
-				break;
-				
-			default:
-				if (rb->default_event_handler_ex(action, cleanup, NULL) == SYS_USB_CONNECTED)
-					return PLUGIN_USB_CONNECTED;
-				break;
-		}
     }
 }
 
