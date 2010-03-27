@@ -250,22 +250,21 @@ test_touchscreen.c
 test_viewports.c
 #endif
 
-#if defined(COWON_D2)
+#if defined(COWON_D2) || defined(IPOD_NANO) || defined(IPOD_VIDEO) \
+    ||  defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5)    
 helloworld.c
+helloworld.lua
 dumblines.c
 gef.c
 circle.c
-testkeys.c
 curves.c
 battleship.c
-helloworld.lua
 #endif
 
-#if defined(IPOD_NANO)
-helloworld.c
-dumblines.c
-gef.c
-circle.c
-curves.c
-battleship.c
+#if defined(COWON_D2)
+testkeys.c
+#endif
+
+#ifdef HAVE_TOUCHSCREEN
+drawnote.c
 #endif
