@@ -887,7 +887,8 @@ pitch_notes.128x64x1.bmp
 #endif /* Complex condition for pitch detector */
 
 /* Battleship */
-#if defined(COWON_D2)
+#if defined(COWON_D2) || defined(IPOD_VIDEO) || defined(OLYMPUS_MROBE_500) \
+    || defined(IAUDIO_X5)
 battleship_huy.80x80x16.bmp
 battleship_map.240x240x16.bmp
 battleship_placeships.80x80x16.bmp
@@ -907,24 +908,24 @@ battleship_shiponedead.22x22x16.bmp
 battleship_noships.10x10x16.bmp
 battleship_gameover.80x60x16.bmp
 #elif defined(IPOD_NANO)
+battleship_huy.80x80x16.bmp
 battleship_map.132x132x16.bmp
 battleship_placeships.44x44x16.bmp
 battleship_yourturn.44x44x16.bmp
 battleship_player1.44x11x16.bmp
 battleship_player2.44x11x16.bmp
-battleship_numbers.13x130x16.bmp
-battleship_numbers_p1.13x130x16.bmp
-battleship_numbers_p2.13x130x16.bmp
+battleship_numbers.12x120x16.bmp
+battleship_numbers_p1.12x120x16.bmp
+battleship_numbers_p2.12x120x16.bmp
 battleship_nsep.3x12x16.bmp
 battleship_aim.10x10x16.bmp
 battleship_missed.10x10x16.bmp
 battleship_shipone_notplaced.13x13x16.bmp
 battleship_shipone.13x13x16.bmp
-battleship_shipone_transparent.13x13x16.bmp
+battleship_shipone_transparent.12x12x16.bmp
 battleship_shiponedead.13x13x16.bmp
 battleship_noships.10x10x16.bmp
 battleship_gameover.80x60x16.bmp
 #endif
- 
 
 #endif /* HAVE_LCD_BITMAP */
