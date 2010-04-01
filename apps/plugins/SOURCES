@@ -267,4 +267,5 @@ testkeys.c
 
 #ifdef HAVE_TOUCHSCREEN
 drawnote.c
+balls.c
 #endif
