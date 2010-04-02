@@ -930,8 +930,9 @@ battleship_gameover.80x60x16.bmp
 
 #ifdef HAVE_TOUCHSCREEN
 balls_board.234x234x16.bmp
-balls_background.84x201x16.bmp
 balls_balls.26x182x16.bmp
+balls_background.320x240x16.bmp
+balls_chooser.24x24x16.bmp
 #endif /* HAVE_TOUCHSCREEN */
 
 #endif /* HAVE_LCD_BITMAP */

@@ -36,11 +36,14 @@ PLUGIN_HEADER
 #include "pluginbitmaps/balls_board.h"
 #include "pluginbitmaps/balls_balls.h"
 #include "pluginbitmaps/balls_background.h"
+#include "pluginbitmaps/balls_chooser.h"
 
 /* State of game */
 enum {
+	ADDBALLS,
+	TURN,
 	GAMEOVER
-} State;
+} State = ADDBALLS;
 
 /* Cell type */
 typedef enum {
@@ -58,17 +61,34 @@ typedef enum {
 #define NCELLS 9
 /* Board is always a square, so only one dimention */
 #define BRDLEN BMPWIDTH_balls_board
-#define BRDOFFSET ((LCD_HEIGHT - BRDLEN) / 2)
+
+#define BRDYOFFSET ((LCD_HEIGHT - BRDLEN) / 2)
+
+#define BRDEXTRAXOFFSET 10
+
+#define BRDXOFFSET (BRDYOFFSET + BRDEXTRAXOFFSET)
 /* Length of square in pixels */
 #define CELLSIZE (BMPWIDTH_balls_board / NCELLS)
 
 #define N_BALL_TYPES 7
+
 #define BALLS_W BMPWIDTH_balls_balls
 #define BALLS_H BMPHEIGHT_balls_balls
+
 #define BALLSIZE BALLS_W
+
 #define BALL_OFFSET ((CELLSIZE - BALLSIZE) / 2)
 
+#define N_BALLS_KILL 5
+
+#define N_BALLS_ADD 3
+
+#define getball() (rb->rand() % N_BALL_TYPES + 1)
+
+/* Game board */
 Celltype Board[NCELLS][NCELLS];
+
+Celltype Next[N_BALLS_ADD];
 
 void cleanup(void *parameter)
 {
@@ -84,15 +104,262 @@ void cleanup(void *parameter)
  * Main code 
  */
 
+bool DoKill(void)
+{
+	int i, j;
+	int len;
+	Celltype prev;
+	bool iskilled = false;
+	
+	/* TODO: count the score,
+	 * if different possibilities to kill - kill them all, more points */
+	
+	/* Vertical */
+	for (i = 0; i < NCELLS; i++)
+	{
+		prev = Board[i][0];
+		len = 1;
+		
+		for (j = 1; j < NCELLS; j++)
+		{
+			if (Board[i][j] == prev &&
+				Board[i][j] != FREE)
+			{
+				len++;
+			}
+			else
+			{
+				if (len >= N_BALLS_KILL)
+				{
+					for (; len; len--)
+						Board[i][j - len] = FREE;
+					iskilled = true;
+				}
+				
+				prev = Board[i][j];
+				len = 1;
+			}
+		}
+		
+		if (len >= N_BALLS_KILL)
+		{
+			for (; len; len--)
+				Board[i][j - len] = FREE;
+			iskilled = true;
+		}
+	}
+	/* Horizontal */
+	for (i = 0; i < NCELLS; i++)
+	{
+		prev = Board[0][i];
+		len = 1;
+		
+		for (j = 1; j < NCELLS; j++)
+		{
+			if (Board[j][i] == prev &&
+				Board[j][i] != FREE)
+			{
+				len++;
+			}
+			else
+			{
+				if (len >= N_BALLS_KILL)
+				{
+					for (; len; len--)
+						Board[j - len][i] = FREE;
+					iskilled = true;
+				}
+				
+				prev = Board[j][i];
+				len = 1;
+			}
+		}
+		
+		if (len >= N_BALLS_KILL)
+		{
+			for (; len; len--)
+				Board[j - len][i] = FREE;
+			iskilled = true;
+		}
+	}
+	/* Diagonals(\), upper the main one */
+	for (i = 0; i < NCELLS; i++)
+	{
+		prev = Board[i][0];
+		len = 1;
+		
+		for (j = i + 1; j < NCELLS; j++)
+		{
+			if (Board[j][j - i] == prev &&
+				Board[j][j - i] != FREE)
+			{
+				len++;
+			}
+			else
+			{
+				if (len >= N_BALLS_KILL)
+				{
+					for (; len; len--)
+						Board[j - len][j - i - len] = FREE;
+					iskilled = true;
+				}
+				
+				prev = Board[j][j - i];
+				len = 1;
+			}
+		}
+		
+		if (len >= N_BALLS_KILL)
+		{
+			for (; len; len--)
+				Board[j - len][j - i - len] = FREE;
+			iskilled = true;
+		}
+	}
+	/* Diagonals (\), lower the main one */
+	for (i = 1; i < NCELLS; i++)
+	{
+		prev = Board[0][i];
+		len = 1;
+		
+		for (j = i + 1; j < NCELLS; j++)
+		{
+			if (Board[j - i][j] == prev &&
+				Board[j - i][j] != FREE)
+			{
+				len++;
+			}
+			else
+			{
+				if (len >= N_BALLS_KILL)
+				{
+					for (; len; len--)
+						Board[j - i - len][j - len] = FREE;
+					iskilled = true;
+				}
+				
+				prev = Board[j - i][j];
+				len = 1;
+			}
+		}
+		
+		if (len >= N_BALLS_KILL)
+		{
+			for (; len; len--)
+				Board[j - i - len][j - len] = FREE;
+			iskilled = true;
+		}
+	}
+	/* Diagonals(/), upper the main one */
+	for (i = 0; i < NCELLS; i++)
+	{
+		prev = Board[i][0];
+		len = 1;
+		
+		for (j = i - 1; j >= 0; j--)
+		{
+			if (Board[j][i - j] == prev &&
+				Board[j][i - j] != FREE)
+			{
+				len++;
+			}
+			else
+			{
+				if (len >= N_BALLS_KILL)
+				{
+					for (; len; len--)
+						Board[j + len][i - j - len] = FREE;
+					iskilled = true;
+				}
+				
+				prev = Board[j][i - j];
+				len = 1;
+			}
+		}
+		
+		if (len >= N_BALLS_KILL)
+		{
+			for (; len; len--)
+				Board[j + len][i - j - len] = FREE;
+			iskilled = true;
+		}
+	}
+	/* Diagonals (/), lower the main one */
+	for (i = 1; i < NCELLS; i++)
+	{
+		prev = Board[NCELLS - 1][i];
+		len = 1;
+		
+		for (j = i + 1; j < NCELLS; j++)
+		{
+			if (Board[NCELLS - 1 - (j - i)][j] == prev &&
+				Board[NCELLS - 1 - (j - i)][j] != FREE)
+			{
+				len++;
+			}
+			else
+			{
+				if (len >= N_BALLS_KILL)
+				{
+					for (; len; len--)
+						Board[NCELLS - 1 - (j - i) + len][j - len] = FREE;
+					iskilled = true;
+				}
+				
+				prev = Board[NCELLS - 1 - (j - i)][j];
+				len = 1;
+			}
+		}
+		
+		if (len >= N_BALLS_KILL)
+		{
+			for (; len; len--)
+				Board[NCELLS - 1 - (j - i) + len][j - len] = FREE;
+			iskilled = true;
+		}
+	}
+	
+	return iskilled;
+}
+
+bool IsGameover(void)
+{
+	int i, j;
+	int nfree = NCELLS * NCELLS;
+	
+	/* Count number of free cells */
+	for (i = 0; i < NCELLS; i++)
+		for (j = 0; j < NCELLS; j++)
+			if (Board[i][j] != FREE)
+				nfree--;
+	
+	/* TODO: fix gameover logic a bit */
+	if (nfree < N_BALLS_KILL)
+		return true;
+	
+	return false;	
+}
+
+/* TODO: place all draw-related stuff in separate function */
+/* void draw() */
+
 int plugin_main(void)
 {
     int action, button; /* Key/touchscreen action */
 	int i, j;
 	bool need_redraw = true;
 	short x, y;
-	short xpos, ypos;
+	short xpos = 0, ypos = 0;
+	bool ispicked = false;
+	short oldxpos = 0, oldypos = 0;
+	Celltype curtype = FREE;
 	
+	/*  */
 	rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+	
+	/* Prepare first balls */
+	for (i = 0; i < N_BALLS_ADD; i++)
+		Next[i] = getball();
 	
 	/* Main loop */
     while (true)
@@ -100,14 +367,24 @@ int plugin_main(void)
 		/* Draw everything (if needed) */
 		if (need_redraw)
 		{
-			rb->lcd_clear_display();
+			/* This isn't really needed */
+			//rb->lcd_clear_display();
 			
+			/* Background, draw only one time (not anymore) */
+			rb->lcd_bitmap(balls_background,
+				0,
+				0,
+				BMPWIDTH_balls_background,
+				BMPHEIGHT_balls_background);
+	
+			/* Game board */
 			rb->lcd_bitmap(balls_board,
-				BRDOFFSET,
-				BRDOFFSET,
+				BRDXOFFSET,
+				BRDYOFFSET,
 				BRDLEN,
 				BRDLEN);
-				
+			
+			/* Balls */
 			for (i = 0; i < NCELLS; i++)
 				for (j = 0; j < NCELLS; j++)
 				{
@@ -116,38 +393,175 @@ int plugin_main(void)
 						rb->lcd_bitmap_transparent_part(balls_balls, 0,
 							CELLSIZE * (Board[i][j] - 1),
 							STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
-							BRDOFFSET + (i * CELLSIZE) + BALL_OFFSET,
-							BRDOFFSET + (j * CELLSIZE) + BALL_OFFSET,
+							BRDXOFFSET + (i * CELLSIZE) + BALL_OFFSET,
+							BRDYOFFSET + (j * CELLSIZE) + BALL_OFFSET,
 							BALLSIZE,
 							BALLSIZE);
 					}
 				}
+				
+			/* Next balls */
+			for (i = 0; i < N_BALLS_ADD; i++)
+			{
+				rb->lcd_bitmap_transparent_part(balls_balls, 0,
+							CELLSIZE * (Next[i] - 1),
+							STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
+							LCD_WIDTH - (LCD_WIDTH - (BRDXOFFSET + BRDLEN - BALLSIZE)) / 2,
+							(LCD_HEIGHT - N_BALLS_ADD * BALLSIZE) / 2 + BALLSIZE * i,
+							BALLSIZE,
+							BALLSIZE);
+			}
+			
+			/* Picked ball */
+			if (ispicked)
+			{
+				rb->lcd_bitmap(balls_chooser,
+					BRDXOFFSET + (xpos * CELLSIZE) + ((CELLSIZE - BMPWIDTH_balls_chooser) / 2),
+					BRDYOFFSET + (ypos * CELLSIZE) + ((CELLSIZE - BMPHEIGHT_balls_chooser) / 2),
+					BMPWIDTH_balls_chooser,
+					BMPHEIGHT_balls_chooser);
+				
+				rb->lcd_bitmap_transparent_part(balls_balls, 0,
+							CELLSIZE * (curtype - 1),
+							STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
+							BRDXOFFSET + (xpos * CELLSIZE) + BALL_OFFSET,
+							BRDYOFFSET + (ypos * CELLSIZE) + BALL_OFFSET,
+							BALLSIZE,
+							BALLSIZE);
+			}
 			
 			rb->lcd_update();
 			need_redraw = false;
 		}
 				
-		//rb->sleep(SLEEP_TIME);
-		rb->yield();
+		rb->sleep(SLEEP_TIME);
+		//rb->yield();
+		
+		if (State == ADDBALLS)
+		{
+			int nadded = 0;
+			
+			while (nadded != N_BALLS_ADD)
+			{
+				xpos = rb->rand() % NCELLS;
+				ypos = rb->rand() % NCELLS;
+				if (Board[xpos][ypos] == FREE)
+				{
+					Board[xpos][ypos] = Next[nadded];
+					nadded++;
+					need_redraw = true;
+				}
+			}
+			
+			for (i = 0; i < N_BALLS_ADD; i++)
+				Next[i] = getball();
+				
+			DoKill();
+			
+			if (IsGameover())
+				State = GAMEOVER;
+			else
+				State = TURN;
+		}
 		
 		action = rb->get_action(CONTEXT_STD, TIMEOUT_NOBLOCK);
 		if (action == ACTION_TOUCHSCREEN)
         {
             button = rb->action_get_touchscreen_press(&x, &y);
             
+            if (State == TURN)
+            {
+				xpos = (x - BRDXOFFSET) / CELLSIZE;
+				ypos = (y - BRDYOFFSET) / CELLSIZE;
+
+				if (button == BUTTON_TOUCHSCREEN)
+				{
+					if (xpos >= 0 && xpos < NCELLS &&
+						ypos >= 0 && ypos < NCELLS &&
+						Board[xpos][ypos] != FREE)
+					{
+						ispicked = true;
+						oldxpos = xpos;
+						oldypos = ypos;
+						curtype = Board[xpos][ypos];
+						Board[xpos][ypos] = FREE;
+					}
+				}
+				else if (button == BUTTON_REL)
+				{
+					Board[oldxpos][oldypos] = curtype;
+					ispicked = false;
+				}
+				else if (button == (BUTTON_REPEAT | BUTTON_REL))
+				{
+					if (ispicked)
+					{
+						if (xpos >= 0 && xpos < NCELLS &&
+							ypos >= 0 && ypos < NCELLS &&
+							Board[xpos][ypos] == FREE)
+						{
+							Board[xpos][ypos] = curtype;
+							
+							if (oldxpos != xpos ||
+								oldypos != ypos)
+							{
+								if (!DoKill())
+									State = ADDBALLS;
+							}
+						}
+						else
+						{
+							Board[oldxpos][oldypos] = curtype;
+						}
+						
+						ispicked = false;
+						need_redraw = true;
+					}				
+				}
+				else if (button == BUTTON_REPEAT)
+				{
+					if (ispicked)
+					{
+						if (xpos >= 0 && xpos < NCELLS &&
+							ypos >= 0 && ypos < NCELLS &&
+							Board[xpos][ypos] == FREE)
+						{
+							need_redraw = true;
+						}
+					}
+				}
+				/*else if (button == BUTTON_REPEAT)
+				{
+					xpos = (x - BRDXOFFSET) / CELLSIZE;
+					ypos = (y - BRDYOFFSET) / CELLSIZE;
+					
+					if (xpos >= 0 && xpos < NCELLS &&
+						ypos >= 0 && ypos < NCELLS)
+					{
+						Board[xpos][ypos] = getball();
+						
+						need_redraw = true;
+						DoKill();
+					}
+				}*/
+			}
+            
+            #if 0
             if (button == BUTTON_REPEAT/*BUTTON_TOUCHSCREEN*/)
             {
-				xpos = (x - BRDOFFSET) / CELLSIZE;
-				ypos = (y - BRDOFFSET) / CELLSIZE;
+				xpos = (x - BRDXOFFSET) / CELLSIZE;
+				ypos = (y - BRDYOFFSET) / CELLSIZE;
 				
 				if (xpos >= 0 && xpos < NCELLS &&
 					ypos >= 0 && ypos < NCELLS)
 				{
-					Board[xpos][ypos] = rb->rand() % N_BALL_TYPES + 1;
+					Board[xpos][ypos] = getball();
 					
 					need_redraw = true;
+					DoKill();
 				}
             }
+            #endif
             
         }
         else if (action == BUTTON_POWER)
