@@ -38,6 +38,34 @@ PLUGIN_HEADER
 #include "pluginbitmaps/balls_background.h"
 #include "pluginbitmaps/balls_chooser.h"
 
+/* Board length in cells */
+#define NCELLS 9
+/* Same in pixels. Board always is a square, only one dimention then */
+#define BRDLEN BMPWIDTH_balls_board
+
+#define BRDYOFFSET ((LCD_HEIGHT - BRDLEN) / 2)
+
+#define BRDEXTRAXOFFSET 10
+
+#define BRDXOFFSET (BRDYOFFSET + BRDEXTRAXOFFSET)
+/* Length of cell in pixels */
+#define CELLSIZE (BMPWIDTH_balls_board / NCELLS)
+
+#define N_BALL_TYPES 7
+
+#define BALLS_W BMPWIDTH_balls_balls
+#define BALLS_H BMPHEIGHT_balls_balls
+
+#define BALLSIZE BALLS_W
+
+#define BALL_OFFSET ((CELLSIZE - BALLSIZE) / 2)
+
+#define N_BALLS_KILL 5
+
+#define N_BALLS_ADD 3
+
+#define getball() (rb->rand() % N_BALL_TYPES + 1)
+
 /* State of game */
 enum {
 	ADDBALLS,
@@ -57,38 +85,12 @@ typedef enum {
 	T7 = 7
 } Celltype;
 
-/* Number of cells on the board */
-#define NCELLS 9
-/* Board is always a square, so only one dimention */
-#define BRDLEN BMPWIDTH_balls_board
-
-#define BRDYOFFSET ((LCD_HEIGHT - BRDLEN) / 2)
-
-#define BRDEXTRAXOFFSET 10
-
-#define BRDXOFFSET (BRDYOFFSET + BRDEXTRAXOFFSET)
-/* Length of square in pixels */
-#define CELLSIZE (BMPWIDTH_balls_board / NCELLS)
-
-#define N_BALL_TYPES 7
-
-#define BALLS_W BMPWIDTH_balls_balls
-#define BALLS_H BMPHEIGHT_balls_balls
-
-#define BALLSIZE BALLS_W
-
-#define BALL_OFFSET ((CELLSIZE - BALLSIZE) / 2)
-
-#define N_BALLS_KILL 5
-
-#define N_BALLS_ADD 3
-
-#define getball() (rb->rand() % N_BALL_TYPES + 1)
-
 /* Game board */
 Celltype Board[NCELLS][NCELLS];
-
+/* Next balls */
 Celltype Next[N_BALLS_ADD];
+/* Player's score */
+int Score;
 
 void cleanup(void *parameter)
 {
@@ -104,12 +106,14 @@ void cleanup(void *parameter)
  * Main code 
  */
 
+/* Does some magic */
 bool DoKill(void)
 {
 	int i, j;
+	bool Kill[NCELLS][NCELLS] = {{false}, {false}};
 	int len;
 	Celltype prev;
-	bool iskilled = false;
+	int newscore = 0;
 	
 	/* TODO: count the score,
 	 * if different possibilities to kill - kill them all, more points */
@@ -122,19 +126,13 @@ bool DoKill(void)
 		
 		for (j = 1; j < NCELLS; j++)
 		{
-			if (Board[i][j] == prev &&
-				Board[i][j] != FREE)
-			{
+			if (Board[i][j] == prev && Board[i][j] != FREE)
 				len++;
-			}
 			else
 			{
 				if (len >= N_BALLS_KILL)
-				{
 					for (; len; len--)
-						Board[i][j - len] = FREE;
-					iskilled = true;
-				}
+						Kill[i][j - len] = true;
 				
 				prev = Board[i][j];
 				len = 1;
@@ -142,11 +140,8 @@ bool DoKill(void)
 		}
 		
 		if (len >= N_BALLS_KILL)
-		{
 			for (; len; len--)
-				Board[i][j - len] = FREE;
-			iskilled = true;
-		}
+				Kill[i][j - len] = true;
 	}
 	/* Horizontal */
 	for (i = 0; i < NCELLS; i++)
@@ -156,19 +151,13 @@ bool DoKill(void)
 		
 		for (j = 1; j < NCELLS; j++)
 		{
-			if (Board[j][i] == prev &&
-				Board[j][i] != FREE)
-			{
+			if (Board[j][i] == prev && Board[j][i] != FREE)
 				len++;
-			}
 			else
 			{
 				if (len >= N_BALLS_KILL)
-				{
 					for (; len; len--)
-						Board[j - len][i] = FREE;
-					iskilled = true;
-				}
+						Kill[j - len][i] = true;
 				
 				prev = Board[j][i];
 				len = 1;
@@ -176,11 +165,8 @@ bool DoKill(void)
 		}
 		
 		if (len >= N_BALLS_KILL)
-		{
 			for (; len; len--)
-				Board[j - len][i] = FREE;
-			iskilled = true;
-		}
+				Kill[j - len][i] = true;
 	}
 	/* Diagonals(\), upper the main one */
 	for (i = 0; i < NCELLS; i++)
@@ -190,19 +176,13 @@ bool DoKill(void)
 		
 		for (j = i + 1; j < NCELLS; j++)
 		{
-			if (Board[j][j - i] == prev &&
-				Board[j][j - i] != FREE)
-			{
+			if (Board[j][j - i] == prev && Board[j][j - i] != FREE)
 				len++;
-			}
 			else
 			{
 				if (len >= N_BALLS_KILL)
-				{
 					for (; len; len--)
-						Board[j - len][j - i - len] = FREE;
-					iskilled = true;
-				}
+						Kill[j - len][j - i - len] = true;
 				
 				prev = Board[j][j - i];
 				len = 1;
@@ -210,11 +190,8 @@ bool DoKill(void)
 		}
 		
 		if (len >= N_BALLS_KILL)
-		{
 			for (; len; len--)
-				Board[j - len][j - i - len] = FREE;
-			iskilled = true;
-		}
+				Kill[j - len][j - i - len] = true;
 	}
 	/* Diagonals (\), lower the main one */
 	for (i = 1; i < NCELLS; i++)
@@ -224,19 +201,13 @@ bool DoKill(void)
 		
 		for (j = i + 1; j < NCELLS; j++)
 		{
-			if (Board[j - i][j] == prev &&
-				Board[j - i][j] != FREE)
-			{
+			if (Board[j - i][j] == prev && Board[j - i][j] != FREE)
 				len++;
-			}
 			else
 			{
 				if (len >= N_BALLS_KILL)
-				{
 					for (; len; len--)
-						Board[j - i - len][j - len] = FREE;
-					iskilled = true;
-				}
+						Kill[j - i - len][j - len] = true;
 				
 				prev = Board[j - i][j];
 				len = 1;
@@ -244,11 +215,8 @@ bool DoKill(void)
 		}
 		
 		if (len >= N_BALLS_KILL)
-		{
 			for (; len; len--)
-				Board[j - i - len][j - len] = FREE;
-			iskilled = true;
-		}
+				Kill[j - i - len][j - len] = true;
 	}
 	/* Diagonals(/), upper the main one */
 	for (i = 0; i < NCELLS; i++)
@@ -258,19 +226,13 @@ bool DoKill(void)
 		
 		for (j = i - 1; j >= 0; j--)
 		{
-			if (Board[j][i - j] == prev &&
-				Board[j][i - j] != FREE)
-			{
+			if (Board[j][i - j] == prev && Board[j][i - j] != FREE)
 				len++;
-			}
 			else
 			{
 				if (len >= N_BALLS_KILL)
-				{
 					for (; len; len--)
-						Board[j + len][i - j - len] = FREE;
-					iskilled = true;
-				}
+						Kill[j + len][i - j - len] = true;
 				
 				prev = Board[j][i - j];
 				len = 1;
@@ -278,11 +240,8 @@ bool DoKill(void)
 		}
 		
 		if (len >= N_BALLS_KILL)
-		{
 			for (; len; len--)
-				Board[j + len][i - j - len] = FREE;
-			iskilled = true;
-		}
+				Kill[j + len][i - j - len] = true;
 	}
 	/* Diagonals (/), lower the main one */
 	for (i = 1; i < NCELLS; i++)
@@ -292,19 +251,13 @@ bool DoKill(void)
 		
 		for (j = i + 1; j < NCELLS; j++)
 		{
-			if (Board[NCELLS - 1 - (j - i)][j] == prev &&
-				Board[NCELLS - 1 - (j - i)][j] != FREE)
-			{
+			if (Board[NCELLS - 1 - (j - i)][j] == prev && Board[NCELLS - 1 - (j - i)][j] != FREE)
 				len++;
-			}
 			else
 			{
 				if (len >= N_BALLS_KILL)
-				{
 					for (; len; len--)
-						Board[NCELLS - 1 - (j - i) + len][j - len] = FREE;
-					iskilled = true;
-				}
+						Kill[NCELLS - 1 - (j - i) + len][j - len] = true;
 				
 				prev = Board[NCELLS - 1 - (j - i)][j];
 				len = 1;
@@ -312,17 +265,28 @@ bool DoKill(void)
 		}
 		
 		if (len >= N_BALLS_KILL)
-		{
 			for (; len; len--)
-				Board[NCELLS - 1 - (j - i) + len][j - len] = FREE;
-			iskilled = true;
-		}
+				Kill[NCELLS - 1 - (j - i) + len][j - len] = true;
 	}
 	
-	return iskilled;
+	for (i = 0; i < NCELLS; i++)
+		for (j = 0; j < NCELLS; j++)
+			if (Kill[i][j])
+			{
+				Board[i][j] = FREE;
+				/* TODO: count score in proper way */
+				newscore += 5;
+			}
+			
+	Score += newscore;
+	
+	if (newscore)
+		return true;
+	return false;
 }
 
-bool IsGameover(void)
+/* Returns number of free cells on the board */
+int FreeCells(void)
 {
 	int i, j;
 	int nfree = NCELLS * NCELLS;
@@ -332,12 +296,8 @@ bool IsGameover(void)
 		for (j = 0; j < NCELLS; j++)
 			if (Board[i][j] != FREE)
 				nfree--;
-	
-	/* TODO: fix gameover logic a bit */
-	if (nfree < N_BALLS_KILL)
-		return true;
-	
-	return false;	
+		
+	return nfree;	
 }
 
 /* TODO: place all draw-related stuff in separate function */
@@ -354,7 +314,7 @@ int plugin_main(void)
 	short oldxpos = 0, oldypos = 0;
 	Celltype curtype = FREE;
 	
-	/*  */
+	/* Set the touchscreen to pointer mode */
 	rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
 	
 	/* Prepare first balls */
@@ -367,10 +327,10 @@ int plugin_main(void)
 		/* Draw everything (if needed) */
 		if (need_redraw)
 		{
-			/* This isn't really needed */
+			/* This isn't really needed (we already have background image), huh? */
 			//rb->lcd_clear_display();
 			
-			/* Background, draw only one time (not anymore) */
+			/* Background image */
 			rb->lcd_bitmap(balls_background,
 				0,
 				0,
@@ -387,7 +347,6 @@ int plugin_main(void)
 			/* Balls */
 			for (i = 0; i < NCELLS; i++)
 				for (j = 0; j < NCELLS; j++)
-				{
 					if (Board[i][j] != FREE)
 					{
 						rb->lcd_bitmap_transparent_part(balls_balls, 0,
@@ -398,7 +357,6 @@ int plugin_main(void)
 							BALLSIZE,
 							BALLSIZE);
 					}
-				}
 				
 			/* Next balls */
 			for (i = 0; i < N_BALLS_ADD; i++)
@@ -439,29 +397,30 @@ int plugin_main(void)
 		
 		if (State == ADDBALLS)
 		{
-			int nadded = 0;
+			int nfree, nadd, nadded = 0;
 			
-			while (nadded != N_BALLS_ADD)
+			if ((nfree = FreeCells()) < N_BALLS_ADD)
+				nadd = nfree; 
+			else
+				nadd = N_BALLS_ADD;
+
+			while (nadded != nadd)
 			{
 				xpos = rb->rand() % NCELLS;
 				ypos = rb->rand() % NCELLS;
 				if (Board[xpos][ypos] == FREE)
-				{
-					Board[xpos][ypos] = Next[nadded];
-					nadded++;
-					need_redraw = true;
-				}
+					Board[xpos][ypos] = Next[nadded++];
 			}
 			
 			for (i = 0; i < N_BALLS_ADD; i++)
 				Next[i] = getball();
-				
-			DoKill();
 			
-			if (IsGameover())
+			if (!DoKill() && nadd < N_BALLS_ADD)
 				State = GAMEOVER;
 			else
 				State = TURN;
+			
+			need_redraw = true;
 		}
 		
 		action = rb->get_action(CONTEXT_STD, TIMEOUT_NOBLOCK);
@@ -476,8 +435,7 @@ int plugin_main(void)
 
 				if (button == BUTTON_TOUCHSCREEN)
 				{
-					if (xpos >= 0 && xpos < NCELLS &&
-						ypos >= 0 && ypos < NCELLS &&
+					if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
 						Board[xpos][ypos] != FREE)
 					{
 						ispicked = true;
@@ -485,6 +443,17 @@ int plugin_main(void)
 						oldypos = ypos;
 						curtype = Board[xpos][ypos];
 						Board[xpos][ypos] = FREE;
+					}
+				}
+				else if (button == BUTTON_REPEAT)
+				{
+					if (ispicked)
+					{
+						if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
+							Board[xpos][ypos] == FREE)
+						{
+							need_redraw = true;
+						}
 					}
 				}
 				else if (button == BUTTON_REL)
@@ -496,76 +465,28 @@ int plugin_main(void)
 				{
 					if (ispicked)
 					{
-						if (xpos >= 0 && xpos < NCELLS &&
-							ypos >= 0 && ypos < NCELLS &&
+						if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
 							Board[xpos][ypos] == FREE)
 						{
 							Board[xpos][ypos] = curtype;
 							
-							if (oldxpos != xpos ||
-								oldypos != ypos)
-							{
+							if (oldxpos != xpos || oldypos != ypos)
 								if (!DoKill())
 									State = ADDBALLS;
-							}
 						}
 						else
-						{
 							Board[oldxpos][oldypos] = curtype;
-						}
-						
+					
 						ispicked = false;
 						need_redraw = true;
 					}				
 				}
-				else if (button == BUTTON_REPEAT)
-				{
-					if (ispicked)
-					{
-						if (xpos >= 0 && xpos < NCELLS &&
-							ypos >= 0 && ypos < NCELLS &&
-							Board[xpos][ypos] == FREE)
-						{
-							need_redraw = true;
-						}
-					}
-				}
-				/*else if (button == BUTTON_REPEAT)
-				{
-					xpos = (x - BRDXOFFSET) / CELLSIZE;
-					ypos = (y - BRDYOFFSET) / CELLSIZE;
-					
-					if (xpos >= 0 && xpos < NCELLS &&
-						ypos >= 0 && ypos < NCELLS)
-					{
-						Board[xpos][ypos] = getball();
-						
-						need_redraw = true;
-						DoKill();
-					}
-				}*/
-			}
-            
-            #if 0
-            if (button == BUTTON_REPEAT/*BUTTON_TOUCHSCREEN*/)
-            {
-				xpos = (x - BRDXOFFSET) / CELLSIZE;
-				ypos = (y - BRDYOFFSET) / CELLSIZE;
-				
-				if (xpos >= 0 && xpos < NCELLS &&
-					ypos >= 0 && ypos < NCELLS)
-				{
-					Board[xpos][ypos] = getball();
-					
-					need_redraw = true;
-					DoKill();
-				}
-            }
-            #endif
-            
+			}            
         }
         else if (action == BUTTON_POWER)
         {
+			rb->splashf(HZ*2, "Score: %i", Score);
+			
             cleanup(NULL);
             return PLUGIN_OK;
         }
