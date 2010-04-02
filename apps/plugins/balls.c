@@ -300,6 +300,48 @@ int FreeCells(void)
 	return nfree;	
 }
 
+/* Checks if there is a path from cell (x1, y1) to cell (x2, y2).
+ * The algo is really really stupid, maybe we should use a smarter one, like A*.
+ * But who cares? Not me. This is fast enough. */
+bool IsWalkable(short x1, short y1, short x2, short y2)
+{
+	int i, j;
+	bool Walk[NCELLS][NCELLS] = {{false}, {false}};
+	bool isanynew;
+	
+	Walk[x1][y1] = true;
+	
+	while (1)
+	{
+		isanynew = false;
+		
+		for (i = 0; i < NCELLS; i++)
+			for (j = 0; j < NCELLS; j++)
+			{
+				if (Walk[i][j])
+				{
+					if (i == x2 && j == y2)
+						return true;
+					
+					if (i < NCELLS - 1 && !Walk[i + 1][j] && Board[i + 1][j] == FREE)
+						Walk[i + 1][j] = true, isanynew = true;
+						
+					if (i > 0 && !Walk[i - 1][j] && Board[i - 1][j] == FREE)
+						Walk[i - 1][j] = true, isanynew = true;
+						
+					if (j < NCELLS - 1 && !Walk[i][j + 1] && Board[i][j + 1] == FREE)
+						Walk[i][j + 1] = true, isanynew = true;
+						
+					if (j > 0 && !Walk[i][j - 1] && Board[i][j - 1] == FREE)
+						Walk[i][j - 1] = true, isanynew = true;
+				}
+			}
+		
+		if (!isanynew)
+			return false;
+	}
+}
+
 /* TODO: place all draw-related stuff in separate function */
 /* void draw() */
 
@@ -450,7 +492,7 @@ int plugin_main(void)
 					if (ispicked)
 					{
 						if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
-							Board[xpos][ypos] == FREE)
+							Board[xpos][ypos] == FREE && IsWalkable(oldxpos, oldypos, xpos, ypos))
 						{
 							need_redraw = true;
 						}
@@ -466,7 +508,7 @@ int plugin_main(void)
 					if (ispicked)
 					{
 						if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
-							Board[xpos][ypos] == FREE)
+							Board[xpos][ypos] == FREE && IsWalkable(oldxpos, oldypos, xpos, ypos))
 						{
 							Board[xpos][ypos] = curtype;
 							
