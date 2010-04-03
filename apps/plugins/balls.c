@@ -378,7 +378,7 @@ int plugin_main(void)
 	short x, y;
 	short xpos = 0, ypos = 0;
 	bool ispicked = false;
-	bool iscached;
+	bool iscached = false;
 	short oldxpos = 0, oldypos = 0;
 	Celltype curtype = CELL_FREE;
 	
@@ -528,6 +528,19 @@ int plugin_main(void)
 				{
 					if (ispicked)
 					{
+						/* Cache benchmark */
+						/*unsigned long tick;
+						
+						tick = *rb->current_tick;
+						for (i = 0; i < 5000; i++)
+							IsWalkable(xpos, ypos, oldxpos, oldypos, true);
+						rb->splashf(HZ*2, "with cache: %lu", (unsigned long)((*rb->current_tick - tick) / (double)HZ * 1000));
+						
+						tick = *rb->current_tick;
+						for (i = 0; i < 5000; i++)
+							IsWalkable(xpos, ypos, oldxpos, oldypos, false);
+						rb->splashf(HZ*2, "without cache: %lu", (unsigned long)((*rb->current_tick - tick) / (double)HZ * 1000));
+						*/
 						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos, iscached))
 						{
 							Board[xpos][ypos] = curtype;
