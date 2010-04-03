@@ -64,7 +64,14 @@ PLUGIN_HEADER
 
 #define N_BALLS_ADD 3
 
-#define getball() (rb->rand() % N_BALL_TYPES + 1)
+#define GETBALL() (rb->rand() % N_BALL_TYPES + 1)
+#define ONBOARD(x, y)  ((x) >= 0 && (x) < NCELLS && \
+						(y) >= 0 && (y) < NCELLS)
+#define FREE(x, y) (Board[(x)][(y)] == CELL_FREE)
+#define BUSY(x, y) (Board[(x)][(y)] != CELL_FREE)
+#define CORRECTMOVE(x, y, oldx, oldy)  (ONBOARD((x), (y)) && \
+										FREE((x), (y)) && \
+										IsWalkable((oldx), (oldy), (x), (y)))
 
 /* State of game */
 enum {
@@ -75,14 +82,14 @@ enum {
 
 /* Cell type */
 typedef enum {
-	FREE = 0,
-	T1 = 1,
-	T2 = 2,
-	T3 = 3,
-	T4 = 4,
-	T5 = 5,
-	T6 = 6,
-	T7 = 7
+	CELL_FREE = 0,
+	CELL_T1 = 1,
+	CELL_T2 = 2,
+	CELL_T3 = 3,
+	CELL_T4 = 4,
+	CELL_T5 = 5,
+	CELL_T6 = 6,
+	CELL_T7 = 7
 } Celltype;
 
 /* Game board */
@@ -126,7 +133,7 @@ bool DoKill(void)
 		
 		for (j = 1; j < NCELLS; j++)
 		{
-			if (Board[i][j] == prev && Board[i][j] != FREE)
+			if (Board[i][j] == prev && BUSY(i, j))
 				len++;
 			else
 			{
@@ -151,7 +158,7 @@ bool DoKill(void)
 		
 		for (j = 1; j < NCELLS; j++)
 		{
-			if (Board[j][i] == prev && Board[j][i] != FREE)
+			if (Board[j][i] == prev && BUSY(j, i))
 				len++;
 			else
 			{
@@ -176,7 +183,7 @@ bool DoKill(void)
 		
 		for (j = i + 1; j < NCELLS; j++)
 		{
-			if (Board[j][j - i] == prev && Board[j][j - i] != FREE)
+			if (Board[j][j - i] == prev && BUSY(j, j - i))
 				len++;
 			else
 			{
@@ -201,7 +208,7 @@ bool DoKill(void)
 		
 		for (j = i + 1; j < NCELLS; j++)
 		{
-			if (Board[j - i][j] == prev && Board[j - i][j] != FREE)
+			if (Board[j - i][j] == prev && BUSY(j - i, j))
 				len++;
 			else
 			{
@@ -226,7 +233,7 @@ bool DoKill(void)
 		
 		for (j = i - 1; j >= 0; j--)
 		{
-			if (Board[j][i - j] == prev && Board[j][i - j] != FREE)
+			if (Board[j][i - j] == prev && BUSY(j, i - j))
 				len++;
 			else
 			{
@@ -251,7 +258,7 @@ bool DoKill(void)
 		
 		for (j = i + 1; j < NCELLS; j++)
 		{
-			if (Board[NCELLS - 1 - (j - i)][j] == prev && Board[NCELLS - 1 - (j - i)][j] != FREE)
+			if (Board[NCELLS - 1 - (j - i)][j] == prev && BUSY(NCELLS - 1 - (j - i), j))
 				len++;
 			else
 			{
@@ -273,7 +280,7 @@ bool DoKill(void)
 		for (j = 0; j < NCELLS; j++)
 			if (Kill[i][j])
 			{
-				Board[i][j] = FREE;
+				Board[i][j] = CELL_FREE;
 				/* TODO: count score in proper way */
 				newscore += 5;
 			}
@@ -285,19 +292,18 @@ bool DoKill(void)
 	return false;
 }
 
-/* Returns number of free cells on the board */
+/* Counts number of free cells on the board */
 int FreeCellsNum(void)
 {
 	int i, j;
 	int nfree = NCELLS * NCELLS;
-	
-	/* Count number of free cells */
+
 	for (i = 0; i < NCELLS; i++)
 		for (j = 0; j < NCELLS; j++)
-			if (Board[i][j] != FREE)
+			if (BUSY(i, j))
 				nfree--;
-		
-	return nfree;	
+
+	return nfree;
 }
 
 /* Checks if there is a path from cell (x1, y1) to cell (x2, y2).
@@ -323,16 +329,16 @@ bool IsWalkable(short x1, short y1, short x2, short y2)
 					if (i == x2 && j == y2)
 						return true;
 					
-					if (i < NCELLS - 1 && !Walk[i + 1][j] && Board[i + 1][j] == FREE)
+					if (i < NCELLS - 1 && !Walk[i + 1][j] && FREE(i + 1, j))
 						Walk[i + 1][j] = true, isanynew = true;
 						
-					if (i > 0 && !Walk[i - 1][j] && Board[i - 1][j] == FREE)
+					if (i > 0 && !Walk[i - 1][j] && FREE(i - 1, j))
 						Walk[i - 1][j] = true, isanynew = true;
 						
-					if (j < NCELLS - 1 && !Walk[i][j + 1] && Board[i][j + 1] == FREE)
+					if (j < NCELLS - 1 && !Walk[i][j + 1] && FREE(i, j + 1))
 						Walk[i][j + 1] = true, isanynew = true;
 						
-					if (j > 0 && !Walk[i][j - 1] && Board[i][j - 1] == FREE)
+					if (j > 0 && !Walk[i][j - 1] && FREE(i, j - 1))
 						Walk[i][j - 1] = true, isanynew = true;
 				}
 			}
@@ -354,14 +360,14 @@ int plugin_main(void)
 	short xpos = 0, ypos = 0;
 	bool ispicked = false;
 	short oldxpos = 0, oldypos = 0;
-	Celltype curtype = FREE;
+	Celltype curtype = CELL_FREE;
 	
 	/* Set the touchscreen to pointer mode */
 	rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
 	
 	/* Prepare first balls */
 	for (i = 0; i < N_BALLS_ADD; i++)
-		Next[i] = getball();
+		Next[i] = GETBALL();
 	
 	/* Main loop */
     while (true)
@@ -389,7 +395,7 @@ int plugin_main(void)
 			/* Balls */
 			for (i = 0; i < NCELLS; i++)
 				for (j = 0; j < NCELLS; j++)
-					if (Board[i][j] != FREE)
+					if (BUSY(i, j))
 					{
 						rb->lcd_bitmap_transparent_part(balls_balls, 0,
 							CELLSIZE * (Board[i][j] - 1),
@@ -448,12 +454,12 @@ int plugin_main(void)
 			{
 				xpos = rb->rand() % NCELLS;
 				ypos = rb->rand() % NCELLS;
-				if (Board[xpos][ypos] == FREE)
+				if (FREE(xpos, ypos))
 					Board[xpos][ypos] = Next[nadded++];
 			}
 			
 			for (i = 0; i < N_BALLS_ADD; i++)
-				Next[i] = getball();
+				Next[i] = GETBALL();
 			
 			if (!DoKill() && nadd < N_BALLS_ADD)
 				State = GAMEOVER;
@@ -475,26 +481,20 @@ int plugin_main(void)
 
 				if (button == BUTTON_TOUCHSCREEN)
 				{
-					if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
-						Board[xpos][ypos] != FREE)
+					if (ONBOARD(xpos, ypos) && BUSY(xpos, ypos))
 					{
 						ispicked = true;
 						oldxpos = xpos;
 						oldypos = ypos;
 						curtype = Board[xpos][ypos];
-						Board[xpos][ypos] = FREE;
+						Board[xpos][ypos] = CELL_FREE;
 					}
 				}
 				else if (button == BUTTON_REPEAT)
 				{
 					if (ispicked)
-					{
-						if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
-							Board[xpos][ypos] == FREE && IsWalkable(oldxpos, oldypos, xpos, ypos))
-						{
+						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos))
 							need_redraw = true;
-						}
-					}
 				}
 				else if (button == BUTTON_REL)
 				{
@@ -505,8 +505,7 @@ int plugin_main(void)
 				{
 					if (ispicked)
 					{
-						if (xpos >= 0 && xpos < NCELLS && ypos >= 0 && ypos < NCELLS &&
-							Board[xpos][ypos] == FREE && IsWalkable(oldxpos, oldypos, xpos, ypos))
+						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos))
 						{
 							Board[xpos][ypos] = curtype;
 							
