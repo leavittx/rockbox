@@ -69,9 +69,9 @@ PLUGIN_HEADER
 						(y) >= 0 && (y) < NCELLS)
 #define FREE(x, y) (Board[(x)][(y)] == CELL_FREE)
 #define BUSY(x, y) (Board[(x)][(y)] != CELL_FREE)
-#define CORRECTMOVE(x, y, oldx, oldy)  (ONBOARD((x), (y)) && \
+#define CORRECTMOVE(x, y, oldx, oldy, iscached)  (ONBOARD((x), (y)) && \
 										FREE((x), (y)) && \
-										IsWalkable((oldx), (oldy), (x), (y)))
+										IsWalkable((oldx), (oldy), (x), (y), (iscached)))
 
 /* State of game */
 enum {
@@ -122,9 +122,6 @@ bool DoKill(void)
 	Celltype prev;
 	int newscore = 0;
 	
-	/* TODO: count the score,
-	 * if different possibilities to kill - kill them all, more points */
-	
 	/* Vertical */
 	for (i = 0; i < NCELLS; i++)
 	{
@@ -150,6 +147,7 @@ bool DoKill(void)
 			for (; len; len--)
 				Kill[i][j - len] = true;
 	}
+	
 	/* Horizontal */
 	for (i = 0; i < NCELLS; i++)
 	{
@@ -175,6 +173,7 @@ bool DoKill(void)
 			for (; len; len--)
 				Kill[j - len][i] = true;
 	}
+	
 	/* Diagonals(\), upper the main one */
 	for (i = 0; i < NCELLS; i++)
 	{
@@ -200,6 +199,7 @@ bool DoKill(void)
 			for (; len; len--)
 				Kill[j - len][j - i - len] = true;
 	}
+	
 	/* Diagonals (\), lower the main one */
 	for (i = 1; i < NCELLS; i++)
 	{
@@ -225,6 +225,7 @@ bool DoKill(void)
 			for (; len; len--)
 				Kill[j - i - len][j - len] = true;
 	}
+	
 	/* Diagonals(/), upper the main one */
 	for (i = 0; i < NCELLS; i++)
 	{
@@ -250,6 +251,7 @@ bool DoKill(void)
 			for (; len; len--)
 				Kill[j + len][i - j - len] = true;
 	}
+	
 	/* Diagonals (/), lower the main one */
 	for (i = 1; i < NCELLS; i++)
 	{
@@ -306,16 +308,13 @@ int FreeCellsNum(void)
 	return nfree;
 }
 
-/* Checks if there is a path from cell (x1, y1) to cell (x2, y2).
- * The algo is really really stupid, maybe we should use a smarter one, like A*.
- * But who cares? Not me. This is fast enough. */
-bool IsWalkable(short x1, short y1, short x2, short y2)
+/* Marks all cells in Walk to which exists path form cell (x, y) */
+void FillWalkableCells(short x, short y, bool (*Walk)[NCELLS])
 {
 	int i, j;
-	bool Walk[NCELLS][NCELLS] = {{false}, {false}};
 	bool isanynew;
 	
-	Walk[x1][y1] = true;
+	Walk[x][y] = true;
 	
 	while (1)
 	{
@@ -326,9 +325,6 @@ bool IsWalkable(short x1, short y1, short x2, short y2)
 			{
 				if (Walk[i][j])
 				{
-					if (i == x2 && j == y2)
-						return true;
-					
 					if (i < NCELLS - 1 && !Walk[i + 1][j] && FREE(i + 1, j))
 						Walk[i + 1][j] = true, isanynew = true;
 						
@@ -343,9 +339,32 @@ bool IsWalkable(short x1, short y1, short x2, short y2)
 				}
 			}
 		
-		if (!isanynew)
-			return false;
+		if (!isanynew) /* No allowed cells were added during the latest iteration */
+			return;
 	}
+}
+
+/* Checks if there is a path from cell (x1, y1) to cell (x2, y2).
+ * The algo (including FillWalkableCells() function) is really really stupid,
+ * maybe we should use a smarter one, like A*.
+ * But who cares? Not me. This is fast enough.
+ * Caching adds some speed-up too */
+bool IsWalkable(short x1, short y1, short x2, short y2, bool cached)
+{
+	bool Walk[NCELLS][NCELLS] = {{false}, {false}};
+	static bool WalkCache[NCELLS][NCELLS];
+	
+	if (cached)
+		return WalkCache[x2][y2];
+	
+	FillWalkableCells(x1, y1, Walk);
+	
+	/* Make the cache */
+	memcpy(WalkCache, Walk, sizeof(Walk));
+
+	if (Walk[x2][y2]) /* Path exists */
+		return true;
+	return false; /* No path */
 }
 
 /* TODO: place all draw-related stuff in separate function */
@@ -359,6 +378,7 @@ int plugin_main(void)
 	short x, y;
 	short xpos = 0, ypos = 0;
 	bool ispicked = false;
+	bool iscached;
 	short oldxpos = 0, oldypos = 0;
 	Celltype curtype = CELL_FREE;
 	
@@ -473,7 +493,6 @@ int plugin_main(void)
 		if (action == ACTION_TOUCHSCREEN)
         {
             button = rb->action_get_touchscreen_press(&x, &y);
-            
             if (State == TURN)
             {
 				xpos = (x - BRDXOFFSET) / CELLSIZE;
@@ -483,17 +502,21 @@ int plugin_main(void)
 				{
 					if (ONBOARD(xpos, ypos) && BUSY(xpos, ypos))
 					{
+						/* Pick the ball */
 						ispicked = true;
 						oldxpos = xpos;
 						oldypos = ypos;
 						curtype = Board[xpos][ypos];
 						Board[xpos][ypos] = CELL_FREE;
+						/* Create the walk cache at first touch */
+						IsWalkable(xpos, ypos, xpos, ypos, false);
+						iscached = true;
 					}
 				}
 				else if (button == BUTTON_REPEAT)
 				{
 					if (ispicked)
-						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos))
+						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos, iscached))
 							need_redraw = true;
 				}
 				else if (button == BUTTON_REL)
@@ -505,7 +528,7 @@ int plugin_main(void)
 				{
 					if (ispicked)
 					{
-						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos))
+						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos, iscached))
 						{
 							Board[xpos][ypos] = curtype;
 							
@@ -517,6 +540,7 @@ int plugin_main(void)
 							Board[oldxpos][oldypos] = curtype;
 					
 						ispicked = false;
+						iscached = false;
 						need_redraw = true;
 					}				
 				}
