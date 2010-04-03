@@ -286,7 +286,7 @@ bool DoKill(void)
 }
 
 /* Returns number of free cells on the board */
-int FreeCells(void)
+int FreeCellsNum(void)
 {
 	int i, j;
 	int nfree = NCELLS * NCELLS;
@@ -439,11 +439,9 @@ int plugin_main(void)
 		
 		if (State == ADDBALLS)
 		{
-			int nfree, nadd, nadded = 0;
+			int nadd, nadded = 0;
 			
-			if ((nfree = FreeCells()) < N_BALLS_ADD)
-				nadd = nfree; 
-			else
+			if ((nadd = FreeCellsNum()) > N_BALLS_ADD)
 				nadd = N_BALLS_ADD;
 
 			while (nadded != nadd)
@@ -527,7 +525,10 @@ int plugin_main(void)
         }
         else if (action == BUTTON_POWER)
         {
-			rb->splashf(HZ*2, "Score: %i", Score);
+			/* TODO: figure out why %i causes strange behavior on real hardware
+			 * (prints 'i' letter instead of score) */
+			/* TODO: use haighscore lib */
+			rb->splashf(HZ*2, "Score: %u", Score);
 			
             cleanup(NULL);
             return PLUGIN_OK;
