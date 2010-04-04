@@ -33,7 +33,6 @@ PLUGIN_HEADER
 #define SLEEP_TIME 3
 
 /* Bitmaps */
-#include "pluginbitmaps/battleship_huy.h"
 #include "pluginbitmaps/battleship_map.h"
 #include "pluginbitmaps/battleship_placeships.h"
 #include "pluginbitmaps/battleship_yourturn.h"

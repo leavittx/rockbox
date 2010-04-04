@@ -887,9 +887,7 @@ pitch_notes.128x64x1.bmp
 #endif /* Complex condition for pitch detector */
 
 /* Battleship */
-#if defined(COWON_D2) || defined(IPOD_VIDEO) || defined(OLYMPUS_MROBE_500) \
-    || defined(IAUDIO_X5)
-battleship_huy.80x80x16.bmp
+#if defined(COWON_D2) || defined(IPOD_VIDEO) || defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5)
 battleship_map.240x240x16.bmp
 battleship_placeships.80x80x16.bmp
 battleship_yourturn.80x20x16.bmp
