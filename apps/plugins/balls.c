@@ -65,14 +65,15 @@ PLUGIN_HEADER
 #define N_BALLS_ADD 3
 
 #define GETBALL() (rb->rand() % N_BALL_TYPES + 1)
-#define ONBOARD(x, y)  ((x) >= 0 && (x) < NCELLS && \
-						(y) >= 0 && (y) < NCELLS)
+#define ONBOARD(x, y) \
+	((x) >= 0 && (x) < NCELLS && \
+	 (y) >= 0 && (y) < NCELLS)
 #define FREE(x, y) (Board[(x)][(y)] == CELL_FREE)
 #define BUSY(x, y) (Board[(x)][(y)] != CELL_FREE)
-#define CORRECTMOVE(x, y, oldx, oldy, iscached)  (ONBOARD((x), (y)) && \
-										FREE((x), (y)) && \
-										IsWalkable((oldx), (oldy), (x), (y), (iscached)))
-
+#define CORRECTMOVE(x, y, oldx, oldy, iscached)	\
+	(ONBOARD((x), (y)) && \
+	 FREE((x), (y)) && \
+	 IsWalkable((oldx), (oldy), (x), (y), (iscached)))
 /* State of game */
 enum {
 	ADDBALLS,
@@ -322,7 +323,6 @@ void FillWalkableCells(short x, short y, bool (*Walk)[NCELLS])
 		
 		for (i = 0; i < NCELLS; i++)
 			for (j = 0; j < NCELLS; j++)
-			{
 				if (Walk[i][j])
 				{
 					if (i < NCELLS - 1 && !Walk[i + 1][j] && FREE(i + 1, j))
@@ -337,7 +337,6 @@ void FillWalkableCells(short x, short y, bool (*Walk)[NCELLS])
 					if (j > 0 && !Walk[i][j - 1] && FREE(i, j - 1))
 						Walk[i][j - 1] = true, isanynew = true;
 				}
-			}
 		
 		if (!isanynew) /* No allowed cells were added during the latest iteration */
 			return;
@@ -577,21 +576,20 @@ enum plugin_status plugin_start(const void* parameter)
 {
 	int ret;
 	
-    /* if you don't use the parameter, you can do like
-       this to avoid the compiler warning about it */
-    (void)parameter;
+	/* avoid the compiler warning about unused parameter */
+	(void)parameter;
     
 #if LCD_DEPTH > 1
-    rb->lcd_set_backdrop(NULL);
+	rb->lcd_set_backdrop(NULL);
 #endif
-    backlight_force_on(); /* backlight control in lib/helper.c */
+	backlight_force_on(); /* backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
-    remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
+	remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
 #endif
 
-    ret = plugin_main();
+	ret = plugin_main();
 
-    return ret;
+	return ret;
 }
 
 #endif /* #ifdef HAVE_LCD_BITMAP */
