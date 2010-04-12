@@ -97,3 +97,8 @@ lua
     || defined(OLYMPUS_MROBE_500)
 c-ray
 #endif
+
+#ifdef HAVE_TOUCHSCREEN
+balls
+bomberman
+#endif

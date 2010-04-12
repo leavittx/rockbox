@@ -383,6 +383,8 @@ int plugin_main(void)
 	
 	/* Set the touchscreen to pointer mode */
 	rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+	/* We wanna new balls every time */
+	rb->srand(*rb->current_tick);
 	
 	/* Prepare first balls */
 	for (i = 0; i < N_BALLS_ADD; i++)
@@ -499,6 +501,11 @@ int plugin_main(void)
 
 				if (button == BUTTON_TOUCHSCREEN)
 				{
+					/* For testing */
+				/*	Board[xpos][ypos] = GETBALL();
+					DoKill();
+					need_redraw = true;
+				*/
 					if (ONBOARD(xpos, ypos) && BUSY(xpos, ypos))
 					{
 						/* Pick the ball */
@@ -528,7 +535,7 @@ int plugin_main(void)
 					if (ispicked)
 					{
 						/* Cache benchmark */
-						/*unsigned long tick;
+					/*	unsigned long tick;
 						
 						tick = *rb->current_tick;
 						for (i = 0; i < 5000; i++)
@@ -539,7 +546,7 @@ int plugin_main(void)
 						for (i = 0; i < 5000; i++)
 							IsWalkable(xpos, ypos, oldxpos, oldypos, false);
 						rb->splashf(HZ*2, "without cache: %lu", (unsigned long)((*rb->current_tick - tick) / (double)HZ * 1000));
-						*/
+					*/	
 						if (CORRECTMOVE(xpos, ypos, oldxpos, oldypos, iscached))
 						{
 							Board[xpos][ypos] = curtype;
