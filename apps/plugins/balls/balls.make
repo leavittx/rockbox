@@ -7,8 +7,8 @@
 # $Id$
 #
 
-BALLS_SRCDIR := $(APPSDIR)/plugins/goban
-BALLS_BUILDDIR := $(BUILDDIR)/apps/plugins/goban
+BALLS_SRCDIR := $(APPSDIR)/plugins/balls
+BALLS_BUILDDIR := $(BUILDDIR)/apps/plugins/balls
 
 BALLS_SRC := $(call preprocess, $(BALLS_SRCDIR)/SOURCES)
 BALLS_OBJ := $(call c2obj, $(BALLS_SRC))
@@ -18,27 +18,27 @@ OTHER_SRC += $(BALLS_SRC)
 ifndef SIMVER
 ifneq (,$(strip $(foreach tgt,RECORDER ONDIO,$(findstring $(tgt),$(TARGET)))))
     ### lowmem targets
-    ROCKS += $(BALLS_BUILDDIR)/goban.ovl
-    BALLS_OUTLDS = $(BALLS_BUILDDIR)/goban.link
+    ROCKS += $(BALLS_BUILDDIR)/balls.ovl
+    BALLS_OUTLDS = $(BALLS_BUILDDIR)/balls.link
     BALLS_OVLFLAGS = -T$(BALLS_OUTLDS) -Wl,--gc-sections -Wl,-Map,$(basename $@).map
 else
     ### all other targets
-    ROCKS += $(BALLS_BUILDDIR)/goban.rock
+    ROCKS += $(BALLS_BUILDDIR)/balls.rock
 endif
 else
     ### simulator
-    ROCKS += $(BALLS_BUILDDIR)/goban.rock
+    ROCKS += $(BALLS_BUILDDIR)/balls.rock
 endif
 
-$(BALLS_BUILDDIR)/goban.rock: $(BALLS_OBJ)
+$(BALLS_BUILDDIR)/balls.rock: $(BALLS_OBJ)
 
-$(BALLS_BUILDDIR)/goban.refmap: $(BALLS_OBJ)
+$(BALLS_BUILDDIR)/balls.refmap: $(BALLS_OBJ)
 
-$(BALLS_OUTLDS): $(PLUGIN_LDS) $(BALLS_BUILDDIR)/goban.refmap
+$(BALLS_OUTLDS): $(PLUGIN_LDS) $(BALLS_BUILDDIR)/balls.refmap
 	$(call PRINTS,PP $(@F))$(call preprocess2file,$<,$@,-DOVERLAY_OFFSET=$(shell \
-		$(TOOLSDIR)/ovl_offset.pl $(BALLS_BUILDDIR)/goban.refmap))
+		$(TOOLSDIR)/ovl_offset.pl $(BALLS_BUILDDIR)/balls.refmap))
 
-$(BALLS_BUILDDIR)/goban.ovl: $(BALLS_OBJ) $(BALLS_OUTLDS)
+$(BALLS_BUILDDIR)/balls.ovl: $(BALLS_OBJ) $(BALLS_OUTLDS)
 	$(SILENT)$(CC) $(PLUGINFLAGS) -o $(basename $@).elf \
 		$(filter %.o, $^) \
 		$(filter %.a, $+) \
