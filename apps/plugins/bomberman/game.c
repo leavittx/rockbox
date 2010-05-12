@@ -89,7 +89,7 @@ void BombsUpdate(Game *game)
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 	{
 		if (game->field.bombs[i].state < BOMB_PLACED)
-			break;
+			continue;
 		if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
 		{
 			game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FREE;
