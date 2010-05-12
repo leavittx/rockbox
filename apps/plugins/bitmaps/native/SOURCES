@@ -931,6 +931,12 @@ balls_board.234x234x16.bmp
 balls_balls.26x182x16.bmp
 balls_background.320x240x16.bmp
 balls_chooser.24x24x16.bmp
+
+bomberman_player.16x24x16.bmp
+bomberman_box.16x16x16.bmp
+bomberman_block.16x16x16.bmp
+bomberman_bomb.16x16x16.bmp
+bomberman_explode.64x144x16.bmp
 #endif /* HAVE_TOUCHSCREEN */
 
 #endif /* HAVE_LCD_BITMAP */
