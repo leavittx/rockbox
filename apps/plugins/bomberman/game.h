@@ -29,17 +29,16 @@
 
 #define BOMBS_MAX_NUM 100
 #define BOMB_DELAY_DET (HZ * 2) /* Two seconds */
-#define BOMB_DELAY_PHASE1 (HZ * 2.2)
-#define BOMB_DELAY_PHASE2 (HZ * 2.4)
-#define BOMB_DELAY_PHASE3 (HZ * 2.6)
-#define BOMB_DELAY_PHASE4 (HZ * 2.8)
+#define BOMB_DELAY_PHASE1 (HZ * 2.1)
+#define BOMB_DELAY_PHASE2 (HZ * 2.2)
+#define BOMB_DELAY_PHASE3 (HZ * 2.3)
+#define BOMB_DELAY_PHASE4 (HZ * 2.4)
 
 typedef enum {
 	SQUARE_FREE,
 	SQUARE_BOX,
 	SQUARE_BLOCK,
-	SQUARE_BOMB,
-	SQUARE_FIRE
+	SQUARE_BOMB
 } SqType;
 
 typedef enum {
@@ -84,15 +83,31 @@ typedef struct {
 	Player *owner;
 } Bomb;
 
+typedef enum {
+	FIRE_RIGNT,
+	FIRE_DOWN,
+	FIRE_LEFT,
+	FIRE_UP,
+	FIRE_CENTER
+} FireDir;
+
+typedef struct {
+	BombState state;
+	FireDir dir;
+	bool isend;
+} Fire;
+
 typedef struct {
 	SqType map[MAP_W][MAP_H];
 	Bomb bombs[BOMBS_MAX_NUM];
+	Fire firemap[MAP_W][MAP_H];
 	//Bonus bonuses[BONUSES_MAX_NUM];
 } Field;
 
 typedef struct {
 	Field field;
 	Player player;
+	int bomb_rad[BOMB_PWR_KILLER + 1];
 } Game;
 
 void PlayerMoveUp(Game *game, Player *player);

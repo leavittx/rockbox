@@ -34,7 +34,7 @@ PLUGIN_HEADER
 #include "game.h"
 #include "draw.h"
 
-#define SLEEP_TIME 0
+#define SLEEP_TIME 3
 
 const struct button_mapping *plugin_contexts[] = { 
 	generic_directions,
@@ -80,10 +80,19 @@ void InitGame(Game *game)
 	
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)
+		{
 			game->field.map[i][j] = DefaultMap[j][i];//SQUARE_FREE;
+			game->field.firemap[i][j].state = BOMB_NONE;
+		}
 			
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
-	game->field.bombs[i].state = BOMB_NONE;
+		game->field.bombs[i].state = BOMB_NONE;
+	
+	game->bomb_rad[BOMB_PWR_SINGLE] = 1;
+	game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
+	game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
+	game->bomb_rad[BOMB_PWR_QUAD] = 6;
+	game->bomb_rad[BOMB_PWR_KILLER] = MAP_W;
 }
 
 void InitPlayer(Player *player)
@@ -95,7 +104,7 @@ void InitPlayer(Player *player)
 	player->speed = 1;
 	player->bombs_max = -1;
 	player->bombs_placed = 0;
-	player->bomb_power = BOMB_PWR_SINGLE;
+	player->bomb_power = BOMB_PWR_KILLER;
 }
 
 int plugin_main(void)
@@ -111,8 +120,6 @@ int plugin_main(void)
     /* Main loop */
     while (true)
     {
-		/* Draw everything (if needed) */
-		//if (need_redraw)
 		Draw(&game);
 	
 		BombsUpdate(&game);
@@ -122,7 +129,7 @@ int plugin_main(void)
 		action = pluginlib_getaction(TIMEOUT_NOBLOCK,
 									 plugin_contexts,
 									 NB_ACTION_CONTEXTS);
-
+									 
 		switch (action)
 		{
 			case PLA_QUIT:

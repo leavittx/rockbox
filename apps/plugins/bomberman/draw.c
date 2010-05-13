@@ -71,7 +71,7 @@ void Draw(Game *game)
 						BMPWIDTH_bomberman_bomb,
 						BMPHEIGHT_bomberman_bomb);
 					break;
-				case SQUARE_FIRE:
+				/*case SQUARE_FIRE:
 					rb->lcd_bitmap_transparent_part(bomberman_explode,
 						0,
 						0,
@@ -80,7 +80,7 @@ void Draw(Game *game)
 						j * SQUARE_SIZE + YMAPOFFSET,
 						SQUARE_SIZE,
 						SQUARE_SIZE);
-					break;
+					break;*/
 			}
 	/*
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
@@ -102,6 +102,37 @@ void Draw(Game *game)
 			(BMPHEIGHT_bomberman_player - SQUARE_SIZE),
 		BMPWIDTH_bomberman_player,
 		BMPHEIGHT_bomberman_player);
+		
+	for (i = 0; i < MAP_W; i++)
+		for (j = 0; j < MAP_H; j++)
+		{
+			if (game->field.firemap[i][j].state > BOMB_PLACED)
+			{
+				if (game->field.firemap[i][j].dir == FIRE_CENTER)
+				{
+					rb->lcd_bitmap_transparent_part(bomberman_explode,
+						(game->field.firemap[i][j].state - 2) * SQUARE_SIZE,
+						0,
+						STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_explode, BMPHEIGHT_bomberman_explode),
+						i * SQUARE_SIZE + XMAPOFFSET,
+						j * SQUARE_SIZE + YMAPOFFSET,
+						SQUARE_SIZE,
+						SQUARE_SIZE);
+				}
+				else
+				{
+					rb->lcd_bitmap_transparent_part(bomberman_explode,
+						game->field.firemap[i][j].dir * SQUARE_SIZE,
+						SQUARE_SIZE + SQUARE_SIZE * (game->field.firemap[i][j].state - 2) * 2 +
+							SQUARE_SIZE * game->field.firemap[i][j].isend,
+						STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_explode, BMPHEIGHT_bomberman_explode),
+						i * SQUARE_SIZE + XMAPOFFSET,
+						j * SQUARE_SIZE + YMAPOFFSET,
+						SQUARE_SIZE,
+						SQUARE_SIZE);
+				}
+			}
+		}
 	
 	rb->lcd_update();
 }
