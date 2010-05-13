@@ -97,7 +97,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 	
 	for (j = 1; j <= rad; j++)
 	{
-		int curx, cury;
+		int curx = 0, cury = 0;
 		
 		switch (dir)
 		{
@@ -154,7 +154,7 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
 	
 	for (j = 1; j <= rad; j++)
 	{
-		int curx, cury;
+		int curx = 0, cury = 0;
 		
 		switch (dir)
 		{
@@ -210,7 +210,7 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
 	
 	for (j = 1; j <= rad; j++)
 	{
-		int curx, cury;
+		int curx = 0, cury = 0;
 		
 		switch (dir)
 		{
@@ -266,7 +266,7 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
 	
 	for (j = 1; j <= rad; j++)
 	{
-		int curx, cury;
+		int curx = 0, cury = 0;
 		
 		switch (dir)
 		{
@@ -322,8 +322,8 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 	
 	for (j = 1; j <= rad; j++)
 	{
-		int curx, cury;
-		int prevx, prevy;
+		int curx = 0, cury = 0;
+		int prevx = 0, prevy = 0;
 		
 		switch (dir)
 		{
