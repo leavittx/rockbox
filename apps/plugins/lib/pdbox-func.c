@@ -1494,7 +1494,7 @@ float rb_exp(float x)
     return TWO127*x;
 }
 
-
+#ifndef SIMULATOR
 /* Division with rest, original. */
 div_t div(int x, int y)
 {
@@ -1512,4 +1512,4 @@ div_t div(int x, int y)
 
     return result;
 }
-
+#endif /* #ifndef SIMULATOR */

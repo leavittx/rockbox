@@ -45,6 +45,8 @@ float rb_atan(float);
 float rb_atan2(float, float);
 float rb_sinh(float);
 float rb_tan(float);
+
+#ifndef SIMULATOR
 typedef struct
 {
     int quot;
@@ -52,6 +54,8 @@ typedef struct
 }
 div_t;
 div_t div(int x, int y);
+#endif /* #ifndef SIMULATOR */
+
 union f2i
 {
     float f;
