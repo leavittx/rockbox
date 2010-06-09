@@ -1563,33 +1563,33 @@ const struct settings_list settings[] = {
     CHOICE_SETTING(0, start_in_screen, LANG_START_SCREEN, 1, 
                    "start in screen", "previous,root,files,"
 #ifdef HAVE_TAGCACHE 
+#define START_DB_COUNT 1
                    "db,"
+#else 
+#define START_DB_COUNT 0
 #endif
                    "wps,menu,"
 #ifdef HAVE_RECORDING
+#define START_REC_COUNT 1
                    "recording,"
+#else 
+#define START_REC_COUNT 0
 #endif
 #if CONFIG_TUNER
+#define START_TUNER_COUNT 1
                    "radio,"
+#else 
+#define START_TUNER_COUNT 0
 #endif
-                   "bookmarks,pictureflow", NULL,
-#if defined(HAVE_TAGCACHE)
-  #if defined(HAVE_RECORDING) && CONFIG_TUNER
-                   10,
-  #elif defined(HAVE_RECORDING) || CONFIG_TUNER /* only one of them */
-                   9,
-  #else
-                   8,
-  #endif
-#else
-  #if defined(HAVE_RECORDING) && CONFIG_TUNER
-                   9,
-  #elif defined(HAVE_RECORDING) || CONFIG_TUNER /* only one of them */
-                   8,
-  #else
-                   7,
-  #endif
+                   "bookmarks"
+#ifdef HAVE_PICTUREFLOW_INTEGRATION
+#define START_PF_COUNT 1
+                   ",pictureflow"
+#else 
+#define START_PF_COUNT 0
 #endif
+                   , NULL,
+    (6 + START_DB_COUNT + START_REC_COUNT + START_TUNER_COUNT + START_PF_COUNT),
                    ID2P(LANG_PREVIOUS_SCREEN), ID2P(LANG_MAIN_MENU),
                    ID2P(LANG_DIR_BROWSER), 
 #ifdef HAVE_TAGCACHE
@@ -1602,8 +1602,10 @@ const struct settings_list settings[] = {
 #if CONFIG_TUNER
                    ID2P(LANG_FM_RADIO),
 #endif
-                   ID2P(LANG_BOOKMARK_MENU_RECENT_BOOKMARKS),
-                   ID2P(LANG_ONPLAY_PICTUREFLOW)
+                   ID2P(LANG_BOOKMARK_MENU_RECENT_BOOKMARKS)
+#ifdef HAVE_PICTUREFLOW_INTEGRATION
+                   ,ID2P(LANG_ONPLAY_PICTUREFLOW)
+#endif
                   ),
     SYSTEM_SETTING(NVRAM(1),last_screen,-1),
 #if defined(HAVE_RTC_ALARM) && \
@@ -1747,10 +1749,23 @@ const struct settings_list settings[] = {
 #ifdef HAVE_HOTKEY
     TABLE_SETTING(F_ALLOW_ARBITRARY_VALS, hotkey_wps,
         LANG_HOTKEY_WPS, HOTKEY_VIEW_PLAYLIST, "hotkey wps",
-        "off,view playlist,show track info,pitchscreen,open with,delete,pictureflow",
-        UNIT_INT, hotkey_formatter, hotkey_getlang, NULL, 7, HOTKEY_OFF,
+        "off,view playlist,show track info,pitchscreen,open with,delete"
+#ifdef HAVE_PICTUREFLOW_INTEGRATION        
+        ",pictureflow"
+#endif
+        ,UNIT_INT, hotkey_formatter, hotkey_getlang, NULL, 
+#ifdef HAVE_PICTUREFLOW_INTEGRATION        
+        7, 
+#else
+        6,
+#endif
+        HOTKEY_OFF,
         HOTKEY_VIEW_PLAYLIST, HOTKEY_SHOW_TRACK_INFO, HOTKEY_PITCHSCREEN,
-        HOTKEY_OPEN_WITH, HOTKEY_DELETE, HOTKEY_PICTUREFLOW),
+        HOTKEY_OPEN_WITH, HOTKEY_DELETE
+#ifdef HAVE_PICTUREFLOW_INTEGRATION        
+        , HOTKEY_PICTUREFLOW
+#endif        
+        ),
     TABLE_SETTING(F_ALLOW_ARBITRARY_VALS, hotkey_tree,
         LANG_HOTKEY_FILE_BROWSER, HOTKEY_OFF, "hotkey tree",
         "off,open with,delete,insert,insert shuffled",
