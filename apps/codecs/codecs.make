@@ -37,6 +37,7 @@ include $(APPSDIR)/codecs/libspeex/libspeex.make
 include $(APPSDIR)/codecs/libtremor/libtremor.make
 include $(APPSDIR)/codecs/libwavpack/libwavpack.make
 include $(APPSDIR)/codecs/libwma/libwma.make
+include $(APPSDIR)/codecs/libmikmod/libmikmod.make
 include $(APPSDIR)/codecs/libcook/libcook.make
 include $(APPSDIR)/codecs/librm/librm.make
 include $(APPSDIR)/codecs/libatrac/libatrac.make
@@ -86,6 +87,7 @@ $(CODECDIR)/wma.codec : $(CODECDIR)/libwma.a $(CODECDIR)/libasf.a
 $(CODECDIR)/wmapro.codec : $(CODECDIR)/libwma.a $(CODECDIR)/libasf.a
 $(CODECDIR)/wavpack_enc.codec: $(CODECDIR)/libwavpack.a
 $(CODECDIR)/asap.codec : $(CODECDIR)/libasap.a
+$(CODECDIR)/mikmod.codec : $(CODECDIR)/libmikmod.a
 $(CODECDIR)/cook.codec : $(CODECDIR)/libcook.a $(CODECDIR)/librm.a
 $(CODECDIR)/raac.codec : $(CODECDIR)/libfaad.a $(CODECDIR)/librm.a
 $(CODECDIR)/a52_rm.codec : $(CODECDIR)/liba52.a $(CODECDIR)/librm.a

@@ -394,6 +394,23 @@ static void codec_configure_callback(int setting, intptr_t value)
         { logf("Illegal key:%d", setting); }
 }
 
+static void* codec_get_scratch(size_t size, int *scratch_hid)
+{
+    void *temp;
+    
+    *scratch_hid = bufalloc(NULL, size, TYPE_ATOMIC_AUDIO);
+    if ( *scratch_hid > 0 ) {
+        bufgetdata(*scratch_hid, 0, &temp);
+        return (char*)temp;
+    }
+    return NULL;
+}
+
+static void codec_close_scratch(int scratch_hid)
+{
+    bufclose(scratch_hid);
+}
+
 /* Initialize codec API */
 void codec_init_codec_api(void)
 {
@@ -412,6 +429,8 @@ void codec_init_codec_api(void)
     ci.discard_codec       = codec_discard_codec_callback;
     ci.set_offset          = codec_set_offset_callback;
     ci.configure           = codec_configure_callback;
+    ci.get_scratch         = codec_get_scratch;
+    ci.close_scratch       = codec_close_scratch;
 }
 
 

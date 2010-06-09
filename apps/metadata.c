@@ -363,7 +363,7 @@ bool get_metadata(struct mp3entry* id3, int fd, const char* trackname)
         break;
 
     case AFMT_MOD:
-        if (!get_mod_metadata(fd, id3))
+        if (!get_mikmod_metadata(fd, id3, trackname))
         {
             return false;
         }
