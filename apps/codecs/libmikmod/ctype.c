@@ -1,5 +1,6 @@
-#include "../../../firmware/common/ctype.c"
-#include "../../../firmware/common/strncmp.c"
+#ifndef SIMULATOR
+#include "../../../firmware/libc/ctype.c"
+#include "../../../firmware/libc/strncmp.c"
 #include "../../../firmware/common/strcasecmp.c"
-#include "../../../firmware/common/random.c"
-
+#include "../../../firmware/libc/random.c"
+#endif

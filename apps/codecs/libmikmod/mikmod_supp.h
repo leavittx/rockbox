@@ -27,7 +27,10 @@ typedef void FILE;
 
 #define sprintf(...)
 #define fprintf(...)
+// printf() is available in the sim (and DEBUGF is defined to printf)
+#ifndef SIMULATOR
 #define printf(...)     DEBUGF(__VA_ARGS__)
+#endif
 #define fputs(...)
 #define puts(...)
 #define putchar(...)
