@@ -58,6 +58,7 @@ PLUGIN_HEADER
 #define PF_WPS ACTION_TREE_WPS
 
 #define PF_QUIT (LAST_ACTION_PLACEHOLDER + 1)
+#define PF_TRACKLIST (LAST_ACTION_PLACEHOLDER + 2)
 
 #if defined(HAVE_SCROLLWHEEL) || CONFIG_KEYPAD == IRIVER_H10_PAD || \
     CONFIG_KEYPAD == SAMSUNG_YH_PAD
@@ -120,6 +121,7 @@ const struct button_mapping pf_context_buttons[] =
     {PF_QUIT,         BUTTON_POWER,               BUTTON_NONE},
 #elif CONFIG_KEYPAD == SANSA_FUZE_PAD
     {PF_QUIT,         BUTTON_HOME|BUTTON_REPEAT,  BUTTON_NONE},
+    {PF_TRACKLIST,    BUTTON_RIGHT,  BUTTON_NONE},    
 /* These all use short press of BUTTON_POWER for menu, map long POWER to quit
 */
 #elif CONFIG_KEYPAD == SANSA_C200_PAD || CONFIG_KEYPAD == SANSA_M200_PAD || \
@@ -311,6 +313,9 @@ static int center_margin = (LCD_WIDTH - DISPLAY_WIDTH) / 12;
 static int num_slides = 4;
 static int zoom = 100;
 static bool show_fps = false;
+static int auto_wps = 0;
+static int last_album = 0;
+static int backlight_mode = 0;
 static bool resize = true;
 static int cache_version = 0;
 static int show_album_name = (LCD_HEIGHT > 100)
@@ -328,8 +333,11 @@ static struct configdata config[] =
     { TYPE_BOOL, 0, 1, { .bool_p = &show_fps }, "show fps", NULL },
     { TYPE_BOOL, 0, 1, { .bool_p = &resize }, "resize", NULL },
     { TYPE_INT, 0, 100, { .int_p = &cache_version }, "cache version", NULL },
-    { TYPE_ENUM, 0, 2, { .int_p = &show_album_name }, "show album name",
-      show_album_name_conf }
+    { TYPE_ENUM, 0, 3, { .int_p = &show_album_name }, "show album name",
+      show_album_name_conf },
+    { TYPE_INT, 0, 2, { .int_p = &auto_wps }, "auto wps", NULL },
+    { TYPE_INT, 0, 999999, { .int_p = &last_album }, "last album", NULL },
+    { TYPE_INT, 0, 1, { .int_p = &backlight_mode }, "backlight", NULL }
 };
 
 #define CONFIG_NUM_ITEMS (sizeof(config) / sizeof(struct configdata))
@@ -783,6 +791,19 @@ char* get_track_filename(const int track_index)
     return 0;
 }
 #endif
+
+int get_wps_current_index(void)
+{
+    struct mp3entry *id3 = rb->audio_current_track();
+    if(id3 && id3->album) {
+        int i;
+        for( i=0; i < album_count; i++ )
+            if(!rb->strcmp(album_names + album[i].name_idx, id3->album))
+                return i;
+        }
+    return last_album;
+}
+
 /**
   Compare two unsigned ints passed via pointers.
  */
@@ -869,13 +890,12 @@ retry:
                 buflib_buffer_out(&buf_ctx, &out);
                 avail += out;
                 borrowed += out;
-                if (track_count)
-                {
-                    struct track_data *new_tracks = (struct track_data *)(out + (uintptr_t)tracks);
-                    unsigned int bytes = track_count * sizeof(struct track_data);
-                    rb->memmove(new_tracks, tracks, bytes);
-                    tracks = new_tracks;
-                }
+
+                struct track_data *new_tracks = (struct track_data *)(out + (uintptr_t)tracks);
+                unsigned int bytes = track_count * sizeof(struct track_data);
+                if (track_count) 
+                     rb->memmove(new_tracks, tracks, bytes);
+                tracks = new_tracks;
             }
             goto retry;
         }
@@ -1032,6 +1052,24 @@ void draw_progressbar(int step)
     rb->yield();
 }
 
+/* Calculate modified FNV hash of string 
+ * has good avalanche behaviour and uniform distribution
+ * see http://home.comcast.net/~bretm/hash/ */
+unsigned int mfnv(char *str)
+{
+    const unsigned int p = 16777619;
+    unsigned int hash = 0x811C9DC5; // 2166136261;
+   
+    while(*str) 
+        hash = (hash ^ *str++) * p;
+    hash += hash << 13;
+    hash ^= hash >> 7;
+    hash += hash << 3;
+    hash ^= hash >> 17;
+    hash += hash << 5;
+    return hash;
+}
+
 /**
  Precomupte the album art images and store them in CACHE_PREFIX.
  */
@@ -1045,29 +1083,35 @@ bool create_albumart_cache(void)
     char pfraw_file[MAX_PATH];
     char albumart_file[MAX_PATH];
     unsigned int format = FORMAT_NATIVE;
+    bool forced = cache_version == 0;
     cache_version = 0;
     configfile_save(CONFIG_FILE, config, CONFIG_NUM_ITEMS, CONFIG_VERSION);
     if (resize)
         format |= FORMAT_RESIZE|FORMAT_KEEP_ASPECT;
     for (i=0; i < album_count; i++)
     {
-        rb->snprintf(pfraw_file, sizeof(pfraw_file), CACHE_PREFIX "/%d.pfraw",
-                     i);
+        rb->snprintf(pfraw_file, sizeof(pfraw_file), CACHE_PREFIX "/%x.pfraw",
+                     mfnv(get_album_name(i)));
         /* delete existing cache, so it's a true rebuild */
-        if(rb->file_exists(pfraw_file))
+        if(rb->file_exists(pfraw_file)) {
+            if(!forced)
+                continue;
             rb->remove(pfraw_file);
+        }
         draw_progressbar(i);
         if (!get_albumart_for_index_from_db(i, albumart_file, MAX_PATH))
-            continue;
+            rb->strcpy(albumart_file, EMPTY_SLIDE_BMP);
 
         input_bmp.data = buf;
         input_bmp.width = DISPLAY_WIDTH;
         input_bmp.height = DISPLAY_HEIGHT;
-        ret = read_image_file(albumart_file, &input_bmp,
-                              buf_size, format, &format_transposed);
+        ret = read_image_file(albumart_file, &input_bmp, buf_size, format, &format_transposed);
         if (ret <= 0) {
-            rb->splash(HZ, "Could not read bmp");
-            continue; /* skip missing/broken files */
+            rb->splashf(HZ, "Album art is bad: %s", get_album_name(i));
+            rb->strcpy(albumart_file, EMPTY_SLIDE_BMP);
+            ret = read_image_file(albumart_file, &input_bmp, buf_size, format, &format_transposed);  
+            if(ret <= 0)
+                continue;
         }
         if (!save_pfraw(pfraw_file, &input_bmp))
         {
@@ -1100,7 +1144,8 @@ void thread(void)
                 /* we just woke up */
                 break;
         }
-        while ( load_new_slide() ) {
+        if(ev.id != SYS_TIMEOUT)
+          while ( load_new_slide() ) {        
             rb->yield();
             switch (ev.id) {
                 case EV_EXIT:
@@ -1342,8 +1387,10 @@ int read_pfraw(char* filename, int prio)
 {
     struct pfraw_header bmph;
     int fh = rb->open(filename, O_RDONLY);
-    if( fh < 0 )
+    if( fh < 0 ) {
+        cache_version = 1;
         return empty_slide_hid;
+    }
     else
         rb->read(fh, &bmph, sizeof(struct pfraw_header));
 
@@ -1358,6 +1405,7 @@ int read_pfraw(char* filename, int prio)
         return 0;
     }
 
+    rb->yield(); // allow audio to play when fast scrolling
     struct dim *bm = buflib_get_data(&buf_ctx, hid);
 
     bm->width = bmph.width;
@@ -1383,8 +1431,8 @@ static inline bool load_and_prepare_surface(const int slide_index,
                                             const int prio)
 {
     char tmp_path_name[MAX_PATH+1];
-    rb->snprintf(tmp_path_name, sizeof(tmp_path_name), CACHE_PREFIX "/%d.pfraw",
-                 slide_index);
+    rb->snprintf(tmp_path_name, sizeof(tmp_path_name), CACHE_PREFIX "/%x.pfraw",
+                 mfnv(get_album_name(slide_index)));
 
     int hid = read_pfraw(tmp_path_name, prio);
     if (!hid)
@@ -1756,6 +1804,9 @@ void render_slide(struct slide_data *slide, const int alpha)
                 pixel -= PIXELSTEP_Y;
             }
         }
+        rb->yield(); // allow audio to play when fast scrolling
+        bmp = surface(slide->slide_index); // resync surface due to yield
+        ptr = &src[column * bmp->height];         
         p = (bmp->height-DISPLAY_OFFS) * PFREAL_ONE;
         plim = MIN(sh * PFREAL_ONE, p + (LCD_HEIGHT/2) * dy);
         int plim2 = MIN(MIN(sh + REFLECT_HEIGHT, sh * 2) * PFREAL_ONE,
@@ -2071,13 +2122,23 @@ int settings_menu(void)
 
     MENUITEM_STRINGLIST(settings_menu, "PictureFlow Settings", NULL, "Show FPS",
                         "Spacing", "Centre margin", "Number of slides", "Zoom",
-                        "Show album title", "Resize Covers", "Rebuild cache");
+                        "Show album title", "Resize Covers", "Rebuild cache", 
+                        "WPS Integration", "Backlight");
 
     static const struct opt_items album_name_options[] = {
         { "Hide album title", -1 },
         { "Show at the bottom", -1 },
         { "Show at the top", -1 }
     };
+    static const struct opt_items wps_options[] = {
+        { "Off", -1 },	
+        { "Direct", -1 },
+        { "Via Track list", -1 }
+    };    
+    static const struct opt_items backlight_options[] = {
+        { "Always On", -1 },
+        { "Normal", -1 },
+    };    
 
     do {
         selection=rb->do_menu(&settings_menu,&selection, NULL, true);
@@ -2134,6 +2195,12 @@ int settings_menu(void)
                 rb->remove(EMPTY_SLIDE);
                 rb->splash(HZ, "Cache will be rebuilt on next restart");
                 break;
+            case 8:
+                rb->set_option("WPS Integration", &auto_wps, INT, wps_options, 3, NULL);
+                break;   
+            case 9:
+                rb->set_option("Backlight", &backlight_mode, INT, backlight_options, 2, NULL);
+                break;
 
             case MENU_ATTACHED_USB:
                 return PLUGIN_USB_CONNECTED;
@@ -2149,6 +2216,7 @@ int settings_menu(void)
 enum {
     PF_GOTO_WPS,
 #if PF_PLAYBACK_CAPABLE
+    PF_MENU_CLEAR_PLAYLIST,
     PF_MENU_PLAYBACK_CONTROL,
 #endif
     PF_MENU_SETTINGS,
@@ -2168,7 +2236,7 @@ int main_menu(void)
     MENUITEM_STRINGLIST(main_menu,"PictureFlow Main Menu",NULL,
                         "Go to WPS",
 #if PF_PLAYBACK_CAPABLE
-                        "Playback Control",
+                        "Clear playlist", "Playback Control",
 #endif
                                             "Settings", "Return", "Quit");
     while (1)  {
@@ -2176,6 +2244,12 @@ int main_menu(void)
             case PF_GOTO_WPS: /* WPS */
                 return -2;
 #if PF_PLAYBACK_CAPABLE
+             case PF_MENU_CLEAR_PLAYLIST: 
+                 if(rb->playlist_remove_all_tracks(NULL) == 0) {
+                     rb->playlist_create(NULL, NULL);
+                     rb->splash(HZ*2, "Playlist Cleared");
+                 }
+                 break;
             case PF_MENU_PLAYBACK_CONTROL: /* Playback Control */
                 playback_control(NULL);
                 break;
@@ -2373,7 +2447,7 @@ void select_prev_track(void)
 /*
  * Puts the current tracklist into a newly created playlist and starts playling
  */
-void start_playback(void)
+void start_playback(bool append)
 {
     static int old_playlist = -1, old_shuffle = 0;
     int count = 0;
@@ -2382,14 +2456,14 @@ void start_playback(void)
     /* reuse existing playlist if possible
      * regenerate if shuffle is on or changed, since playlist index and
      * selected track are "out of sync" */
-    if (!shuffle && center_slide.slide_index == old_playlist
+    if (!shuffle && !append && center_slide.slide_index == old_playlist
             && (old_shuffle == shuffle))
     {
         goto play;
     }
     /* First, replace the current playlist with a new one */
-    else if (rb->playlist_remove_all_tracks(NULL) == 0
-            && rb->playlist_create(NULL, NULL) == 0)
+    else if (append || (rb->playlist_remove_all_tracks(NULL) == 0
+            && rb->playlist_create(NULL, NULL) == 0))
     {
         do {
             rb->yield();
@@ -2408,7 +2482,8 @@ play:
     /* TODO: can we adjust selected_track if !play_selected ?
      * if shuffle, we can't predict the playing track easily, and for either
      * case the track list doesn't get auto scrolled*/
-    rb->playlist_start(position, 0);
+    if(!append)
+    	rb->playlist_start(position, 0);
     old_playlist = center_slide.slide_index;
     old_shuffle = shuffle;
 }
@@ -2493,7 +2568,6 @@ int main(void)
     int ret;
 
     rb->lcd_setfont(FONT_UI);
-    draw_splashscreen();
 
     if ( ! rb->dir_exists( CACHE_PREFIX ) ) {
         if ( rb->mkdir( CACHE_PREFIX ) < 0 ) {
@@ -2502,7 +2576,13 @@ int main(void)
         }
     }
 
-    configfile_load(CONFIG_FILE, config, CONFIG_NUM_ITEMS, CONFIG_VERSION);
+    configfile_load(CONFIG_FILE, config, CONFIG_NUM_ITEMS, CONFIG_VERSION); 
+    if(auto_wps == 0)
+    	draw_splashscreen();
+    if(backlight_mode == 0) {
+        /* Turn off backlight timeout */
+        backlight_force_on();     /* backlight control in lib/helper.c */
+    }        
 
     init_reflect_table();
 
@@ -2581,6 +2661,7 @@ int main(void)
 
     recalc_offsets();
     reset_slides();
+    set_current_slide(get_wps_current_index());
 
     char fpstxt[10];
     int button;
@@ -2712,14 +2793,50 @@ int main(void)
             if ( pf_state == pf_idle || pf_state == pf_scrolling )
                 show_previous_slide();
             break;
-
+#if PF_PLAYBACK_CAPABLE
+        case PF_CONTEXT:
+            if ( auto_wps != 0 ) {
+                if( pf_state == pf_idle ) {  
+				    create_track_index(center_slide.slide_index);
+        		    reset_track_list();
+				    start_playback(true);
+				    rb->splash(HZ*2, "Added to playlist");
+                }
+                else if( pf_state == pf_show_tracks ) {
+                    rb->playlist_insert_track(NULL, get_track_filename(selected_track),
+                                                    PLAYLIST_INSERT_LAST, false, true);
+                    rb->playlist_sync(NULL);
+                    rb->splash(HZ*2, "Added to playlist");                    
+                }
+            }
+        	break;
+#endif            
+        case PF_TRACKLIST:
+            if ( auto_wps == 1 && pf_state == pf_idle ) {
+                pf_state = pf_cover_in;
+                break;				
+				} 
         case PF_SELECT:
             if ( pf_state == pf_idle ) {
-                pf_state = pf_cover_in;
+#if PF_PLAYBACK_CAPABLE
+                if(auto_wps == 1) {
+					create_track_index(center_slide.slide_index);
+        			reset_track_list();
+					start_playback(false);
+					last_album = center_index;
+                	return PLUGIN_GOTO_WPS;
+					}
+				else
+#endif              
+                pf_state = pf_cover_in;  
             }
             else if ( pf_state == pf_show_tracks ) {
 #if PF_PLAYBACK_CAPABLE
-                start_playback();
+                start_playback(false);
+                if(auto_wps != 0) {
+					last_album = center_index;
+                	return PLUGIN_GOTO_WPS;
+				}
 #endif
             }
             break;
@@ -2741,8 +2858,6 @@ enum plugin_status plugin_start(const void *parameter)
 
     FOR_NB_SCREENS(i)
         rb->viewportmanager_theme_enable(i, false, NULL);
-    /* Turn off backlight timeout */
-    backlight_force_on();     /* backlight control in lib/helper.c */
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     rb->cpu_boost(true);
 #endif
@@ -2759,7 +2874,7 @@ enum plugin_status plugin_start(const void *parameter)
 #endif
 #endif
     ret = main();
-    if ( ret == PLUGIN_OK ) {
+    if ( ret == PLUGIN_OK || ret == PLUGIN_GOTO_WPS) {
         if (configfile_save(CONFIG_FILE, config, CONFIG_NUM_ITEMS,
                             CONFIG_VERSION))
         {

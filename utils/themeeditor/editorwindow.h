@@ -29,6 +29,7 @@
 #include "skinhighlighter.h"
 #include "skindocument.h"
 #include "preferencesdialog.h"
+#include "projectmodel.h"
 
 namespace Ui {
     class EditorWindow;
@@ -52,6 +53,7 @@ private slots:
     void saveCurrent();
     void saveCurrentAs();
     void openFile();
+    void openProject();
     void tabTitleChanged(QString title);
     void updateCurrent(); /* Generates code in the current tab */
 
@@ -66,6 +68,7 @@ private:
     Ui::EditorWindow *ui;
     PreferencesDialog* prefs;
     QLabel* parseStatus;
+    ProjectModel* project;
 };
 
 #endif // EDITORWINDOW_H

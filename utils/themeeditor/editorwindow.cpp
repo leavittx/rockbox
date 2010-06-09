@@ -33,6 +33,7 @@ EditorWindow::EditorWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     prefs = new PreferencesDialog(this);
+    project = 0;
     loadSettings();
     setupUI();
     setupMenus();
@@ -75,11 +76,6 @@ void EditorWindow::saveSettings()
 
 void EditorWindow::setupUI()
 {
-    /* Displaying some files to test the file tree view */
-    QFileSystemModel* model = new QFileSystemModel;
-    model->setRootPath(QDir::currentPath());
-    ui->fileTree->setModel(model);
-
     /* Connecting the tab bar signals */
     QObject::connect(ui->editorTabs, SIGNAL(currentChanged(int)),
                      this, SLOT(shiftTab(int)));
@@ -131,6 +127,8 @@ void EditorWindow::setupMenus()
     QObject::connect(ui->actionToolbarOpen, SIGNAL(triggered()),
                      this, SLOT(openFile()));
 
+    QObject::connect(ui->actionOpen_Project, SIGNAL(triggered()),
+                     this, SLOT(openProject()));
 }
 
 void EditorWindow::addTab(SkinDocument *doc)
@@ -240,6 +238,33 @@ void EditorWindow::openFile()
     settings.endGroup();
 }
 
+void EditorWindow::openProject()
+{
+    QString fileName;
+    QSettings settings;
+
+    settings.beginGroup("ProjectModel");
+    QString directory = settings.value("defaultDirectory", "").toString();
+    fileName = QFileDialog::getOpenFileName(this, tr("Open Project"), directory,
+                                            ProjectModel::fileFilter());
+
+    if(QFile::exists(fileName))
+    {
+
+        if(project)
+            delete project;
+
+        project = new ProjectModel(fileName);
+        ui->projectTree->setModel(project);
+
+        fileName.chop(fileName.length() - fileName.lastIndexOf('/') - 1);
+        settings.setValue("defaultDirectory", fileName);
+
+    }
+
+    settings.endGroup();
+
+}
 
 void EditorWindow::tabTitleChanged(QString title)
 {
@@ -250,7 +275,7 @@ void EditorWindow::tabTitleChanged(QString title)
 void EditorWindow::showPanel()
 {
     if(sender() == ui->actionFile_Panel)
-        ui->fileDock->setVisible(true);
+        ui->projectDock->setVisible(true);
     if(sender() == ui->actionPreview_Panel)
         ui->skinPreviewDock->setVisible(true);
     if(sender() == ui->actionDisplay_Panel)
@@ -289,4 +314,6 @@ EditorWindow::~EditorWindow()
 {
     delete ui;
     delete prefs;
+    if(project)
+        delete project;
 }

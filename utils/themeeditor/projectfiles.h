@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2002 Björn Stenberg
+ * Copyright (C) 2010 Robert Bieber
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,34 +18,29 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
-#ifndef _ONPLAY_H_
-#define _ONPLAY_H_
 
-int onplay(char* file, int attr, int from_screen, bool hotkey);
+#ifndef PROJECTFILES_H
+#define PROJECTFILES_H
 
-enum {
-    ONPLAY_MAINMENU = -1,
-    ONPLAY_OK = 0,
-    ONPLAY_RELOAD_DIR,
-    ONPLAY_START_PLAY,
-    ONPLAY_PLAYLIST,
-    ONPLAY_PICTUREFLOW,
+#include "projectmodel.h"
+
+class ProjectFiles : public ProjectNode
+{
+public:
+    ProjectFiles(ProjectNode* parent);
+    virtual ~ProjectFiles();
+
+    virtual ProjectNode* parent() const;
+    virtual ProjectNode* child(int row) const;
+    virtual int numChildren() const;
+    virtual int row() const;
+    virtual QVariant data(int column) const;
+    virtual Qt::ItemFlags flags(int column) const;
+    virtual void activated();
+
+private:
+    ProjectNode* parentLink;
+
 };
 
-#ifdef HAVE_HOTKEY
-int get_hotkey_lang_id(int action);
-
-enum hotkey_action {
-    HOTKEY_OFF = 0,
-    HOTKEY_VIEW_PLAYLIST,
-    HOTKEY_SHOW_TRACK_INFO,
-    HOTKEY_PITCHSCREEN,
-    HOTKEY_OPEN_WITH,
-    HOTKEY_DELETE,
-    HOTKEY_INSERT,
-    HOTKEY_INSERT_SHUFFLED,
-    HOTKEY_PICTUREFLOW,
-};
-#endif
-
-#endif
+#endif // PROJECTFILES_H

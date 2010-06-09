@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2002 Björn Stenberg
+ * Copyright (C) 2009 by Michael Sparmann
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,34 +18,28 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
-#ifndef _ONPLAY_H_
-#define _ONPLAY_H_
 
-int onplay(char* file, int attr, int from_screen, bool hotkey);
+#ifndef __FTL_TARGET_H__
+#define __FTL_TARGET_H__
 
-enum {
-    ONPLAY_MAINMENU = -1,
-    ONPLAY_OK = 0,
-    ONPLAY_RELOAD_DIR,
-    ONPLAY_START_PLAY,
-    ONPLAY_PLAYLIST,
-    ONPLAY_PICTUREFLOW,
-};
+#include "config.h"
+#include "inttypes.h"
 
-#ifdef HAVE_HOTKEY
-int get_hotkey_lang_id(int action);
-
-enum hotkey_action {
-    HOTKEY_OFF = 0,
-    HOTKEY_VIEW_PLAYLIST,
-    HOTKEY_SHOW_TRACK_INFO,
-    HOTKEY_PITCHSCREEN,
-    HOTKEY_OPEN_WITH,
-    HOTKEY_DELETE,
-    HOTKEY_INSERT,
-    HOTKEY_INSERT_SHUFFLED,
-    HOTKEY_PICTUREFLOW,
-};
+#ifdef BOOTLOADER
+/* Bootloaders don't need write access */
+#define FTL_READONLY
 #endif
+
+/* Pointer to an info structure regarding the flash type used */
+const struct nand_device_info_type* ftl_nand_type;
+
+/* Number of banks we detected a chip on */
+uint32_t ftl_banks;
+
+uint32_t ftl_init(void);
+uint32_t ftl_read(uint32_t sector, uint32_t count, void* buffer);
+uint32_t ftl_write(uint32_t sector, uint32_t count, const void* buffer);
+uint32_t ftl_sync(void);
+
 
 #endif

@@ -390,7 +390,8 @@ static const struct wps_tag all_tags[] = {
     { WPS_NO_TOKEN,                       "Fl",  0,       parse_font_load },
 #ifdef HAVE_ALBUMART
     { WPS_NO_TOKEN,                       "Cl",  0,    parse_albumart_load },
-    { WPS_TOKEN_ALBUMART_DISPLAY,         "C",   WPS_REFRESH_STATIC,  parse_albumart_display },
+    { WPS_TOKEN_ALBUMART_DISPLAY,         "Cd",   WPS_REFRESH_STATIC,  parse_albumart_display },
+    { WPS_TOKEN_ALBUMART_FOUND,           "C", WPS_REFRESH_STATIC, NULL },
 #endif
 
     { WPS_VIEWPORT_ENABLE,                "Vd",  WPS_REFRESH_DYNAMIC,
@@ -1090,7 +1091,7 @@ static int parse_image_special(const char *wps_bufptr,
     if (token->type == WPS_TOKEN_IMAGE_BACKDROP)
     {
         /* format: %X|filename.bmp| or %Xd */
-        if (*(wps_bufptr+1) == 'd')
+        if (!strncmp(wps_bufptr, "(d)", 3))
         {
             wps_data->backdrop = NULL;
             return skip_end_of_line(wps_bufptr);
@@ -1266,6 +1267,8 @@ static int parse_progressbar(const char *wps_bufptr,
         line_num++;
         line = line->next;
     }
+    if (curr_vp->label != VP_DEFAULT_LABEL)
+        line_num--;
     pb->vp = vp;
     pb->have_bitmap_pb = false;
     pb->bm.data = NULL; /* no bitmap specified */
@@ -1481,12 +1484,8 @@ static int parse_albumart_display(const char *wps_bufptr,
                                       struct wps_data *wps_data)
 {
     (void)wps_bufptr;
-    struct wps_token *prev = token-1;
-    if ((wps_data->num_tokens >= 1) && (prev->type == WPS_TOKEN_CONDITIONAL))
-    {
-        token->type = WPS_TOKEN_ALBUMART_FOUND;
-    }
-    else if (wps_data->albumart)
+    (void)token;
+    if (wps_data->albumart)
     {
         wps_data->albumart->vp = &curr_vp->vp;
     }
