@@ -160,16 +160,15 @@ Sqtype battlefield_p2[FLD_LEN][FLD_LEN];
 Ships ships_p1;
 Ships ships_p2;
 
-const struct button_mapping *plugin_contexts[] = { 
-	generic_directions,
-	generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
 
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts) / sizeof(struct button_mapping*)
+    (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 void cleanup(void *parameter)
 {
@@ -1235,7 +1234,7 @@ int plugin_main(void)
 									 NB_ACTION_CONTEXTS);
 		switch (action)
 		{
-			case PLA_QUIT:
+			case PLA_EXIT:
 				cleanup(NULL);
 				return PLUGIN_OK;
 				
@@ -1499,7 +1498,7 @@ int plugin_main(void)
 				}
 				break;
 			
-			case PLA_MENU:
+			case PLA_CANCEL:
 				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
 				{
 					State = PLACE_SHIPS_PLAYER1;
@@ -1568,7 +1567,7 @@ int plugin_main(void)
 				}
 				break;
 			
-			case PLA_FIRE:
+			case PLA_SELECT:
 				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
 				{
 					State = PLACE_SHIPS_PLAYER1;
@@ -1695,7 +1694,8 @@ int plugin_main(void)
 					}
 				}
 				break;
-				
+			/* there is no more PLA_START */
+			/*
 			case PLA_START:
 				if (State == WAIT_FOR_PLAYER1_TO_PLACE_SHIPS)
 				{
@@ -1729,6 +1729,7 @@ int plugin_main(void)
 					ypos = 0;
 				}
 				break;
+			*/
 				
 			default:
 				if (rb->default_event_handler_ex(action, cleanup, NULL) == SYS_USB_CONNECTED)

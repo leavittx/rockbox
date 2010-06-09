@@ -46,16 +46,15 @@ struct Color
 #define YELLOW  {209, 237,  18}
 #define CYAN    { 39, 236, 215}
 
-const struct button_mapping *plugin_contexts[] = { 
-	generic_directions,
-	generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
 
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts) / sizeof(struct button_mapping*)
+    (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 void cleanup(void * parameter)
 {
@@ -81,6 +80,7 @@ int plugin_main(void)
     int action, button; /* Key/touchscreen actions */
     short x = LCD_WIDTH / 2, y = LCD_HEIGHT / 2, oldx = x, oldy = y;
     struct Color Red = {255, 0, 0};
+    unsigned long oldtick = *rb->current_tick;
 
 	//rb->splashf(HZ*3, "%i %i", LCD_WIDTH, LCD_HEIGHT);
 	
@@ -95,18 +95,32 @@ int plugin_main(void)
 	/* Main loop */
     while (true)
     {
-        action = rb->get_action(CONTEXT_STD, HZ);
+        action = rb->get_action(CONTEXT_STD, TIMEOUT_NOBLOCK);
         
-        if (action == BUTTON_POWER)
-        {
-            cleanup(NULL);
-            return PLUGIN_OK;
-        }
-        else if (action == ACTION_TOUCHSCREEN)
+        if (action == ACTION_TOUCHSCREEN)
         {
             button = rb->action_get_touchscreen_press(&x, &y);
             
-            if (button == BUTTON_TOUCHSCREEN)
+            if (button == BUTTON_REPEAT)
+            {
+		#ifdef HAVE_ADJUSTABLE_CPU_FREQ
+		rb->cpu_boost(true);
+		#endif
+		
+                rb->lcd_drawline(oldx, oldy, x, y);
+                
+                //if (*rb->current_tick - oldtick > HZ/10)
+                {
+                    oldtick = *rb->current_tick;
+                    rb->lcd_update();
+                }
+                //else
+                //    rb->splash(HZ*2, "aaa");
+                
+                oldx = x;
+                oldy = y;
+            }
+            else if (button == BUTTON_TOUCHSCREEN)
             {
                 //rb->lcd_drawpixel(x, y);
                 //rb->lcd_update();
@@ -114,18 +128,16 @@ int plugin_main(void)
                 oldx = x;
                 oldy = y;
             }
-            else if (button == BUTTON_REPEAT)
-            {
-                rb->lcd_drawline(oldx, oldy, x, y);
-                rb->lcd_update();
-                
-                oldx = x;
-                oldy = y;
-            }
+            
+        }
+        else if (action == BUTTON_POWER)
+        {
+            cleanup(NULL);
+            return PLUGIN_OK;
         }
 				
-		rb->sleep(SLEEP_TIME);
-		//rb->yield();
+		//rb->sleep(SLEEP_TIME);
+		rb->yield();
     }
 }
 

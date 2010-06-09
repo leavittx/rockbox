@@ -34,14 +34,15 @@ PLUGIN_HEADER
 
 #define DEFAULT_WAIT_TIME 3
 
-const struct button_mapping *plugin_contexts[]
-= {generic_directions, generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
+
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+    (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 void cleanup(void *parameter)
 {
@@ -64,75 +65,22 @@ int plugin_main(void)
     /* without unsigned I got warning on line before "switch(action)" */
     unsigned int i;
     bool show_none_button = true;
-    /*
-    int key[] = {
-					PLA_LEFT,              BUTTON_MINUS,
-					PLA_LEFT_REPEAT,       BUTTON_MINUS|BUTTON_REPEAT,
-					PLA_RIGHT,             BUTTON_PLUS,
-					PLA_RIGHT_REPEAT,      BUTTON_PLUS|BUTTON_REPEAT,
-					PLA_FIRE,              BUTTON_MENU,
-					PLA_FIRE_REPEAT,       BUTTON_MENU|BUTTON_REPEAT,
-				
-					PLA_START,         BUTTON_MINUS,
-					PLA_MENU,          BUTTON_MENU,
-					PLA_FIRE,          BUTTON_PLUS,
-					PLA_FIRE_REPEAT,   BUTTON_PLUS|BUTTON_REPEAT,
-					
-					PLA_INC,             BUTTON_PLUS,
-					PLA_DEC,             BUTTON_MINUS,
-					PLA_INC_REPEAT,      BUTTON_PLUS|BUTTON_REPEAT,
-					PLA_DEC_REPEAT,      BUTTON_MINUS|BUTTON_REPEAT,
-				
-					PLA_UP,
-					PLA_DOWN,
-					PLA_UP_REPEAT,
-					PLA_DOWN_REPEAT };
-				
-	char *keyname[] = {
-					"PLA_LEFT",              "BUTTON_MINUS",
-					"PLA_LEFT_REPEAT",       "BUTTON_MINUS|BUTTON_REPEAT",
-					"PLA_RIGHT",             "BUTTON_PLUS",
-					"PLA_RIGHT_REPEAT",      "BUTTON_PLUS|BUTTON_REPEAT",
-					"PLA_FIRE",              "BUTTON_MENU",
-					"PLA_FIRE_REPEAT",       "BUTTON_MENU|BUTTON_REPEAT",
-				
-					"PLA_START",         "BUTTON_MINUS",
-					"PLA_MENU",          "BUTTON_MENU",
-					"PLA_FIRE",          "BUTTON_PLUS",
-					"PLA_FIRE_REPEAT",   "BUTTON_PLUS|BUTTON_REPEAT",
-					
-					"PLA_INC",             "BUTTON_PLUS",
-					"PLA_DEC",             "BUTTON_MINUS",
-					"PLA_INC_REPEAT",      "BUTTON_PLUS|BUTTON_REPEAT",
-					"PLA_DEC_REPEAT",      "BUTTON_MINUS|BUTTON_REPEAT",
-				
-					"PLA_UP",
-					"PLA_DOWN",
-					"PLA_UP_REPEAT",
-					"PLA_DOWN_REPEAT" };
-*/
 
     int key[] = {
 					PLA_LEFT,              BUTTON_MINUS,
 					PLA_RIGHT,             BUTTON_PLUS,
-					PLA_FIRE,              BUTTON_MENU,
-					PLA_START,         BUTTON_MINUS,
-					PLA_MENU,          BUTTON_MENU,
-					PLA_INC,             BUTTON_PLUS,
-					PLA_DEC,             BUTTON_MINUS,
-					PLA_UP,
-					PLA_DOWN };
+					BUTTON_MENU,	PLA_SELECT,
+					PLA_CANCEL,          BUTTON_MENU,
+					BUTTON_PLUS,      BUTTON_MINUS,
+					PLA_UP,	PLA_DOWN };
 				
 	char *keyname[] = {
 					"PLA_LEFT",              "BUTTON_MINUS",
 					"PLA_RIGHT",             "BUTTON_PLUS",
-					"PLA_FIRE",              "BUTTON_MENU",
-					"PLA_START",         "BUTTON_MINUS",
-					"PLA_MENU",          "BUTTON_MENU",
-					"PLA_INC",             "BUTTON_PLUS",
-					"PLA_DEC",             "BUTTON_MINUS",
-					"PLA_UP",
-					"PLA_DOWN" };
+					"BUTTON_MENU",          "PLA_SELECT",
+					"PLA_CANCEL",          "BUTTON_MENU",
+					"BUTTON_PLUS",       "BUTTON_MINUS",
+					"PLA_UP", 	"PLA_DOWN" };
 					
     while (true)
     {
@@ -152,11 +100,11 @@ int plugin_main(void)
 					break;
 				}
 				
-			if (action == PLA_QUIT)
+			if (action == PLA_EXIT)
 			{
 				rb->lcd_clear_display();
 				rb->lcd_update();
-				rb->splash(HZ*2, "PLA_QUIT :(");
+				rb->splash(HZ*2, "PLA_EXIT :(");
 				cleanup(NULL);
 				return PLUGIN_OK;
 			}
@@ -165,41 +113,12 @@ int plugin_main(void)
 			if (i == NELEMS(key))
 			switch (action)
 			{
-				case PLA_QUIT:
+				case PLA_EXIT:
 					rb->lcd_clear_display();
 					rb->lcd_update();
-					rb->splash(HZ*2, "PLA_QUIT :(");
+					rb->splash(HZ*2, "PLA_EXIT :(");
 					cleanup(NULL);
 					return PLUGIN_OK;
-					
-/* 
-	{ PLA_LEFT,              BUTTON_MINUS,                  BUTTON_NONE},
-    { PLA_LEFT_REPEAT,       BUTTON_MINUS|BUTTON_REPEAT,    BUTTON_NONE},
-    { PLA_RIGHT,             BUTTON_PLUS,                   BUTTON_NONE},
-    { PLA_RIGHT_REPEAT,      BUTTON_PLUS|BUTTON_REPEAT,     BUTTON_NONE},
-    { PLA_FIRE,              BUTTON_MENU,                   BUTTON_NONE},
-    { PLA_FIRE_REPEAT,       BUTTON_MENU|BUTTON_REPEAT,     BUTTON_NONE},
-	
-    {PLA_QUIT,          BUTTON_POWER,                   BUTTON_NONE},
-    {PLA_START,         BUTTON_MINUS,                   BUTTON_NONE},
-    {PLA_MENU,          BUTTON_MENU,                    BUTTON_NONE},
-    {PLA_FIRE,          BUTTON_PLUS,                    BUTTON_NONE},
-    {PLA_FIRE_REPEAT,   BUTTON_PLUS|BUTTON_REPEAT,      BUTTON_NONE},
-    
-    {PLA_INC,             BUTTON_PLUS,                       BUTTON_NONE},
-    {PLA_DEC,             BUTTON_MINUS,                      BUTTON_NONE},
-    {PLA_INC_REPEAT,      BUTTON_PLUS|BUTTON_REPEAT,         BUTTON_NONE},
-    {PLA_DEC_REPEAT,      BUTTON_MINUS|BUTTON_REPEAT,        BUTTON_NONE},
-    
-    { PLA_UP,                BUTTON_RC_VOL_UP,                  BUTTON_NONE},
-    { PLA_DOWN,              BUTTON_RC_VOL_DOWN,                BUTTON_NONE},
-    { PLA_LEFT,              BUTTON_RC_REW,                     BUTTON_NONE},
-    { PLA_RIGHT,             BUTTON_RC_FF,                      BUTTON_NONE},
-    { PLA_UP_REPEAT,         BUTTON_RC_VOL_UP|BUTTON_REPEAT,    BUTTON_NONE},
-    { PLA_DOWN_REPEAT,       BUTTON_RC_VOL_DOWN|BUTTON_REPEAT,  BUTTON_NONE},
-    { PLA_LEFT_REPEAT,       BUTTON_RC_REW|BUTTON_REPEAT,       BUTTON_NONE},
-    { PLA_RIGHT_REPEAT,      BUTTON_RC_FF|BUTTON_REPEAT,        BUTTON_NONE},
-*/
 
 				case BUTTON_NONE:
 					if (show_none_button)

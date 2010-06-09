@@ -41,14 +41,15 @@ double k1 = 0.5, k2 = 0.5, k3 = 0.9;
 int rec_lvl = 0;
 bool need_redraw = true;
 
-const struct button_mapping *plugin_contexts[]
-= {generic_directions, generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
+
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+    (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 #ifdef HAVE_LCD_COLOR
 struct line_color
@@ -230,7 +231,7 @@ int plugin_main(void)
 										 NB_ACTION_CONTEXTS);
 			switch (action)
 			{
-				case PLA_QUIT:
+				case PLA_EXIT:
 					cleanup(NULL);
 					return PLUGIN_OK;
 					

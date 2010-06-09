@@ -120,14 +120,15 @@ Curve Curves[] = {
     {false, "triangle effect",       10, 0,  1, DEFAULT_P1, DEFAULT_P2, GREEN,  DrawIterTrian}
     };
 
-const struct button_mapping *plugin_contexts[]
-= {generic_directions, generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
+
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+    (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 void cleanup(void *parameter)
 {
@@ -196,11 +197,11 @@ int plugin_main(void)
                                      NB_ACTION_CONTEXTS);
         switch (action)
         {
-            case PLA_QUIT:
+            case PLA_EXIT:
                 cleanup(NULL);
                 return PLUGIN_OK;
                 
-            case PLA_FIRE:
+            case PLA_UP: //PLA_SELECT:
                 if (Curves[CType].CurIter <= Curves[CType].MaxIter)
                 {
                     Curves[CType].CurIter++;
@@ -208,7 +209,7 @@ int plugin_main(void)
                 }
                 break;
                 
-            case PLA_START:
+            case PLA_DOWN: //PLA_START:
                 if (Curves[CType].CurIter > 0)
                 {
                     Curves[CType].CurIter--;
@@ -216,7 +217,7 @@ int plugin_main(void)
                 }
                 break;
                 
-            case PLA_MENU:
+            case PLA_CANCEL:
                 do
                 {
                     if ((unsigned int)CType < ARRAYLEN(Curves) - 1)

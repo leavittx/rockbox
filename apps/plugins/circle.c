@@ -33,18 +33,19 @@ PLUGIN_HEADER
 #define DEFAULT_WAIT_TIME 3
 
 /* Key assignement */
-#define MY_QUIT PLA_QUIT
-#define MY_LESS_R PLA_DEC
-#define MY_MORE_R PLA_INC
+#define MY_QUIT PLA_EXIT
+#define MY_LESS_R PLA_DOWN
+#define MY_MORE_R PLA_UP
 
-const struct button_mapping *plugin_contexts[]
-= {generic_directions, generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
+
 #define NB_ACTION_CONTEXTS \
-    sizeof(plugin_contexts)/sizeof(struct button_mapping*)
+    (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 #ifdef HAVE_LCD_COLOR
 struct line_color

@@ -36,11 +36,10 @@ PLUGIN_HEADER
 
 #define SLEEP_TIME 3
 
-const struct button_mapping *plugin_contexts[] = { 
-	generic_directions,
-	generic_actions,
+const struct button_mapping *plugin_contexts[] = {
+	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
-    remote_directions
+    pla_remote_ctx,
 #endif
 };
 
@@ -132,7 +131,7 @@ int plugin_main(void)
 									 
 		switch (action)
 		{
-			case PLA_QUIT:
+			case PLA_EXIT:
 				cleanup(NULL);
 				return PLUGIN_OK;
 				
@@ -156,11 +155,11 @@ int plugin_main(void)
 				PlayerMoveLeft(&game, &game.player);
 				break;
 			
-			case PLA_FIRE:
+			case PLA_SELECT:
 				PlayerPlaceBomb(&game, &game.player);
 				break;
 				
-			case PLA_MENU:
+			case PLA_CANCEL:
 				break;
 		}
 	}
