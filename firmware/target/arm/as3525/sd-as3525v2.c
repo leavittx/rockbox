@@ -708,7 +708,7 @@ int sd_init(void)
 {
     int ret;
 
-    CGU_PERI |= CGU_MCI_CLOCK_ENABLE;
+    bitset32(&CGU_PERI, CGU_MCI_CLOCK_ENABLE);
 
     CGU_IDE =   (1<<7)          /* AHB interface enable */
             |   (AS3525_IDE_DIV << 2)
@@ -789,6 +789,8 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
 #ifndef HAVE_MULTIDRIVE
     const int drive = 0;
 #endif
+    bool aligned = !((uintptr_t)buf & (CACHEALIGN_SIZE - 1));
+
 
     mutex_lock(&sd_mtx);
 #ifndef BOOTLOADER
@@ -828,17 +830,34 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
     last_disk_activity = current_tick;
     dma_retain();
 
+    if(aligned)
+    {
+        if(write)
+            clean_dcache_range(buf, count * SECTOR_SIZE);
+        else
+            dump_dcache_range(buf, count * SECTOR_SIZE);
+    }
+
     const int cmd = write ? SD_WRITE_MULTIPLE_BLOCK : SD_READ_MULTIPLE_BLOCK;
 
     do
     {
-        void *dma_buf = aligned_buffer;
+        void *dma_buf;
         unsigned int transfer = count;
-        if(transfer > UNALIGNED_NUM_SECTORS)
-            transfer = UNALIGNED_NUM_SECTORS;
 
-        if(write)
-            memcpy(uncached_buffer, buf, transfer * SD_BLOCK_SIZE);
+        if(aligned)
+        {
+            dma_buf = AS3525_PHYSICAL_ADDR(buf);
+        }
+        else
+        {
+            dma_buf = aligned_buffer;
+            if(transfer > UNALIGNED_NUM_SECTORS)
+                transfer = UNALIGNED_NUM_SECTORS;
+
+            if(write)
+                memcpy(uncached_buffer, buf, transfer * SD_BLOCK_SIZE);
+        }
 
         /* Interrupt handler might set this to true during transfer */
         retry = false;
@@ -893,7 +912,7 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
 
         if(!retry)
         {
-            if(!write)
+            if(!write && !aligned)
                 memcpy(buf, uncached_buffer, transfer * SD_BLOCK_SIZE);
             buf += transfer * SD_BLOCK_SIZE;
             start += transfer;
@@ -953,8 +972,20 @@ long sd_last_disk_activity(void)
 
 void sd_enable(bool on)
 {
-    /* TODO */
-    (void) on;
+    if (on)
+    {
+        bitset32(&CGU_PERI, CGU_MCI_CLOCK_ENABLE);
+        CGU_IDE |= (1<<7);                  /* AHB interface enable */
+        CGU_MEMSTICK |= (1<<7);             /* interface enable */
+        CGU_SDSLOT |= (1<<7);               /* interface enable */
+    }
+    else
+    {
+        CGU_SDSLOT &= ~(1<<7);              /* interface enable */
+        CGU_MEMSTICK &= ~(1<<7);            /* interface enable */
+        CGU_IDE &= ~(1<<7);                 /* AHB interface enable */
+        bitclr32(&CGU_PERI, CGU_MCI_CLOCK_ENABLE);
+    }
 }
 
 tCardInfo *card_get_info_target(int card_no)

@@ -48,7 +48,6 @@
 #include "backlight.h"
 #include "status.h"
 #include "debug_menu.h"
-#include "version.h"
 #include "font.h"
 #include "language.h"
 #include "wps.h"
@@ -115,6 +114,8 @@
 
 #ifdef SIMULATOR
 #include "sim_tasks.h"
+#endif
+#ifdef HAVE_SDL
 #include "system-sdl.h"
 #endif
 
@@ -313,7 +314,7 @@ static void init_tagcache(void)
 }
 #endif
 
-#ifdef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 
 static void init(void)
 {
@@ -694,7 +695,7 @@ static void init(void)
 }
 
 #ifdef CPU_PP
-void cop_main(void)
+void __attribute__((noreturn)) cop_main(void)
 {
 /* This is the entry point for the coprocessor
    Anyone not running an upgraded bootloader will never reach this point,
@@ -705,7 +706,6 @@ void cop_main(void)
    destroyed for purposes of continuity. The cop sits idle until at least
    one thread exists on it. */
 
-/* 3G doesn't have Rolo or dual core support yet */
 #if NUM_CORES > 1
     system_init();
     kernel_init();
@@ -717,5 +717,4 @@ void cop_main(void)
 }
 #endif /* CPU_PP */
 
-#endif
-
+#endif /* SIMULATOR */

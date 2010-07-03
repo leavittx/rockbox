@@ -17,7 +17,6 @@ FIRMLIB_OBJ := $(call c2obj, $(FIRMLIB_SRC))
 ifeq (,$(findstring -DARCHOS_PLAYER,$(TARGET)))
     FIRMLIB_OBJ += $(BUILDDIR)/sysfont.o
 endif
-FIRMLIB_OBJ += $(BUILDDIR)/version.o
 OTHER_SRC += $(FIRMLIB_SRC)
 
 FIRMLIB = $(BUILDDIR)/firmware/libfirmware.a
@@ -44,8 +43,12 @@ $(BUILDDIR)/sysfont.o: $(SYSFONT) $(BUILDDIR)/sysfont.h
 	$(call PRINTS,CONVBDF $(subst $(ROOTDIR)/,,$<))$(TOOLSDIR)/convbdf -l $(MAXCHAR) -c -o $(BUILDDIR)/sysfont.c $<
 	$(call PRINTS,CC $(subst $(ROOTDIR)/,,$(BUILDDIR)/sysfont.c))$(CC) $(CFLAGS) -c $(BUILDDIR)/sysfont.c -o $@
 
-$(BUILDDIR)/version.c: $(BUILDDIR)/version.h
-	$(TOOLSDIR)/genversion.sh c $(BUILDDIR) $(TOOLSDIR)/version.sh $(ROOTDIR)
+SVNVERSION:=$(shell $(TOOLSDIR)/version.sh $(ROOTDIR))
+OLDSVNVERSION:=$(shell grep 'RBVERSION' $(BUILDDIR)/version.h 2>/dev/null|cut -d '"' -f 2 || echo "NOREVISION")
+
+ifneq ($(SVNVERSION),$(OLDSVNVERSION))
+.PHONY: $(BUILDDIR)/version.h
+endif
 
 $(BUILDDIR)/version.h:
-	$(TOOLSDIR)/genversion.sh h $(BUILDDIR) $(TOOLSDIR)/version.sh $(ROOTDIR)
+	$(call PRINTS,GEN $(@F))$(TOOLSDIR)/genversion.sh $(BUILDDIR) $(TOOLSDIR)/version.sh $(ROOTDIR)

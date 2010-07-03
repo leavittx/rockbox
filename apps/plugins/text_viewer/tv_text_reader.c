@@ -29,19 +29,9 @@
 static int get_block;
 static bool get_double_blocks;
 
-bool tv_init_text_reader(unsigned char *buf, size_t bufsize, size_t *used_size)
+bool tv_init_text_reader(unsigned char **buf, size_t *size)
 {
-    size_t size;
-
-    if (!tv_init_text_processor(buf, bufsize, used_size))
-        return false;
-
-    size = *used_size;
-    if (!tv_init_pager(buf + size, bufsize - size, used_size))
-        return false;
-
-    *used_size += size;
-    return true;
+    return tv_init_text_processor(buf, size) && tv_init_pager(buf, size);
 }
 
 void tv_finalize_text_reader(void)

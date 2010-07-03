@@ -41,6 +41,7 @@
 #define TEA5760    0x10 /* Philips */
 #define LV240000   0x20 /* Sanyo */
 #define IPOD_REMOTE_TUNER   0x40 /* Apple */
+#define RDA5802    0x80 /* RDA Microelectronics */
 
 /* CONFIG_CODEC */
 #define MAS3587F 3587
@@ -72,6 +73,13 @@
 #define AS3525       3525
 #define AT91SAM9260  9260
 #define AS3525v2    35252
+
+/* platforms
+ * bit fields to allow PLATFORM_HOSTED to be OR'ed e.g. with a
+ * possible future PLATFORM_ANDROID (some OSes might need totally different
+ * handling to run on them than a stand-alone application) */
+#define PLATFORM_NATIVE (1<<0)
+#define PLATFORM_HOSTED (1<<1)
 
 /* CONFIG_KEYPAD */
 #define PLAYER_PAD          1
@@ -496,6 +504,10 @@ Lyre prototype 1 */
 #define CONFIG_BACKLIGHT_FADING BACKLIGHT_NO_FADING
 #endif
 
+#ifndef CONFIG_PLATFORM
+#define CONFIG_PLATFORM PLATFORM_NATIVE
+#endif
+
 #ifndef CONFIG_TUNER
 #define CONFIG_TUNER 0
 #endif
@@ -674,10 +686,10 @@ Lyre prototype 1 */
 #define HAVE_EXTENDED_MESSAGING_AND_NAME
 #define HAVE_WAKEUP_EXT_CB
 
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 #define HAVE_PRIORITY_SCHEDULING
 #define HAVE_SCHEDULER_BOOSTCTRL
-#endif /* SIMULATOR */
+#endif /* PLATFORM_NATIVE */
 
 #define HAVE_SEMAPHORE_OBJECTS
 
@@ -710,6 +722,26 @@ Lyre prototype 1 */
 #define ROCKBOX_STRICT_ALIGN 1
 #endif
 
+#if defined(CPU_ARM) && defined(__ASSEMBLER__)
+/* ARMv4T doesn't switch the T bit when popping pc directly, we must use BX */
+.macro ldmpc cond="", order="ia", regs
+#if ARM_ARCH == 4 && defined(USE_THUMB)
+    ldm\cond\order sp!, { \regs, lr }
+    bx\cond lr
+#else
+    ldm\cond\order sp!, { \regs, pc }
+#endif
+.endm
+.macro ldrpc cond=""
+#if ARM_ARCH == 4 && defined(USE_THUMB)
+    ldr\cond lr, [sp], #4
+    bx\cond  lr
+#else
+    ldr\cond pc, [sp], #4
+#endif
+.endm
+#endif
+
 #ifndef CODEC_SIZE
 #define CODEC_SIZE 0
 #endif
@@ -723,13 +755,13 @@ Lyre prototype 1 */
 #endif
 
 /* IRAM usage */
-#if !defined(SIMULATOR) &&   /* Not for simulators */ \
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE) &&   /* Not for hosted environments */ \
     (((CONFIG_CPU == SH7034) && !defined(PLUGIN)) || /* SH1 archos: core only */ \
     defined(CPU_COLDFIRE) || /* Coldfire: core, plugins, codecs */ \
     defined(CPU_PP) ||  /* PortalPlayer: core, plugins, codecs */ \
-    (CONFIG_CPU == AS3525 && MEMORYSIZE > 2) || /* AS3525 +2MB: core, plugins, codecs */ \
-    (CONFIG_CPU == AS3525 && MEMORYSIZE <= 2 && !defined(PLUGIN) && !defined(CODEC)) || /* AS3525 2MB: core only */ \
-    (CONFIG_CPU == AS3525v2 && !defined(PLUGIN) && !defined(CODEC)) || /* AS3525v2: core only */ \
+    (CONFIG_CPU == AS3525 && MEMORYSIZE > 2 && !defined(BOOTLOADER)) || /* AS3525 +2MB: core, plugins, codecs */ \
+    (CONFIG_CPU == AS3525 && MEMORYSIZE <= 2 && !defined(PLUGIN) && !defined(CODEC) && !defined(BOOTLOADER)) || /* AS3525 2MB: core only */ \
+    (CONFIG_CPU == AS3525v2 && !defined(PLUGIN) && !defined(CODEC) && !defined(BOOTLOADER)) || /* AS3525v2: core only */ \
     (CONFIG_CPU == PNX0101) || \
     (CONFIG_CPU == TCC7801) || \
     defined(CPU_S5L870X)) || /* Samsung S5L8700: core, plugins, codecs */ \
@@ -743,10 +775,11 @@ Lyre prototype 1 */
     && CONFIG_CPU != JZ4732 && CONFIG_CPU != AS3525v2
 #define PLUGIN_USE_IRAM
 #endif
-#if defined(CPU_ARM)
+#if defined(CPU_ARM) && !defined(__ARM_EABI__)
 /* GCC quirk workaround: arm-elf-gcc treats static functions as short_call
  * when not compiling with -ffunction-sections, even when the function has
- * a section attribute. */
+ * a section attribute.
+ * This is fixed with eabi since all calls are short ones by default */
 #define STATICIRAM
 #else
 #define STATICIRAM static
@@ -758,8 +791,10 @@ Lyre prototype 1 */
 #define IBSS_ATTR
 #define STATICIRAM static
 #endif
-#if (defined(CPU_PP) || (CONFIG_CPU == AS3525) || (CONFIG_CPU == AS3525v2)) \
-    && !defined(SIMULATOR) && !defined(BOOTLOADER)
+
+#if (defined(CPU_PP) || (CONFIG_CPU == AS3525) || (CONFIG_CPU == AS3525v2) || \
+    (CONFIG_CPU == IMX31L)) \
+    && (CONFIG_PLATFORM & PLATFORM_NATIVE) && !defined(BOOTLOADER)
 /* Functions that have INIT_ATTR attached are NOT guaranteed to survive after
  * root_menu() has been called. Their code may be overwritten by other data or
  * code in order to save RAM, and references to them might point into
@@ -776,7 +811,7 @@ Lyre prototype 1 */
 #define INIT_ATTR
 #endif
 
-#if defined(SIMULATOR) && defined(__APPLE__)
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED) && defined(__APPLE__)
 #define DATA_ATTR       __attribute__ ((section("__DATA, .data")))
 #else
 #define DATA_ATTR       __attribute__ ((section(".data")))
@@ -793,11 +828,6 @@ Lyre prototype 1 */
 #define FORCE_SINGLE_CORE
 #endif
 
-/* Core locking types - specifies type of atomic operation */
-#define CORELOCK_NONE   0
-#define SW_CORELOCK     1 /* Mutual exclusion provided by a software algorithm
-                             and not a special semaphore instruction */
-
 #if defined(CPU_PP)
 #define IDLE_STACK_SIZE  0x80
 #define IDLE_STACK_WORDS 0x20
@@ -811,6 +841,7 @@ Lyre prototype 1 */
 #if !defined(FORCE_SINGLE_CORE)
 
 #define NUM_CORES 2
+#define HAVE_CORELOCK_OBJECT
 #define CURRENT_CORE current_core()
 /* Attributes for core-shared data in DRAM where IRAM is better used for other
  * purposes. */
@@ -821,9 +852,7 @@ Lyre prototype 1 */
 #define IF_COP_VOID(...)    __VA_ARGS__
 #define IF_COP_CORE(core)   core
 
-#define CONFIG_CORELOCK SW_CORELOCK /* SWP(B) is broken */
-
-#endif /* !defined(BOOTLOADER) && CONFIG_CPU != PP5002 */
+#endif /* !defined(FORCE_SINGLE_CORE) */
 
 #endif /* CPU_PP */
 
@@ -831,18 +860,6 @@ Lyre prototype 1 */
 #define NOCACHEBSS_ATTR     __attribute__((section(".ncbss"),nocommon))
 #define NOCACHEDATA_ATTR    __attribute__((section(".ncdata"),nocommon))
 #endif
-
-#ifndef CONFIG_CORELOCK
-#define CONFIG_CORELOCK CORELOCK_NONE
-#endif
-
-#if CONFIG_CORELOCK == SW_CORELOCK
-#define IF_SWCL(...) __VA_ARGS__
-#define IFN_SWCL(...)
-#else
-#define IF_SWCL(...)
-#define IFN_SWCL(...) __VA_ARGS__
-#endif /* CONFIG_CORELOCK == */
 
 #ifndef NUM_CORES
 /* Default to single core */
@@ -855,7 +872,6 @@ Lyre prototype 1 */
 #define NOCACHEBSS_ATTR
 #define NOCACHEDATA_ATTR
 #endif
-#define CONFIG_CORELOCK CORELOCK_NONE
 
 #define IF_COP(...)
 #define IF_COP_VOID(...)    void
@@ -891,7 +907,8 @@ Lyre prototype 1 */
 #define USB_HAS_BULK
 #elif (CONFIG_USBOTG == USBOTG_ARC) || \
     (CONFIG_USBOTG == USBOTG_JZ4740) || \
-    (CONFIG_USBOTG == USBOTG_M66591)
+    (CONFIG_USBOTG == USBOTG_M66591) || \
+    (CONFIG_USBOTG == USBOTG_AS3525)
 #define USB_HAS_BULK
 #define USB_HAS_INTERRUPT
 #elif defined(CPU_TCC780X) || defined(CPU_TCC77X)
@@ -901,7 +918,8 @@ Lyre prototype 1 */
 //#define USB_HAS_INTERRUPT -- seems to be broken
 #endif /* CONFIG_USBOTG */
 
-#if CONFIG_USBOTG == USBOTG_ARC
+#if (CONFIG_USBOTG == USBOTG_ARC) || \
+    (CONFIG_USBOTG == USBOTG_AS3525)
 #define USB_HAS_ISOCHRONOUS
 #endif
 
@@ -912,13 +930,14 @@ Lyre prototype 1 */
 #if  (defined(TOSHIBA_GIGABEAT_S) || \
      (defined(CREATIVE_ZVx) || \
      defined(CPU_TCC77X) || defined(CPU_TCC780X))) || \
-     (CONFIG_USBOTG == USBOTG_JZ4740) || defined(IPOD_NANO2G)
+     (CONFIG_USBOTG == USBOTG_JZ4740) || defined(IPOD_NANO2G) || \
+     CONFIG_USBOTG == USBOTG_AS3525
 #define USB_ENABLE_STORAGE
 #endif
 
 #else /* BOOTLOADER */
 
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 //#define USB_ENABLE_SERIAL
 #define USB_ENABLE_STORAGE
 
@@ -936,11 +955,11 @@ Lyre prototype 1 */
 /* This attribute can be used to enable to detection of plugin file handles leaks.
  * When enabled, the plugin core will monitor open/close/creat and when the plugin exits
  * will display an error message if the plugin leaked some file handles */
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 #define HAVE_PLUGIN_CHECK_OPEN_CLOSE
 #endif
 
-#if defined(HAVE_DIRCACHE) && !defined(SIMULATOR)
+#if defined(HAVE_DIRCACHE) && (CONFIG_PLATFORM & PLATFORM_NATIVE)
 #define HAVE_IO_PRIORITY
 #endif
 

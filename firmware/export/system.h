@@ -125,7 +125,7 @@ int get_cpu_boost_counter(void);
 
 
 /* newer? SDL includes endian.h, So we ignore it */
-#if defined(SIMULATOR) || defined(__PCTOOL__)
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED) || defined(__PCTOOL__)
 #undef letoh16
 #undef letoh32
 #undef htole16
@@ -214,6 +214,11 @@ static inline __attribute__((always_inline))
 uint32_t isolate_first_bit(uint32_t val)
     { return val & -val; }
 
+/* Functions to set and clear register or variable bits atomically */
+void bitmod32(volatile uint32_t *addr, uint32_t bits, uint32_t mask);
+void bitset32(volatile uint32_t *addr, uint32_t mask);
+void bitclr32(volatile uint32_t *addr, uint32_t mask);
+
 /* gcc 3.4 changed the format of the constraints */
 #if (__GNUC__ >= 3) && (__GNUC_MINOR__ > 3) || (__GNUC__ >= 4)
 #define I_CONSTRAINT "I08"
@@ -234,8 +239,11 @@ enum {
 
 #if !defined(SIMULATOR) && !defined(__PCTOOL__) 
 #include "system-target.h"
-#elif defined(HAVE_SDL) /* SIMULATOR */
+#elif defined(HAVE_SDL) /* SDL build */
 #include "system-sdl.h"
+#endif
+
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 static inline uint16_t swap16(uint16_t value)
     /*
       result[15..8] = value[ 7..0];
@@ -268,7 +276,7 @@ static inline uint32_t swap_odd_even32(uint32_t value)
     return (t >> 8) | ((t ^ value) << 8);
 }
 
-#endif /* !SIMULATOR */
+#endif /* PLATFORM_HOSTED */
 
 #ifndef BIT_N
 #define BIT_N(n) (1U << (n))
@@ -301,7 +309,7 @@ static inline void cpucache_flush(void)
 /* 2^CACHEALIGN_BITS = the byte size */
 #define CACHEALIGN_SIZE (1u << CACHEALIGN_BITS)
 #else
-#define CACHEALIGN_SIZE sizeof(int)
+#define CACHEALIGN_SIZE 16  /* FIXME */
 #endif
 #endif /* CACHEALIGN_SIZE */
 
@@ -336,6 +344,7 @@ static inline void cpucache_flush(void)
 #endif /* PROC_NEEDS_CACHEALIGN */
 
 #ifdef STORAGE_WANTS_ALIGN
+#define STORAGE_ALIGN_ATTR __attribute__((aligned(CACHEALIGN_SIZE)))
 #define STORAGE_ALIGN_DOWN(x) \
     ((typeof (x))ALIGN_DOWN_P2((uintptr_t)(x), CACHEALIGN_BITS))
 /* Pad a size so the buffer can be aligned later */
@@ -343,6 +352,7 @@ static inline void cpucache_flush(void)
 /* Number of bytes in the last cacheline assuming buffer of size x is aligned */
 #define STORAGE_OVERLAP(x) ((x) & (CACHEALIGN_SIZE - 1))
 #else
+#define STORAGE_ALIGN_ATTR
 #define STORAGE_ALIGN_DOWN(x) (x)
 #define STORAGE_PAD(x) (x)
 #define STORAGE_OVERLAP(x) 0

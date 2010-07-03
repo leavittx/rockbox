@@ -257,7 +257,7 @@ extern unsigned char codecbuf[];
 extern size_t codec_size;
 
 #ifdef CODEC
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 /* plugin_* is correct, codecs use the plugin linker script */
 extern unsigned char plugin_start_addr[];
 extern unsigned char plugin_end_addr[];

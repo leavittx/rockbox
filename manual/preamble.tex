@@ -197,10 +197,8 @@
 % command to mark a text block as intended especially for blind people
 % Usage: \blind{text}
 \ifpdfoutput{
-\newcommand{\blind}[1]{
-  \ifinner\else\par\noindent\fi
-  \ifinner#1\else\marginpar{\raisebox{-6pt}{\Huge\ForwardToEnd}}#1\par\fi%
-}}
+\newcommand{\blind}[1]{\mbox{}\marginpar{\raisebox{-1ex}{\Huge{\ForwardToEnd}}}#1}
+}
 {\newcommand{\blind}[1]{\ifinner\else\par\noindent\fi#1}}
 
 % make table floats use "H" (as for screenshots) as default positioning
@@ -248,6 +246,7 @@
   \endtabularx
 }
 
+\newcommand{\tabnlindent}{\newline\mbox{ }\mbox{ }}
 
 
 
@@ -268,7 +267,7 @@
     \endcenter%
   }
   \center
-\tabularx{\textwidth}{lX}\toprule\rowcolor{tblhdrbgcolor} % here is the table width defined
+\tabularx{\textwidth}{Xp{.7\textwidth}}\toprule\rowcolor{tblhdrbgcolor} % here is the table width defined
   \taghead
 }{%
   \endtabularx

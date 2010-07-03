@@ -41,6 +41,7 @@ struct si4700_dbg_info
     uint16_t regs[16];  /* Read registers */
 };
 
+bool si4700_detect(void);
 void si4700_init(void);
 int si4700_set(int setting, int value);
 int si4700_get(int setting);

@@ -90,7 +90,7 @@ extern const struct fm_region_data fm_region_data[TUNER_NUM_REGIONS];
 
 #if CONFIG_TUNER
 
-#ifdef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 int tuner_set(int setting, int value);
 int tuner_get(int setting);
 #ifdef HAVE_RDS_CAP
@@ -99,6 +99,7 @@ char* tuner_get_rds_info(int setting);
 #else
 
 #ifdef CONFIG_TUNER_MULTI
+extern int tuner_detect_type(void);
 extern int (*tuner_set)(int setting, int value);
 extern int (*tuner_get)(int setting);
 #endif /* CONFIG_TUNER_MULTI */
@@ -131,12 +132,17 @@ extern int (*tuner_get)(int setting);
 #include "si4700.h"
 #endif
 
+/* RDA micro RDA5802 */
+#if (CONFIG_TUNER & RDA5802)
+#include "rda5802.h"
+#endif
+
 /* Apple remote tuner */
 #if (CONFIG_TUNER & IPOD_REMOTE_TUNER)
 #include "ipod_remote_tuner.h"
 #endif
 
-#endif /* SIMULATOR */
+#endif /* PLATFORM_HOSTED */
 
 /* Additional messages that get enumerated after tuner driver headers */
 

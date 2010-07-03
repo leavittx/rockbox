@@ -44,7 +44,6 @@ PLUGIN_HEADER
 static int line = 0;
 static int max_line = 0;
 static int log_fd = -1;
-static char logfilename[MAX_PATH];
 
 static void log_close(void)
 {
@@ -55,6 +54,7 @@ static void log_close(void)
 static bool log_init(bool use_logfile)
 {
     int h;
+    char logfilename[MAX_PATH];
 
     rb->lcd_getstringsize("A", NULL, &h);
     max_line = LCD_HEIGHT / h;
@@ -99,7 +99,6 @@ struct wavinfo_t
 static void* audiobuf;
 static void* codec_mallocbuf;
 static size_t audiosize;
-static char str[MAX_PATH];
 
 /* Our local implementation of the codec API */
 static struct codec_api ci;
@@ -160,9 +159,8 @@ static inline void int2le16(unsigned char* buf, int16_t x)
   buf[1] = (x & 0xff00) >> 8;
 }
 
-/* 32KB should be enough */
-static unsigned char wavbuffer[32*1024];
-static unsigned char dspbuffer[32*1024];
+static unsigned char *wavbuffer;
+static unsigned char *dspbuffer;
 
 void init_wav(char* filename)
 {
@@ -208,7 +206,7 @@ void close_wav(void)
 /* Returns buffer to malloc array. Only codeclib should need this. */
 static void* codec_get_buffer(size_t *size)
 {
-   DEBUGF("codec_get_buffer(%d)\n",(int)size);
+   DEBUGF("codec_get_buffer(%"PRIuPTR")\n",(uintptr_t)size);
    *size = CODEC_SIZE;
    return codec_mallocbuf;
 }
@@ -591,6 +589,7 @@ static enum plugin_status test_track(const char* filename)
     unsigned long speed;
     unsigned long duration;
     const char* ch;
+    char str[MAX_PATH];
 
     /* Display filename (excluding any path)*/
     ch = rb->strrchr(filename, '/');
@@ -676,7 +675,7 @@ static enum plugin_status test_track(const char* filename)
     
     if (checksum)
     {
-        rb->snprintf(str, sizeof(str), "CRC32 - %x", (unsigned)crc32);
+        rb->snprintf(str, sizeof(str), "CRC32 - %08x", (unsigned)crc32);
         log_text(str,true);
     }
     else if (wavinfo.fd < 0) 
@@ -697,7 +696,7 @@ static enum plugin_status test_track(const char* filename)
         rb->snprintf(str,sizeof(str),"%d.%02d%% realtime",(int)speed/100,(int)speed%100);
         log_text(str,true);
         
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
         /* show effective clockrate in MHz needed for realtime decoding */
         if (speed > 0)
         {
@@ -733,12 +732,16 @@ enum plugin_status plugin_start(const void* parameter)
     char* ch;
     char dirpath[MAX_PATH];
     char filename[MAX_PATH];
+    size_t buffer_size;
 
     if (parameter == NULL)
     {
         rb->splash(HZ*2, "No File");
         return PLUGIN_ERROR;
     }
+
+    wavbuffer = rb->plugin_get_buffer(&buffer_size);
+    dspbuffer = wavbuffer + buffer_size / 2;
 
     codec_mallocbuf = rb->plugin_get_audio_buffer(&audiosize);
     audiobuf = SKIPBYTES(codec_mallocbuf, CODEC_SIZE);

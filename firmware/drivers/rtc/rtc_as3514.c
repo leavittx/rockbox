@@ -99,6 +99,9 @@ void rtc_alarm_poweroff(void)
     seconds >>= 8;
     seconds |= 1<<7; /* enable bit */
     ascodec_write(AS3543_WAKEUP, seconds);
+    
+    /* write 0x80 to prevent the OF refreshing its database from the microSD */
+    ascodec_write(AS3543_WAKEUP, 0x80);
 
     /* write our desired time of wake up to detect power-up from RTC */
     ascodec_write(AS3543_WAKEUP, wakeup_h);
@@ -122,36 +125,24 @@ bool rtc_check_alarm_started(bool release_alarm)
 {
     (void) release_alarm;
 
-    /* was it an alarm that triggered power on ? */
-    bool alarm_start = false;
-
     /* 3 first reads give the 23 bits counter and enable bit */
     ascodec_read(AS3543_WAKEUP); /* bits  7:0  */
     ascodec_read(AS3543_WAKEUP); /* bits 15:8  */
-    if(ascodec_read(AS3543_WAKEUP) & (1<<7)) /* enable bit */
-    {
-#if 0   /* we could have a persistent setting for wake-up time */
-        alarm_enabled = true;
-#endif
+    if(!(ascodec_read(AS3543_WAKEUP) & (1<<7))) /* enable bit */
+        return false;
+        
+    /* skip WAKEUP[3] which the OF uses for other purposes */
+    ascodec_read(AS3543_WAKEUP);
 
-        /* subsequent reads give the 16 bytes static SRAM */
-        wakeup_h = ascodec_read(AS3543_WAKEUP);
-        wakeup_m = ascodec_read(AS3543_WAKEUP);
+    /* subsequent reads give the 16 bytes static SRAM */
+    wakeup_h = ascodec_read(AS3543_WAKEUP);
+    wakeup_m = ascodec_read(AS3543_WAKEUP);
 
-        struct tm tm;
-        rtc_read_datetime(&tm);
+    struct tm tm;
+    rtc_read_datetime(&tm);
 
-        /* do we wake up at the programmed time, or for another reason ? */
-        if(wakeup_h == tm.tm_hour && wakeup_m == tm.tm_min)
-            alarm_start = true;
-    }
-
-    /* disable alarm */
-    ascodec_write(AS3543_WAKEUP, 0); /* bits  7:0  */
-    ascodec_write(AS3543_WAKEUP, 0); /* bits 15:8  */
-    ascodec_write(AS3543_WAKEUP, 0); /* bits 22:16 + enable bit */
-
-    return alarm_start;
+    /* were we powered up at the programmed time ? */
+    return wakeup_h == tm.tm_hour && wakeup_m == tm.tm_min;
 }
 
 bool rtc_check_alarm_flag(void)

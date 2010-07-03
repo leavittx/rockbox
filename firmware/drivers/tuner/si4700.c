@@ -316,18 +316,28 @@ static void si4700_sleep(int snooze)
     }
 }
 
+bool si4700_detect(void)
+{
+    bool detected;
+
+    tuner_power(true);
+    detected = (si4700_read_reg(DEVICEID) == 0x1242);
+    tuner_power(false);
+
+    return detected;
+}
+
 void si4700_init(void)
 {
-    tuner_power(true);
-
-    /* read all registers */
-    si4700_read(16);
-    si4700_sleep(0);
-
     /* check device id */
-    if (cache[DEVICEID] == 0x1242)
-    {
+    if (si4700_detect()) {
         tuner_present = true;
+
+        tuner_power(true);
+
+        /* read all registers */
+        si4700_read(16);
+        si4700_sleep(0);
 
 #ifdef USE_INTERNAL_OSCILLATOR
         /* Enable the internal oscillator
@@ -335,11 +345,10 @@ void si4700_init(void)
         si4700_write_set(TEST1, TEST1_XOSCEN | 0x100);
         sleep(HZ/2);
 #endif
+
+        si4700_sleep(1);
+        tuner_power(false);
     }
-
-    si4700_sleep(1);
-
-    tuner_power(false);
 }
 
 static void si4700_set_frequency(int freq)
@@ -361,19 +370,21 @@ static void si4700_set_frequency(int freq)
     int space = SYSCONFIG2_SPACEr(cache[SYSCONFIG2]);
     int band = SYSCONFIG2_BANDr(cache[SYSCONFIG2]);
     int chan = (freq - bands[band]) / spacings[space];
+    int readchan;
 
     curr_frequency = freq;
-
-    si4700_write_reg(CHANNEL, CHANNEL_CHANw(chan) | CHANNEL_TUNE);
 
     do
     {
         /* tuning should be done within 60 ms according to the datasheet */
+        si4700_write_reg(CHANNEL, CHANNEL_CHANw(chan) | CHANNEL_TUNE);
         sleep(HZ * 60 / 1000);
-    }
-    while ((si4700_read_reg(STATUSRSSI) & STATUSRSSI_STC) == 0); /* STC high? */
 
-    si4700_write_clear(CHANNEL, CHANNEL_TUNE); /* Set TUNE low */
+        /* get tune result */
+        readchan = si4700_read_reg(READCHAN) & READCHAN_READCHAN;
+
+        si4700_write_clear(CHANNEL, CHANNEL_TUNE);
+    } while (!((cache[STATUSRSSI] & STATUSRSSI_STC) && (readchan == chan)));
 }
 
 static int si4700_tuned(void)

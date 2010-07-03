@@ -9,6 +9,7 @@ fixedpoint.c
 playback_control.c
 rgb_hsv.c
 buflib.c
+highscore.c
 simple_viewer.c
 display_text.c
 strncpy.c
@@ -27,18 +28,16 @@ grey_sh.S
 
 #endif /* HAVE_LCD_BITMAP && LCD_DEPTH < 4 */
 
-highscore.c
-
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 overlay.c
-#endif
-
-#ifdef HAVE_LCD_CHARCELLS
-playergfx.c
 #endif
 
 #ifdef RB_PROFILE
 profile_plugin.c
+#endif
+
+#ifdef HAVE_LCD_CHARCELLS
+playergfx.c
 #endif
 
 #ifdef HAVE_LCD_BITMAP
@@ -77,7 +76,7 @@ pluginlib_albumart.c
 pluginlib_touchscreen.c
 #endif
 
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 
 #ifdef CPU_ARM
 ../../codecs/lib/setjmp_arm.S
@@ -91,7 +90,7 @@ pluginlib_touchscreen.c
 ../../codecs/lib/setjmp_mips.S
 #endif
 
-#endif /* !SIMULATOR */
+#endif /* PLATFORM_NATIVE */
 
 #if defined(COWON_D2) || defined(IPOD_NANO) || defined(IPOD_VIDEO) \
 	|| defined(OLYMPUS_MROBE_500)

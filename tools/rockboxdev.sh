@@ -187,10 +187,10 @@ build() {
     cd build-$toolname
 
     echo "ROCKBOXDEV: $toolname/configure"
-    ../$toolname-$version/configure --target=$target --prefix=$prefix --enable-languages=c --disable-libssp --disable-docs $configure_params
+    CFLAGS=-U_FORTIFY_SOURCE ../$toolname-$version/configure --target=$target --prefix=$prefix --enable-languages=c --disable-libssp --disable-docs $configure_params
 
     echo "ROCKBOXDEV: $toolname/make"
-    $make -j8
+    $make
 
     echo "ROCKBOXDEV: $toolname/make install"
     $make install
@@ -214,6 +214,7 @@ done
 echo "Download directory : $dlwhere (set RBDEV_DOWNLOAD to change)"
 echo "Install prefix     : $prefix  (set RBDEV_PREFIX to change)"
 echo "Build dir          : $builddir (set RBDEV_BUILD to change)"
+echo "Make options       : $MAKEFLAGS (set MAKEFLAGS to change)"
 echo ""
 
 # Verify download directory
@@ -300,7 +301,7 @@ do
             ;;
 
         [Ee])
-            build "binutils" "arm-elf-eabi" "2.20.1"
+            build "binutils" "arm-elf-eabi" "2.20.1" "binutils-2.20.1-ld-thumb-interwork-long-call.diff"
             build "gcc" "arm-elf-eabi" "4.4.4" "rockbox-multilibs-noexceptions-arm-elf-eabi-gcc-4.4.2_1.diff" "" "needs_gmp"
             ;;
 

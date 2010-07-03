@@ -104,7 +104,9 @@
 #elif CONFIG_KEYPAD == ONDIO_PAD
 #define FM_RECORD_DBLPRE
 #define FM_RECORD
-#elif (CONFIG_KEYPAD == SANSA_E200_PAD) || (CONFIG_KEYPAD == SANSA_C200_PAD)
+
+#elif (CONFIG_KEYPAD == SANSA_E200_PAD) || (CONFIG_KEYPAD == SANSA_C200_PAD) ||\
+      (CONFIG_KEYPAD == SANSA_FUZE_PAD) || (CONFIG_KEYPAD == SANSA_CLIP_PAD)
 #define FM_MENU
 #define FM_PRESET
 #define FM_STOP
@@ -418,10 +420,10 @@ int radio_screen(void)
     bool have_recorded = false;
     int timeout = current_tick + HZ/10;
     unsigned int last_seconds = 0;
-#ifndef SIMULATOR    
+#if !defined(SIMULATOR)
     unsigned int seconds = 0;
     struct audio_recording_options rec_options;
-#endif
+#endif /* SIMULATOR */
 #endif /* CONFIG_CODEC != SWCODEC */
 #ifndef HAVE_NOISY_IDLE_MODE
     int button_timeout = current_tick + (2*HZ);

@@ -84,7 +84,6 @@ $(CODECDIR)/shorten.codec : $(CODECDIR)/libffmpegFLAC.a
 $(CODECDIR)/ape-pre.map : $(CODECDIR)/libdemac-pre.a
 $(CODECDIR)/ape.codec : $(CODECDIR)/libdemac.a
 $(CODECDIR)/wma.codec : $(CODECDIR)/libwma.a $(CODECDIR)/libasf.a
-$(CODECDIR)/wmapro.codec : $(CODECDIR)/libwma.a $(CODECDIR)/libasf.a
 $(CODECDIR)/wavpack_enc.codec: $(CODECDIR)/libwavpack.a
 $(CODECDIR)/asap.codec : $(CODECDIR)/libasap.a
 $(CODECDIR)/mikmod.codec : $(CODECDIR)/libmikmod.a
@@ -124,6 +123,7 @@ else
  CODECLDFLAGS = -T$(CODECLINK_LDS) -Wl,--gc-sections -Wl,-Map,$(CODECDIR)/$*.map
  CODECFLAGS += -UDEBUG -DNDEBUG
 endif
+CODECLDFLAGS += $(GLOBAL_LDOPTS)
 
 $(CODECDIR)/%-pre.map: $(CODEC_CRT0) $(CODECLINK_LDS) $(CODECDIR)/%.o $(CODECLIB)
 	$(call PRINTS,LD $(@F))$(CC) $(CODECFLAGS) -o $(CODECDIR)/$*-pre.elf \

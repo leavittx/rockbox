@@ -22,7 +22,6 @@
  ****************************************************************************/
 #include "plugin.h"
 #include "tv_bookmark.h"
-#include "tv_reader.h"
 #include "tv_settings.h"
 
 /* global settings file
@@ -41,15 +40,17 @@
  * encoding               1
  * vertical_scrollbar     1
  * (unused)               1 (for compatibility)
- * page_mode              1
- * page_number_mode       1
- * title_mode             1
- * scroll_mode            1
+ * overlap_page_mode      1
+ * header_mode            1
+ * footer_mode            1
+ * vertical_scroll_mode   1
  * autoscroll_speed       1
  * horizontal_scrollbar   1
  * horizontal_scroll_mode 1
  * narrow_mode            1
- * (reserved)             13
+ * indent_spaces          1
+ * statusbar              1
+ * (reserved)             11
  * font name              MAX_PATH
  */
 
@@ -57,7 +58,7 @@
 #define TV_GLOBAL_SETTINGS_FILE          VIEWERS_DIR "/tv_global.dat"
 
 #define TV_GLOBAL_SETTINGS_HEADER        "\x54\x56\x47\x53" /* "TVGS" */
-#define TV_GLOBAL_SETTINGS_VERSION       0x36
+#define TV_GLOBAL_SETTINGS_VERSION       0x38
 #define TV_GLOBAL_SETTINGS_HEADER_SIZE   5
 #define TV_GLOBAL_SETTINGS_FIRST_VERSION 0x31
 
@@ -82,15 +83,17 @@
  *     encoding               1
  *     vertical_scrollbar     1
  *     (unused)               1 (for compatibility)
- *     page_mode              1
+ *     overlap_page_mode      1
  *     header_mode            1
  *     footer_mode            1
- *     scroll_mode            1
+ *     vertical_scroll_mode   1
  *     autoscroll_speed       1
  *     horizontal_scrollbar   1
  *     horizontal_scroll_mode 1
  *     narrow_mode            1
- *     (reserved)             13
+ *     indent_spaces          1
+ *     statusbar              1
+ *     (reserved)             11
  *     font name              MAX_PATH
  *   bookmark count           1
  *   [1st bookmark]
@@ -112,7 +115,7 @@
 #define TV_SETTINGS_TMP_FILE      VIEWERS_DIR "/tv_file.tmp"
 
 #define TV_SETTINGS_HEADER        "\x54\x56\x53" /* "TVS" */
-#define TV_SETTINGS_VERSION       0x37
+#define TV_SETTINGS_VERSION       0x39
 #define TV_SETTINGS_HEADER_SIZE   4
 #define TV_SETTINGS_FIRST_VERSION 0x32
 
@@ -137,8 +140,8 @@ static bool tv_read_preferences(int pfd, int version, struct tv_preferences *pre
     if (rb->read(pfd, buf, read_size) < 0)
         return false;
 
-    prefs->word_mode        = *p++;
-    prefs->line_mode        = *p++;
+    prefs->word_mode = *p++;
+    prefs->line_mode = *p++;
 
     prefs->windows = *p++;
     if (version <= 1)
@@ -147,36 +150,70 @@ static bool tv_read_preferences(int pfd, int version, struct tv_preferences *pre
     if (version > 0)
         prefs->alignment = *p++;
     else
-        prefs->alignment = LEFT;
+        prefs->alignment = AL_LEFT;
 
     prefs->encoding           = *p++;
-    prefs->vertical_scrollbar = *p++;
+    prefs->vertical_scrollbar = (*p++ != 0);
     /* skip need_scrollbar */
     p++;
-    prefs->page_mode            = *p++;
-    prefs->header_mode          = *p++;
-    prefs->footer_mode          = *p++;
+    prefs->overlap_page_mode  = (*p++ != 0);
+
+    if (version < 7)
+    {
+        prefs->statusbar = false;
+        if (*p > 1)
+        {
+            prefs->header_mode = ((*p & 1) != 0);
+            prefs->statusbar   = true;
+        }
+        else
+            prefs->header_mode = (*p != 0);
+
+        if (*(++p) > 1)
+        {
+            prefs->footer_mode = ((*p & 1) != 0);
+            prefs->statusbar   = true;
+        }
+        else
+            prefs->footer_mode = (*p != 0);
+
+        p++;
+    }
+    else
+    {
+        prefs->header_mode = (*p++ != 0);
+        prefs->footer_mode = (*p++ != 0);
+    }
+
     prefs->vertical_scroll_mode = *p++;
     prefs->autoscroll_speed     = *p++;
 
     if (version > 2)
-        prefs->horizontal_scrollbar = *p;
+        prefs->horizontal_scrollbar = (*p != 0);
     else
-        prefs->horizontal_scrollbar = SB_OFF;
+        prefs->horizontal_scrollbar = false;
 
     if (version > 3)
         prefs->horizontal_scroll_mode = *p++;
     else
-        prefs->horizontal_scroll_mode = SCREEN;
+        prefs->horizontal_scroll_mode = HS_SCREEN;
 
     if (version > 4)
         prefs->narrow_mode = *p++;
     else
         prefs->narrow_mode = NM_PAGE;
 
-    rb->memcpy(prefs->font_name, buf + read_size - MAX_PATH, MAX_PATH);
+    if (version > 5)
+        prefs->indent_spaces = *p++;
+    else
+        prefs->indent_spaces = 2;
+
+    if (version > 6)
+        prefs->statusbar = (*p++ != 0);
 
 #ifdef HAVE_LCD_BITMAP
+    rb->strlcpy(prefs->font_name, buf + read_size - MAX_PATH, MAX_PATH);
+
     prefs->font = rb->font_get(FONT_UI);
 #endif
 
@@ -188,6 +225,7 @@ static bool tv_write_preferences(int pfd, const struct tv_preferences *prefs)
     unsigned char buf[TV_PREFERENCES_SIZE];
     unsigned char *p = buf;
 
+    rb->memset(buf, 0, TV_PREFERENCES_SIZE);
     *p++ = prefs->word_mode;
     *p++ = prefs->line_mode;
     *p++ = prefs->windows;
@@ -196,7 +234,7 @@ static bool tv_write_preferences(int pfd, const struct tv_preferences *prefs)
     *p++ = prefs->vertical_scrollbar;
     /* skip need_scrollbar */
     p++;
-    *p++ = prefs->page_mode;
+    *p++ = prefs->overlap_page_mode;
     *p++ = prefs->header_mode;
     *p++ = prefs->footer_mode;
     *p++ = prefs->vertical_scroll_mode;
@@ -204,8 +242,12 @@ static bool tv_write_preferences(int pfd, const struct tv_preferences *prefs)
     *p++ = prefs->horizontal_scrollbar;
     *p++ = prefs->horizontal_scroll_mode;
     *p++ = prefs->narrow_mode;
+    *p++ = prefs->indent_spaces;
+    *p++ = prefs->statusbar;
 
-    rb->memcpy(buf + 28, prefs->font_name, MAX_PATH);
+#ifdef HAVE_LCD_BITMAP
+    rb->strlcpy(buf + 28, prefs->font_name, MAX_PATH);
+#endif
 
     return (rb->write(pfd, buf, TV_PREFERENCES_SIZE) >= 0);
 }
@@ -375,7 +417,7 @@ bool tv_save_global_settings(const struct tv_preferences *prefs)
  * ----------------------------------------------------------------------------
  */
 
-void tv_load_settings(const unsigned char *file_name)
+bool tv_load_settings(const unsigned char *file_name)
 {
     unsigned char buf[MAX_PATH+2];
     unsigned int fcount;
@@ -428,7 +470,7 @@ void tv_load_settings(const unsigned char *file_name)
             tv_set_default_preferences(&prefs);
     }
     rb->strlcpy(prefs.file_name, file_name, MAX_PATH);
-    tv_set_preferences(&prefs);
+    return tv_set_preferences(&prefs);
 }
 
 static bool tv_copy_settings(int sfd, int dfd, int size)
@@ -449,7 +491,6 @@ static bool tv_copy_settings(int sfd, int dfd, int size)
 
 bool tv_save_settings(void)
 {
-    const struct tv_preferences *prefs = tv_get_preferences();
     unsigned char buf[MAX_PATH+2];
     unsigned int fcount = 0;
     unsigned int i;
@@ -494,7 +535,7 @@ bool tv_save_settings(void)
                 }
 
                 size = (buf[MAX_PATH] << 8) | buf[MAX_PATH + 1];
-                if (rb->strcmp(buf, prefs->file_name) == 0)
+                if (rb->strcmp(buf, preferences->file_name) == 0)
                     rb->lseek(ofd, size, SEEK_CUR);
                 else
                 {
@@ -515,11 +556,11 @@ bool tv_save_settings(void)
         /* save to current read file's preferences and bookmarks */
         res = false;
         rb->memset(buf, 0, MAX_PATH);
-        rb->strlcpy(buf, prefs->file_name, MAX_PATH);
+        rb->strlcpy(buf, preferences->file_name, MAX_PATH);
 
         if (rb->write(tfd, buf, MAX_PATH + 2) >= 0)
         {
-            if (tv_write_preferences(tfd, prefs))
+            if (tv_write_preferences(tfd, preferences))
             {
                 size = tv_serialize_bookmarks(tfd);
                 if (size > 0)

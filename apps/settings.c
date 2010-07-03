@@ -119,12 +119,14 @@ static bool read_nvram_data(char* buf, int max_len)
     int var_count = 0, i = 0, buf_pos = 0;
 #ifndef HAVE_RTC_RAM
     int fd = open(NVRAM_FILE,O_RDONLY);
+    int bytes;
     if (fd < 0)
         return false;
     memset(buf,0,max_len);
-    if (read(fd,buf,max_len) < 8) /* min is 8 bytes,magic, ver, vars, crc32 */
-        return false;
+    bytes = read(fd,buf,max_len);
     close(fd);
+    if (bytes < 8) /* min is 8 bytes,magic, ver, vars, crc32 */
+        return false;
 #else
     memset(buf,0,max_len);
     /* read rtc block */
@@ -835,7 +837,7 @@ void settings_apply(bool read_disk)
 #ifdef HAVE_DISK_STORAGE
     storage_spindown(global_settings.disk_spindown);
 #endif
-#if (CONFIG_CODEC == MAS3507D) && !defined(SIMULATOR)
+#if (CONFIG_CODEC == MAS3507D) && (CONFIG_PLATFORM & PLATFORM_NATIVE)
     dac_line_in(global_settings.line_in);
 #endif
     set_poweroff_timeout(global_settings.poweroff);

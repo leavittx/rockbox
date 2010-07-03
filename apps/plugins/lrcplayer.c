@@ -75,9 +75,7 @@ struct preferences {
     bool wrap;
     bool wipe;
     bool active_one_line;
-    enum {
-        ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT,
-    } align;
+    int  align; /* 0: left, 1: center, 2: right */
     bool statusbar_on;
     bool display_title;
 #endif
@@ -2225,7 +2223,7 @@ static void load_or_save_settings(bool save)
         { TYPE_BOOL, 0, 1, { .bool_p = &prefs.wipe }, "wipe", NULL },
         { TYPE_BOOL, 0, 1, { .bool_p = &prefs.active_one_line },
             "active one line", NULL },
-        { TYPE_INT,  0, 2, { .int_p = (int *) &prefs.align }, "align", NULL },
+        { TYPE_INT,  0, 2, { .int_p =  &prefs.align }, "align", NULL },
         { TYPE_BOOL, 0, 1, { .bool_p = &prefs.statusbar_on },
             "statusbar on", NULL },
         { TYPE_BOOL, 0, 1, { .bool_p = &prefs.display_title },
@@ -2256,7 +2254,7 @@ static void load_or_save_settings(bool save)
         prefs.wrap = true;
         prefs.wipe = true;
         prefs.active_one_line = false;
-        prefs.align = ALIGN_CENTER;
+        prefs.align = 1; /* center */
         prefs.statusbar_on = false;
         prefs.display_title = true;
 #endif
@@ -2301,7 +2299,7 @@ static bool lrc_theme_menu(void)
 #endif
                         "Display Time",
 #ifdef HAVE_LCD_COLOR
-                        "Inactive Color",
+                        "Inactive Colour",
 #endif
                         "Backlight Force On");
 
@@ -2322,7 +2320,7 @@ static bool lrc_theme_menu(void)
                 break;
 #ifdef HAVE_LCD_COLOR
             case LRC_MENU_INACTIVE_COLOR:
-                usb = rb->set_color(NULL, "Inactive Color",
+                usb = rb->set_color(NULL, "Inactive Colour",
                                     &prefs.inactive_color, -1);
                 break;
 #endif
@@ -2355,11 +2353,11 @@ static bool lrc_display_menu(void)
     bool exit = false, usb = false;
 
     MENUITEM_STRINGLIST(menu, "Display Settings", NULL,
-                        "Wrap", "Wipe", "Align",
+                        "Wrap", "Wipe", "Alignment",
                         "Activate Only Current Line");
 
     struct opt_items align_names[] = {
-        {"Left", -1}, {"Center", -1}, {"Right", -1},
+        {"Left", -1}, {"Centre", -1}, {"Right", -1},
     };
 
     while (!exit && !usb)
@@ -2373,7 +2371,7 @@ static bool lrc_display_menu(void)
                 usb = rb->set_bool("Wipe", &prefs.wipe);
                 break;
             case LRC_MENU_ALIGN:
-                usb = rb->set_option("Align", &prefs.align, INT,
+                usb = rb->set_option("Alignment", &prefs.align, INT,
                                      align_names, 3, NULL);
                 break;
             case LRC_MENU_LINE_MODE:
@@ -2848,6 +2846,7 @@ static int lrc_main(void)
         {
             /* current.loaded_lrc is false after changing encode setting */
             update_display_state = true;
+            display_state();
             load_lrc_file();
         }
         if (update_display_state)

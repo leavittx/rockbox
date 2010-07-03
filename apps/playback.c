@@ -468,7 +468,7 @@ unsigned char *audio_get_recording_buffer(size_t *buffer_size)
 
 bool audio_load_encoder(int afmt)
 {
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
     const char *enc_fn = get_codec_filename(afmt | CODEC_TYPE_ENCODER);
     if (!enc_fn)
         return false;
@@ -493,7 +493,7 @@ bool audio_load_encoder(int afmt)
 
 void audio_remove_encoder(void)
 {
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
     /* force encoder codec unload (if currently loaded) */
     if (ci.enc_codec_loaded <= 0)
         return;
@@ -1850,13 +1850,13 @@ static void audio_reset_buffer(void)
 
     /* Initially set up file buffer as all space available */
     malloc_buf = audiobuf + talk_get_bufsize();
-    /* Align the malloc buf to line size. Especially important to cf
-       targets that do line reads/writes. */
-    malloc_buf = (unsigned char *)(((uintptr_t)malloc_buf + 15) & ~15);
-    filebuf    = malloc_buf; /* filebuf line align implied */
-    filebuflen = audiobufend - filebuf;
 
-    filebuflen &= ~15;
+    /* Align the malloc buf to line size.
+     * Especially important to cf targets that do line reads/writes.
+     * Also for targets which need aligned DMA storage buffers */
+    malloc_buf = (unsigned char *)(((uintptr_t)malloc_buf + (CACHEALIGN_SIZE - 1)) & ~(CACHEALIGN_SIZE - 1));
+    filebuf    = malloc_buf; /* filebuf line align implied */
+    filebuflen = (audiobufend - filebuf) & ~(CACHEALIGN_SIZE - 1);
 
     /* Subtract whatever the pcm buffer says it used plus the guard buffer */
     const size_t pcmbuf_size = pcmbuf_init(filebuf + filebuflen) +GUARD_BUFSIZE;
@@ -2008,7 +2008,7 @@ static void audio_thread(void)
                 LOGFQUEUE("audio < Q_AUDIO_TRACK_CHANGED");
                 audio_finalise_track_change();
                 break;
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
             case SYS_USB_CONNECTED:
                 LOGFQUEUE("audio < SYS_USB_CONNECTED");
                 if (playing)

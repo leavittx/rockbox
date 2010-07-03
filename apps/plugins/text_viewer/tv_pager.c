@@ -32,9 +32,7 @@
 #define TV_MAX_PAGE 9999
 #endif
 
-#define TV_PAGER_MEMSIZE (4 * TV_MAX_PAGE)
-
-static unsigned char *pager_buffer;
+static unsigned char pager_buffer[4 * TV_MAX_PAGE];
 
 static struct tv_screen_pos cur_pos;
 
@@ -75,7 +73,7 @@ static off_t tv_get_fpos(int page)
     return 0;
 }
 
-static void tv_change_preferences(const struct tv_preferences *oldp)
+static int tv_change_preferences(const struct tv_preferences *oldp)
 {
     (void)oldp;
 
@@ -85,14 +83,11 @@ static void tv_change_preferences(const struct tv_preferences *oldp)
     max_page  = TV_MAX_PAGE - 1;
     tv_set_fpos(cur_pos.page, 0);
     tv_seek(0, SEEK_SET);
+    return TV_CALLBACK_OK;
 }
 
-bool tv_init_pager(unsigned char *buf, size_t bufsize, size_t *used_size)
+bool tv_init_pager(unsigned char **buf, size_t *size)
 {
-    if (bufsize < TV_PAGER_MEMSIZE)
-        return false;
-
-    pager_buffer = buf;
     tv_set_screen_pos(&cur_pos);
     tv_add_preferences_change_listner(tv_change_preferences);
 
@@ -101,14 +96,7 @@ bool tv_init_pager(unsigned char *buf, size_t bufsize, size_t *used_size)
 
     line_pos[0] = 0;
 
-    buf     += TV_PAGER_MEMSIZE;
-    bufsize -= TV_PAGER_MEMSIZE;
-    if (!tv_init_reader(buf, bufsize, used_size))
-        return false;
-
-    *used_size += TV_PAGER_MEMSIZE;
-
-    return true;
+    return tv_init_reader(buf, size);
 }
 
 void tv_finalize_pager(void)

@@ -46,7 +46,6 @@
 #include "screens.h"
 #include "playlist.h"
 #include "pcmbuf.h"
-#include "bmp.h"
 #include "appevents.h"
 #include "metadata.h"
 #ifdef HAVE_ALBUMART
@@ -1488,7 +1487,7 @@ void buffering_thread(void)
                 base_handle_id = (int)ev.data;
                 break;
 
-#ifndef SIMULATOR
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
             case SYS_USB_CONNECTED:
                 LOGFQUEUE("buffering < SYS_USB_CONNECTED");
                 usb_acknowledge(SYS_USB_CONNECTED_ACK);
@@ -1577,8 +1576,7 @@ bool buffering_reset(char *buf, size_t buflen)
         return false;
 
     buffer = buf;
-    /* Preserve alignment when wrapping around */
-    buffer_len = STORAGE_ALIGN_DOWN(buflen);
+    buffer_len = buflen;
     guard_buffer = buf + buflen;
 
     buf_widx = 0;

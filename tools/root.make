@@ -58,6 +58,7 @@ include $(TOOLSDIR)/tools.make
 ifeq (,$(findstring checkwps,$(APPSDIR)))
   ifeq (,$(findstring database,$(APPSDIR)))
     include $(FIRMDIR)/firmware.make
+    include $(ROOTDIR)/lib/skin_parser/skin_parser.make
     include $(ROOTDIR)/apps/bitmaps/bitmaps.make
   endif
 endif
@@ -122,7 +123,7 @@ veryclean: clean
 clean:
 	$(SILENT)echo Cleaning build directory
 	$(SILENT)rm -rf rockbox.zip rockbox.7z rockbox.tar rockbox.tar.gz \
-		rockbox.tar.bz2 TAGS apps firmware tools comsim sim lang \
+		rockbox.tar.bz2 TAGS apps firmware tools comsim sim lang lib \
 		manual *.pdf *.a credits.raw rockbox.ipod bitmaps \
 		pluginbitmaps UI256.bmp rockbox-full.zip html txt \
 		rockbox-manual*.zip sysfont.h rockbox-info.txt voicefontids \
@@ -158,17 +159,18 @@ $(LINKROM): $(ROMLDS)
 	$(call PRINTS,PP $(@F))
 	$(call preprocess2file,$<,$@,-DLOADADDRESS=$(LOADADDRESS))
 
-$(BUILDDIR)/rockbox.elf : $$(OBJ) $$(FIRMLIB) $$(VOICESPEEXLIB) $$(LINKRAM)
+$(BUILDDIR)/rockbox.elf : $$(OBJ) $$(FIRMLIB) $$(VOICESPEEXLIB) $$(SKINLIB) $$(LINKRAM)
 	$(call PRINTS,LD $(@F))$(CC) $(GCCOPTS) -Os -nostdlib -o $@ $(OBJ) \
 		-L$(BUILDDIR)/firmware -lfirmware \
+		-L$(BUILDDIR)/lib -lskin_parser \
 		-L$(BUILDDIR)/apps/codecs $(VOICESPEEXLIB:lib%.a=-l%) \
-		-lgcc $(BOOTBOXLDOPTS) \
+		-lgcc $(BOOTBOXLDOPTS) $(GLOBAL_LDOPTS) \
 		-T$(LINKRAM) -Wl,-Map,$(BUILDDIR)/rockbox.map
 
-$(BUILDDIR)/rombox.elf : $$(OBJ) $$(FIRMLIB) $$(VOICESPEEXLIB) $$(LINKROM)
+$(BUILDDIR)/rombox.elf : $$(OBJ) $$(FIRMLIB) $$(VOICESPEEXLIB) $$(SKINLIB) $$(LINKROM)
 	$(call PRINTS,LD $(@F))$(CC) $(GCCOPTS) -Os -nostdlib -o $@ $(OBJ) \
-		$(VOICESPEEXLIB) $(FIRMLIB) -lgcc -L$(BUILDDIR)/firmware \
-		-T$(LINKROM) -Wl,-Map,$(BUILDDIR)/rombox.map
+		$(VOICESPEEXLIB) $(FIRMLIB) -lgcc $(GLOBAL_LDOPTS) \
+                -L$(BUILDDIR)/firmware -T$(LINKROM) -Wl,-Map,$(BUILDDIR)/rombox.map
 
 $(BUILDDIR)/rockbox.bin : $(BUILDDIR)/rockbox.elf
 	$(call PRINTS,OC $(@F))$(OC) $(if $(filter yes, $(USE_ELF)), -S -x, -O binary) $< $@
@@ -234,24 +236,20 @@ fontzip:
 	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 1 -o rockbox-fonts.zip $(TARGET) $(BINARY)
 
 zip:
-	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done ; \
-	$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -r "$(ROOTDIR)" --rbdir="$(RBDIR)" $(TARGET) $(BINARY)
+	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -r "$(ROOTDIR)" --rbdir="$(RBDIR)" $(TARGET) $(BINARY)
 
 mapzip:
 	$(SILENT)find . -name "*.map" | xargs zip rockbox-maps.zip
 
 fullzip:
-	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done; \
-	$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 2 -o rockbox-full.zip $(TARGET) $(BINARY)
+	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 2 -o rockbox-full.zip $(TARGET) $(BINARY)
 
 7zip:
-	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done; \
-	$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -o "rockbox.7z" -z "7za a -mx=9" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" $(TARGET) $(BINARY)
+	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -o "rockbox.7z" -z "7za a -mx=9" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" $(TARGET) $(BINARY)
 
 tar:
 	$(SILENT)rm -f rockbox.tar
-	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done; \
-	$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -o "rockbox.tar" -z "tar -cf" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" $(TARGET) $(BINARY)
+	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m \"$(MODELNAME)\" -i \"$(TARGET_ID)\"  -o "rockbox.tar" -z "tar -cf" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" $(TARGET) $(BINARY)
 
 bzip2: tar
 	$(SILENT)bzip2 -f9 rockbox.tar
@@ -273,21 +271,23 @@ manual-zip:
 
 ifdef TTS_ENGINE
 
-voice: voicetools features
+voice: voicetools $(BUILDDIR)/apps/features
 	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done ; \
 	for lang in `echo $(VOICELANGUAGE) |sed "s/,/ /g"`; do $(TOOLSDIR)/voice.pl -V -l=$$lang -t=$(MODELNAME)$$feat -i=$(TARGET_ID) -e="$(ENCODER)" -E="$(ENC_OPTS)" -s=$(TTS_ENGINE) -S="$(TTS_OPTS)"; done \
 
 endif
 
+bininstall: $(BUILDDIR)/$(BINARY)
+	@echo "Installing your rockbox binary in your '$(PREFIX)' dir"
+	$(SILENT)cp $(BINARY) "$(PREFIX)/.rockbox/"
+
 install:
 	@echo "Installing your build in your '$(PREFIX)' dir"
-	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done; \
-	$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m "$(MODELNAME)" -i "$(TARGET_ID)" $(INSTALL) -z "zip -r0" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 0 $(TARGET) $(BINARY)
+	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m "$(MODELNAME)" -i "$(TARGET_ID)" $(INSTALL) -z "zip -r0" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 0 $(TARGET) $(BINARY)
 
 fullinstall:
 	@echo "Installing a full setup in your '$(PREFIX)' dir"
-	$(SILENT)for f in `cat $(BUILDDIR)/apps/features`; do feat="$$feat:$$f" ; done; \
-	$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m "$(MODELNAME)" -i "$(TARGET_ID)" $(INSTALL) -z "zip -r0" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 2 $(TARGET) $(BINARY)
+	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m "$(MODELNAME)" -i "$(TARGET_ID)" $(INSTALL) -z "zip -r0" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 2 $(TARGET) $(BINARY)
 
 help:
 	@echo "A few helpful make targets"

@@ -11,6 +11,9 @@
 # global CC options for all platforms
 CCOPTS="-W -Wall -Wundef -O -nostdlib -ffreestanding -Wstrict-prototypes -pipe"
 
+# global LD options for all platforms
+GLOBAL_LDOPTS="-Wl,-z,defs"
+
 use_logf="#undef ROCKBOX_HAS_LOGF"
 use_bootchart="#undef DO_BOOTCHART"
 
@@ -40,7 +43,10 @@ prefixtools () {
 }
 
 findarmgcc() {
-  if [ "$ARG_ARM_EABI" = "1" ]; then
+  # FIXME: ipod4g buttons do not work
+  [ "$ARG_ARM_EABI" != 1 -a "$modelname" = "ipod4g" ] && ARG_ARM_EABI="0"
+
+  if [ "$ARG_ARM_EABI" != "0" ]; then
     prefixtools arm-elf-eabi-
     gccchoice="4.4.4"
   else
@@ -98,12 +104,13 @@ simcc () {
 
  # default tool setup for native building
  prefixtools "$CROSS_COMPILE"
+ ARG_ARM_THUMB=0 # can't use thumb in native builds
 
  simver=sdl
  winbuild="$crosscompile"
  GCCOPTS='-W -Wall -g -fno-builtin'
  GCCOPTIMIZE=''
- LDOPTS=''
+ LDOPTS='-lm' # button-sdl.c uses sqrt()
 
  # default output binary name
  output="rockboxui"
@@ -115,7 +122,7 @@ simcc () {
    CYGWIN*)
    echo "Cygwin host detected"
 
-   LDOPTS="-mconsole"
+   LDOPTS="$LDOPTS -mconsole"
    output="rockboxui.exe"
    winbuild="yes"
    ;;
@@ -123,21 +130,24 @@ simcc () {
    MINGW*)
    echo "MinGW host detected"
 
-   LDOPTS="-mconsole"
+   LDOPTS="$LDOPTS -mconsole"
    output="rockboxui.exe"
    winbuild="yes"
    ;;
 
    Linux)
    echo "Linux host detected"
+   LDOPTS="$LDOPTS -ldl"
    ;;
 
    FreeBSD)
    echo "FreeBSD host detected"
+   LDOPTS="$LDOPTS -ldl"
    ;;
 
    Darwin)
    echo "Darwin host detected"
+   LDOPTS="$LDOPTS -ldl"
 
    SHARED_FLAG="-dynamiclib -Wl\,-single_module"
    ;;
@@ -146,7 +156,7 @@ simcc () {
    echo "*Solaris host detected"
 
    GCCOPTS="$GCCOPTS -fPIC"
-   LDOPTS="-lm"
+   LDOPTS="$LDOPTS -ldl"
    ;;
 
    *)
@@ -272,7 +282,7 @@ coldfirecc () {
 arm7tdmicc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm7tdmi"
- if test "X$1" != "Xshort" -a "$ARG_ARM_EABI" != "1"; then
+ if test "X$1" != "Xshort" -a "$ARG_ARM_EABI" = "0"; then
    GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -282,7 +292,7 @@ arm7tdmicc () {
 arm9tdmicc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm9tdmi"
- if test "$modelname" != "gigabeatfx" -a "$t_manufacturer" != "as3525" -a "$ARG_ARM_EABI" != "1"; then
+ if test "$modelname" != "gigabeatfx" -a "$t_manufacturer" != "as3525" -a "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -292,7 +302,7 @@ arm9tdmicc () {
 arm940tbecc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mbig-endian -mcpu=arm940t"
- if test "$ARG_ARM_EABI" != "1"; then
+ if test "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -302,7 +312,7 @@ arm940tbecc () {
 arm940tcc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm940t"
- if test "$ARG_ARM_EABI" != "1"; then
+ if test "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -312,7 +322,7 @@ arm940tcc () {
 arm946cc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm9e"
- if test "$ARG_ARM_EABI" != "1"; then
+ if test "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -322,7 +332,7 @@ arm946cc () {
 arm926ejscc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm926ej-s"
- if test "$t_manufacturer" != "as3525" -a "$ARG_ARM_EABI" != "1"; then
+ if test "$t_manufacturer" != "as3525" -a "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -332,7 +342,7 @@ arm926ejscc () {
 arm1136jfscc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm1136jf-s"
- if test "$modelname" != "gigabeats" -a "$ARG_ARM_EABI" != "1"; then
+ if test "$modelname" != "gigabeats" -a "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -342,7 +352,7 @@ arm1136jfscc () {
 arm1176jzscc () {
  findarmgcc
  GCCOPTS="$CCOPTS -mcpu=arm1176jz-s"
- if test "$ARG_ARM_EABI" != "1"; then
+ if test "$ARG_ARM_EABI" = "0"; then
   GCCOPTS="$GCCOPTS -mlong-calls"
  fi
  GCCOPTIMIZE="-fomit-frame-pointer"
@@ -368,8 +378,9 @@ whichadvanced () {
   else
     interact=1
     echo ""
-    echo "Enter your developer options (press enter when done)"
-    printf "(D)EBUG, (L)ogf, Boot(c)hart, (S)imulator, (P)rofiling, (V)oice, (W)in32 crosscompile, (T)est plugins"
+    printf "Enter your developer options (press only enter when done)\n\
+(D)EBUG, (L)ogf, Boot(c)hart, (S)imulator, (P)rofiling, (V)oice, (W)in32 crosscompile,\n\
+(T)est plugins, S(m)all C lib:"
     if [ "$memory" = "2" ]; then
       printf ", (8)MB MOD"
     fi
@@ -409,6 +420,10 @@ whichadvanced () {
       [Ll])
         echo "logf() support enabled"
         logf="yes"
+        ;;
+      [Mm])
+        echo "Using Rockbox' small C library"
+        extradefines="$extradefines -DHAVE_ROCKBOX_C_LIBRARY"
         ;;
       [Tt])
         echo "Including test plugins"
@@ -797,6 +812,9 @@ help() {
     --eabi            Make configure prefer toolchains that are able to compile
                       for the new ARM standard abi EABI
     --no-eabi         The opposite of --eabi (prefer old non-eabi toolchains)
+    --thumb           Build with -mthumb (for ARM builds)
+    --no-thumb        The opposite of --thumb (don't use thumb even for targets
+                      where this is the default
     --help            Shows this message (must not be used with other options)
 
 EOF
@@ -815,6 +833,7 @@ ARG_TTSOPTS=
 ARG_TYPE=
 ARG_VOICE=
 ARG_ARM_EABI=
+ARG_ARM_THUMB=
 err=
 for arg in "$@"; do
 	case "$arg" in
@@ -831,6 +850,8 @@ for arg in "$@"; do
 		--voice=*)    ARG_VOICE=`echo "$arg" | cut -d = -f 2`;;
 		--eabi)       ARG_ARM_EABI=1;;
 		--no-eabi)    ARG_ARM_EABI=0;;
+		--thumb)      ARG_ARM_THUMB=1;;
+		--no-thumb)   ARG_ARM_THUMB=0;;
 		--help)       help;;
 		*)            err=1; echo "[ERROR] Option '$arg' unsupported";;
 	esac
@@ -1513,11 +1534,13 @@ fi
     memory=16 # always
     coldfirecc
     tool="$rootdir/tools/scramble -add=iax5"
+    boottool="$rootdir/tools/scramble -iaudiox5"
     bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
     bmp2rb_native="$rootdir/tools/bmp2rb -f 4"
     bmp2rb_remotemono="$rootdir/tools/bmp2rb -f 0"
     bmp2rb_remotenative="$rootdir/tools/bmp2rb -f 7"
     output="rockbox.iaudio"
+    bootoutput="x5_fw.bin"
     appextra="recorder:gui:radio"
     plugins="yes"
     swcodec="yes"
@@ -1537,11 +1560,13 @@ fi
     memory=16 # always
     coldfirecc
     tool="$rootdir/tools/scramble -add=iam5"
+    boottool="$rootdir/tools/scramble -iaudiom5"
     bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
     bmp2rb_native="$rootdir/tools/bmp2rb -f 2"
     bmp2rb_remotemono="$rootdir/tools/bmp2rb -f 0"
     bmp2rb_remotenative="$rootdir/tools/bmp2rb -f 7"
     output="rockbox.iaudio"
+    bootoutput="m5_fw.bin"
     appextra="recorder:gui:radio"
     plugins="yes"
     swcodec="yes"
@@ -1607,9 +1632,11 @@ fi
     memory=16 # always
     coldfirecc
     tool="$rootdir/tools/scramble -add=iam3"
+    boottool="$rootdir/tools/scramble -iaudiom3"
     bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
     bmp2rb_native="$rootdir/tools/bmp2rb -f 7"
     output="rockbox.iaudio"
+    bootoutput="cowon_m3.bin"
     appextra="recorder:gui:radio"
     plugins="yes"
     swcodec="yes"
@@ -1949,7 +1976,9 @@ fi
     t_cpu="arm"
     t_manufacturer="as3525"
     t_model="sansa-clip"
+    if [ "$ARG_ARM_THUMB" != 0 ]; then ARG_ARM_THUMB=1; fi
     arm9tdmicc
+    GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
     ;;
 
 
@@ -1991,7 +2020,9 @@ fi
     t_cpu="arm"
     t_manufacturer="as3525"
     t_model="sansa-m200v4"
+    if [ "$ARG_ARM_THUMB" != 0 ]; then ARG_ARM_THUMB=1; fi
     arm9tdmicc
+    GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
     ;;
 
 
@@ -2036,7 +2067,9 @@ fi
     t_cpu="arm"
     t_manufacturer="as3525"
     t_model="sansa-c200v2"
+    if [ "$ARG_ARM_THUMB" != 0 ]; then ARG_ARM_THUMB=1; fi
     arm9tdmicc
+    GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
     ;;
 
    60|sansaclipv2)
@@ -2199,7 +2232,7 @@ fi
     target_id=65
     modelname="gogearhdd6330"
     target="-DPHILIPS_HDD6330"
-    memory=32 # supposedly
+    memory=64 # always
     arm7tdmicc
     tool="$rootdir/tools/scramble -mi4v3 -model=6330 -type=RBOS"
     bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
@@ -2924,6 +2957,11 @@ if test -n "$ccache"; then
   CC="$ccache $CC"
 fi
 
+if test "$ARG_ARM_THUMB" = "1"; then
+  extradefines="$extradefines -DUSE_THUMB"
+  CC="$toolsdir/thumb-cc.py $CC"
+fi
+
 if test "X$endian" = "Xbig"; then
   defendian="ROCKBOX_BIG_ENDIAN"
 else
@@ -2936,15 +2974,15 @@ if [ "$ARG_RBDIR" ]; then
 fi
 
 sed > autoconf.h \
- -e "s,@ENDIAN@,${defendian},g" \
- -e "s,^#undef ROCKBOX_HAS_LOGF,$use_logf,g" \
- -e "s,^#undef DO_BOOTCHART,$use_bootchart,g" \
- -e "s,@config_rtc@,$config_rtc,g" \
- -e "s,@have_rtc_alarm@,$have_rtc_alarm,g" \
- -e "s,@RBDIR@,${rbdir},g" \
- -e "s,@have_backlight@,$have_backlight,g" \
- -e "s,@have_fmradio_in@,$have_fmradio_in,g" \
- -e "s,@have_ata_poweroff@,$have_ata_poweroff,g" \
+ -e "s<@ENDIAN@<${defendian}<g" \
+ -e "s<^#undef ROCKBOX_HAS_LOGF<$use_logf<g" \
+ -e "s<^#undef DO_BOOTCHART<$use_bootchart<g" \
+ -e "s<@config_rtc@<$config_rtc<g" \
+ -e "s<@have_rtc_alarm@<$have_rtc_alarm<g" \
+ -e "s<@RBDIR@<${rbdir}<g" \
+ -e "s<@have_backlight@<$have_backlight<g" \
+ -e "s<@have_fmradio_in@<$have_fmradio_in<g" \
+ -e "s<@have_ata_poweroff@<$have_ata_poweroff<g" \
 <<EOF
 /* This header was made by configure */
 #ifndef __BUILD_AUTOCONF_H
@@ -2991,8 +3029,8 @@ fi
 
 if test "$simulator" = "yes"; then
   # add simul make stuff on the #SIMUL# line
-  simmagic1="s,@SIMUL1@,\$(SILENT)\$(MAKE) -C \$(SIMDIR) OBJDIR=\$(BUILDDIR)/sim,"
-  simmagic2="s,@SIMUL2@,\$(SILENT)\$(MAKE) -C \$(ROOTDIR)/uisimulator/common OBJDIR=\$(BUILDDIR)/comsim,"
+  simmagic1="s<@SIMUL1@<\$(SILENT)\$(MAKE) -C \$(SIMDIR) OBJDIR=\$(BUILDDIR)/sim<"
+  simmagic2="s<@SIMUL2@<\$(SILENT)\$(MAKE) -C \$(ROOTDIR)/uisimulator/common OBJDIR=\$(BUILDDIR)/comsim<"
 else
   # delete the lines that match
   simmagic1='/@SIMUL1@/D'
@@ -3024,70 +3062,71 @@ cmdline="$cmdline--target=\$(MODELNAME) --ram=\$(MEMORYSIZE) --rbdir=\$(RBDIR) -
 ### end of cmdline
 
 sed > Makefile \
- -e "s,@ROOTDIR@,${rootdir},g" \
- -e "s,@DEBUG@,${debug},g" \
- -e "s,@MEMORY@,${memory},g" \
- -e "s,@TARGET_ID@,${target_id},g" \
- -e "s,@TARGET@,${target},g" \
- -e "s,@CPU@,${t_cpu},g" \
- -e "s,@MANUFACTURER@,${t_manufacturer},g" \
- -e "s,@MODELNAME@,${modelname},g" \
- -e "s,@LANGUAGE@,${language},g" \
+ -e "s<@ROOTDIR@<${rootdir}<g" \
+ -e "s<@DEBUG@<${debug}<g" \
+ -e "s<@MEMORY@<${memory}<g" \
+ -e "s<@TARGET_ID@<${target_id}<g" \
+ -e "s<@TARGET@<${target}<g" \
+ -e "s<@CPU@<${t_cpu}<g" \
+ -e "s<@MANUFACTURER@<${t_manufacturer}<g" \
+ -e "s<@MODELNAME@<${modelname}<g" \
+ -e "s<@LANGUAGE@<${language}<g" \
  -e "s:@VOICELANGUAGE@:${voicelanguage}:g" \
- -e "s,@PWD@,${pwd},g" \
- -e "s,@HOSTCC@,${HOSTCC},g" \
- -e "s,@HOSTAR@,${HOSTAR},g" \
- -e "s,@CC@,${CC},g" \
- -e "s,@LD@,${LD},g" \
- -e "s,@AR@,${AR},g" \
- -e "s,@AS@,${AS},g" \
- -e "s,@OC@,${OC},g" \
- -e "s,@WINDRES@,${WINDRES},g" \
- -e "s,@DLLTOOL@,${DLLTOOL},g" \
- -e "s,@DLLWRAP@,${DLLWRAP},g" \
- -e "s,@RANLIB@,${RANLIB},g" \
- -e "s,@TOOL@,${tool},g" \
- -e "s,@BMP2RB_NATIVE@,${bmp2rb_native},g" \
- -e "s,@BMP2RB_MONO@,${bmp2rb_mono},g" \
- -e "s,@BMP2RB_REMOTENATIVE@,${bmp2rb_remotenative},g" \
- -e "s,@BMP2RB_REMOTEMONO@,${bmp2rb_remotemono},g" \
- -e "s,@OUTPUT@,${output},g" \
- -e "s,@APPEXTRA@,${appextra},g" \
- -e "s,@ARCHOSROM@,${archosrom},g" \
- -e "s,@FLASHFILE@,${flash},g" \
- -e "s,@PLUGINS@,${plugins},g" \
- -e "s,@CODECS@,${swcodec},g" \
- -e "s,@PROFILE_OPTS@,${PROFILE_OPTS},g" \
- -e "s,@SHARED_FLAG@,${SHARED_FLAG},g" \
- -e "s,@GCCOPTS@,${GCCOPTS},g" \
- -e "s,@TARGET_INC@,${TARGET_INC},g" \
- -e "s!@LDOPTS@!${LDOPTS}!g" \
- -e "s,@LOADADDRESS@,${loadaddress},g" \
- -e "s,@EXTRADEF@,${extradefines},g" \
- -e "s,@APPSDIR@,${appsdir},g" \
- -e "s,@FIRMDIR@,${firmdir},g" \
- -e "s,@TOOLSDIR@,${toolsdir},g" \
- -e "s,@APPS@,${apps},g" \
- -e "s,@SIMVER@,${simver},g" \
- -e "s,@GCCVER@,${gccver},g" \
- -e "s,@GCCNUM@,${gccnum},g" \
- -e "s,@UNAME@,${uname},g" \
- -e "s,@ENDIAN@,${defendian},g" \
- -e "s,@TOOLSET@,${toolset},g" \
+ -e "s<@PWD@<${pwd}<g" \
+ -e "s<@HOSTCC@<${HOSTCC}<g" \
+ -e "s<@HOSTAR@<${HOSTAR}<g" \
+ -e "s<@CC@<${CC}<g" \
+ -e "s<@LD@<${LD}<g" \
+ -e "s<@AR@<${AR}<g" \
+ -e "s<@AS@<${AS}<g" \
+ -e "s<@OC@<${OC}<g" \
+ -e "s<@WINDRES@<${WINDRES}<g" \
+ -e "s<@DLLTOOL@<${DLLTOOL}<g" \
+ -e "s<@DLLWRAP@<${DLLWRAP}<g" \
+ -e "s<@RANLIB@<${RANLIB}<g" \
+ -e "s<@TOOL@<${tool}<g" \
+ -e "s<@BMP2RB_NATIVE@<${bmp2rb_native}<g" \
+ -e "s<@BMP2RB_MONO@<${bmp2rb_mono}<g" \
+ -e "s<@BMP2RB_REMOTENATIVE@<${bmp2rb_remotenative}<g" \
+ -e "s<@BMP2RB_REMOTEMONO@<${bmp2rb_remotemono}<g" \
+ -e "s<@OUTPUT@<${output}<g" \
+ -e "s<@APPEXTRA@<${appextra}<g" \
+ -e "s<@ARCHOSROM@<${archosrom}<g" \
+ -e "s<@FLASHFILE@<${flash}<g" \
+ -e "s<@PLUGINS@<${plugins}<g" \
+ -e "s<@CODECS@<${swcodec}<g" \
+ -e "s<@PROFILE_OPTS@<${PROFILE_OPTS}<g" \
+ -e "s<@SHARED_FLAG@<${SHARED_FLAG}<g" \
+ -e "s<@GCCOPTS@<${GCCOPTS}<g" \
+ -e "s<@TARGET_INC@<${TARGET_INC}<g" \
+ -e "s<@LDOPTS@<${LDOPTS}<g" \
+ -e "s<@GLOBAL_LDOPTS@<${GLOBAL_LDOPTS}<g" \
+ -e "s<@LOADADDRESS@<${loadaddress}<g" \
+ -e "s<@EXTRADEF@<${extradefines}<g" \
+ -e "s<@APPSDIR@<${appsdir}<g" \
+ -e "s<@FIRMDIR@<${firmdir}<g" \
+ -e "s<@TOOLSDIR@<${toolsdir}<g" \
+ -e "s<@APPS@<${apps}<g" \
+ -e "s<@SIMVER@<${simver}<g" \
+ -e "s<@GCCVER@<${gccver}<g" \
+ -e "s<@GCCNUM@<${gccnum}<g" \
+ -e "s<@UNAME@<${uname}<g" \
+ -e "s<@ENDIAN@<${defendian}<g" \
+ -e "s<@TOOLSET@<${toolset}<g" \
  -e "${simmagic1}" \
  -e "${simmagic2}" \
- -e "s,@MANUALDEV@,${manualdev},g" \
- -e "s,@ENCODER@,${ENC_CMD},g" \
- -e "s,@ENC_OPTS@,${ENC_OPTS},g" \
- -e "s,@TTS_ENGINE@,${TTS_ENGINE},g" \
- -e "s,@TTS_OPTS@,${TTS_OPTS},g" \
- -e "s,@VOICETOOLSET@,${voicetoolset},g" \
- -e "s,@LANGS@,${buildlangs},g" \
- -e "s,@USE_ELF@,${USE_ELF},g" \
- -e "s,@RBDIR@,${rbdir},g" \
- -e "s,@PREFIX@,$PREFIX,g" \
- -e "s,@CMDLINE@,$cmdline,g" \
- -e "s,@SDLCONFIG@,$sdl,g" \
+ -e "s<@MANUALDEV@<${manualdev}<g" \
+ -e "s<@ENCODER@<${ENC_CMD}<g" \
+ -e "s<@ENC_OPTS@<${ENC_OPTS}<g" \
+ -e "s<@TTS_ENGINE@<${TTS_ENGINE}<g" \
+ -e "s<@TTS_OPTS@<${TTS_OPTS}<g" \
+ -e "s<@VOICETOOLSET@<${voicetoolset}<g" \
+ -e "s<@LANGS@<${buildlangs}<g" \
+ -e "s<@USE_ELF@<${USE_ELF}<g" \
+ -e "s<@RBDIR@<${rbdir}<g" \
+ -e "s<@PREFIX@<$PREFIX<g" \
+ -e "s<@CMDLINE@<$cmdline<g" \
+ -e "s<@SDLCONFIG@<$sdl<g" \
 <<EOF
 ## Automatically generated. http://www.rockbox.org/
 
@@ -3141,6 +3180,7 @@ export TARGET_INC=@TARGET_INC@
 export LOADADDRESS=@LOADADDRESS@
 export SHARED_FLAG=@SHARED_FLAG@
 export LDOPTS=@LDOPTS@
+export GLOBAL_LDOPTS=@GLOBAL_LDOPTS@
 export GCCVER=@GCCVER@
 export GCCNUM=@GCCNUM@
 export UNAME=@UNAME@

@@ -23,94 +23,99 @@
 #ifndef PLUGIN_TEXT_VIEWER_PREFERENCES_H
 #define PLUGIN_TEXT_VIEWER_PREFERENCES_H
 
-enum scrollbar_mode {
-    SB_OFF = 0,
-    SB_ON,
+enum {
+    TV_CALLBACK_OK,
+    TV_CALLBACK_STOP,
+    TV_CALLBACK_ERROR,
+};
+
+/* word_mode */
+enum {
+    WM_WRAP = 0,
+    WM_CHOP,
+};
+
+/* line_mode */
+enum {
+    LM_NORMAL = 0,
+    LM_JOIN,
+    LM_EXPAND,
+    LM_REFLOW,
+};
+
+/* alignment */
+enum {
+    AL_LEFT = 0,
+    AL_RIGHT,
+};
+
+/* horizontal_scroll_mode */
+enum {
+    HS_SCREEN = 0,
+    HS_COLUMN,
+};
+
+/* vertical_scroll_mode */
+enum {
+    VS_PAGE = 0,
+    VS_LINE,
+};
+
+/* narrow_mode */
+enum {
+    NM_PAGE = 0,
+    NM_TOP_BOTTOM,
 };
 
 struct tv_preferences {
-    enum {
-        WRAP = 0,
-        CHOP,
-    } word_mode;
+    unsigned word_mode;
+    unsigned line_mode;
+    unsigned alignment;
 
-    enum {
-        NORMAL = 0,
-        JOIN,
-        EXPAND,
-        REFLOW,
-    } line_mode;
+    unsigned encoding;
 
-    enum {
-        LEFT = 0,
-        RIGHT,
-    } alignment;
+    bool horizontal_scrollbar;
+    bool vertical_scrollbar;
 
-    enum codepages encoding;
-
-    enum scrollbar_mode horizontal_scrollbar;
-    enum scrollbar_mode vertical_scrollbar;
-
-    enum {
-        NO_OVERLAP = 0,
-        OVERLAP,
-    } page_mode;
-
-    enum {
-        HD_NONE = 0,
-        HD_PATH,
-        HD_SBAR,
-        HD_BOTH,
-    } header_mode;
-
-    enum {
-        FT_NONE = 0,
-        FT_PAGE,
-        FT_SBAR,
-        FT_BOTH,
-    } footer_mode;
-
-    enum {
-        SCREEN = 0,
-        COLUMN,
-    } horizontal_scroll_mode;
-
-    enum {
-        PAGE = 0,
-        LINE,
-    } vertical_scroll_mode;
+    bool overlap_page_mode;
+    bool header_mode;
+    bool footer_mode;
+    unsigned horizontal_scroll_mode;
+    unsigned vertical_scroll_mode;
 
     int autoscroll_speed;
 
     int windows;
 
-    enum {
-        NM_PAGE = 0,
-        NM_TOP_BOTTOM,
-    } narrow_mode;
+    unsigned narrow_mode;
 
-    unsigned char font_name[MAX_PATH];
+    unsigned indent_spaces;
+
+    bool statusbar;
+
 #ifdef HAVE_LCD_BITMAP
+    unsigned char font_name[MAX_PATH];
     struct font *font;
 #endif
     unsigned char file_name[MAX_PATH];
 };
 
 /*
- * return the preferences
- *
- * return
- *     the pointer the preferences
+ *     global pointer to the preferences (read-only)
  */
-const struct tv_preferences *tv_get_preferences(void);
+extern const struct tv_preferences * const preferences;
 
 /*
  * change the preferences
  *
  * [In] new_prefs
  *          new preferences
+ *
+ * return
+ *     true  success
+ *     false error
  */
-void tv_set_preferences(const struct tv_preferences *new_prefs);
+bool tv_set_preferences(const struct tv_preferences *new_prefs);
 
 /*
  * copy the preferences
@@ -134,6 +139,6 @@ void tv_set_default_preferences(struct tv_preferences *p);
  * [In] listner
  *          the function to be executed when the current preferences is changed
  */
-void tv_add_preferences_change_listner(void (*listner)(const struct tv_preferences *oldp));
+void tv_add_preferences_change_listner(int (*listner)(const struct tv_preferences *oldp));
 
 #endif

@@ -98,20 +98,30 @@ static int tv_find_bookmark(const struct tv_screen_pos *pos)
     return -1;
 }
 
-static void tv_change_preferences(const struct tv_preferences *oldp)
+static int tv_change_preferences(const struct tv_preferences *oldp)
 {
     int i;
 
-    if (oldp == NULL)
-        return;
-
-    for (i = 0; i < bookmark_count; i++)
-        tv_convert_fpos(bookmarks[i].pos.file_pos, &bookmarks[i].pos);
+    if (oldp)
+    {
+        for (i = 0; i < bookmark_count; i++)
+            tv_convert_fpos(bookmarks[i].pos.file_pos, &bookmarks[i].pos);
+    }
+    return TV_CALLBACK_OK;
 }
 
-void tv_init_bookmark(void)
+bool tv_init_bookmark(unsigned char **buf, size_t *size)
 {
+    (void)buf;
+    (void)size;
+
     tv_add_preferences_change_listner(tv_change_preferences);
+    return true;
+}
+
+void tv_finalize_bookmark(void)
+{
+    /* no-operation function */
 }
 
 int tv_get_bookmark_positions(struct tv_screen_pos *pos_array)
@@ -224,7 +234,7 @@ void tv_select_bookmark(void)
     }
 
     /* move to the select position */
-    if (tv_get_preferences()->vertical_scroll_mode == PAGE)
+    if (preferences->vertical_scroll_mode == VS_PAGE)
         select_pos.line = 0;
 
     tv_move_screen(select_pos.page, select_pos.line, SEEK_SET);

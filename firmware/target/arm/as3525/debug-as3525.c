@@ -112,14 +112,27 @@ static int calc_freq(int clk)
                                                (((CGU_PLLB>>8) & 0x1f)*out_div);
             return 0;
 #else
+    int od, f, r;
+
     /* AS3525v2  */
     switch(clk) {
-        /*  we're using a known setting for PLLA = 240 MHz and PLLB inop  */
         case CLK_PLLA:
-            return 240000000;
+            if(CGU_PLLASUP & (1<<3))
+                return 0;
+
+            f = (CGU_PLLA & 0x7F) + 1;
+            r = ((CGU_PLLA >> 7) & 0x7) + 1;
+            od = (CGU_PLLA >> 10) & 1 ? 2 : 1;
+            return (CLK_MAIN / 2) * f / (r * od);
 
         case CLK_PLLB:
-            return 0;
+            if(CGU_PLLBSUP & (1<<3))
+                return 0;
+
+            f = (CGU_PLLB & 0x7F) + 1;
+            r = ((CGU_PLLB >> 7) & 0x7) + 1;
+            od = (CGU_PLLB >> 10) & 1 ? 2 : 1;
+            return (CLK_MAIN / 2) * f / (r * od);
 #endif
         case CLK_PROC:
 #if CONFIG_CPU == AS3525 /* not in arm926-ejs */
@@ -256,21 +269,10 @@ bool __dbg_hw_info(void)
         while(1)
         {
 #ifdef SANSA_C200V2
-        extern int dbop_denoise_accept;
-        extern int dbop_denoise_reject;
-
         lcd_clear_display();
         line = 0;
         lcd_puts(0, line++, "[Submodel:]");
         lcd_putsf(0, line++, "C200v2 variant %d", c200v2_variant);
-        if (dbop_denoise_accept) {
-            lcd_putsf(0, line++, "DBOP noise: %d%%",
-                      (100*dbop_denoise_reject)/dbop_denoise_accept);
-        } else {
-            lcd_puts(0, line++, "DBOP noise: oo");
-        }
-        lcd_putsf(0, line++, "reject: %d", dbop_denoise_reject);
-        lcd_putsf(0, line++, "accept: %d", dbop_denoise_accept);
         lcd_update();
         int btn = button_get_w_tmo(HZ/10);
         if(btn == (DEBUG_CANCEL|BUTTON_REL))

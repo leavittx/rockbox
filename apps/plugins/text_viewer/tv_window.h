@@ -26,20 +26,17 @@
 /*
  * initialize the window module
  *
- * [In] buf
+ * [In/Out] buf
  *          the start pointer of the buffer
  *
- * [In] size
+ * [In/Out] size
  *          enabled buffer size
- *
- * [Out] used_size
- *          the size of the buffer which the pager uses
  *
  * return
  *     true  initialize success
  *     false initialize failure
  */
-bool tv_init_window(unsigned char *buf, size_t bufsize, size_t *used_size);
+bool tv_init_window(unsigned char **buf, size_t *bufsize);
 
 /* finalize the window module */
 void tv_finalize_window(void);

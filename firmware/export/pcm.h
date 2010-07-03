@@ -54,9 +54,16 @@ typedef void (*pcm_play_callback_type)(unsigned char **start,
                                        size_t *size);
 typedef void (*pcm_rec_callback_type)(int status, void **start, size_t *size);
 
-/* set the pcm frequency - use values in hw_sampr_list
- * use -1 for the default frequency
- */
+/* set the pcm frequency - use values in hw_sampr_list 
+ * when CONFIG_SAMPR_TYPES is #defined, or-in SAMPR_TYPE_* fields with
+ * frequency value. SAMPR_TYPE_PLAY is 0 and the default if none is
+ * specified. */
+#ifdef CONFIG_SAMPR_TYPES
+#ifdef SAMPR_TYPE_REC
+unsigned int pcm_sampr_type_rec_to_play(unsigned int samplerate);
+#endif
+#endif /* CONFIG_SAMPR_TYPES */
+
 void pcm_set_frequency(unsigned int samplerate);
 /* apply settings to hardware immediately */
 void pcm_apply_settings(void);
@@ -68,7 +75,7 @@ void pcm_play_lock(void);
 void pcm_play_unlock(void);
 
 void pcm_init(void) INIT_ATTR;
-void pcm_postinit(void) INIT_ATTR;
+void pcm_postinit(void);
 
 /* This is for playing "raw" PCM data */
 void pcm_play_data(pcm_play_callback_type get_more,

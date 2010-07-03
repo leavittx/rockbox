@@ -45,16 +45,21 @@
 #include "ata_idle_notify.h"
 #include "sd.h"
 #include "usb.h"
+/*#define LOGF_ENABLE*/
+#include "logf.h"
 
 #ifdef HAVE_HOTSWAP
 #include "disk.h"
 #endif
 
+#define VERIFY_WRITE 1
+
 /* command flags */
-#define MCI_NO_FLAGS    (0<<0)
+#define MCI_NO_RESP     (0<<0)
 #define MCI_RESP        (1<<0)
 #define MCI_LONG_RESP   (1<<1)
-#define MCI_ARG         (1<<2)
+#define MCI_ACMD        (1<<2)
+#define MCI_NOCRC       (1<<3)
 
 /* ARM PL180 registers */
 #define MCI_POWER(i)       (*(volatile unsigned char *) (pl180_base[i]+0x00))
@@ -123,9 +128,7 @@ static long sd_stack [(DEFAULT_STACK_SIZE*2 + 0x200)/sizeof(long)];
 static const char         sd_thread_name[] = "ata/sd";
 static struct mutex       sd_mtx;
 static struct event_queue sd_queue;
-#ifndef BOOTLOADER
 bool sd_enabled = false;
-#endif
 
 #if defined(HAVE_MULTIDRIVE)
 static bool hs_card = false;
@@ -211,11 +214,15 @@ static bool send_cmd(const int drive, const int cmd, const int arg,
     unsigned cmd_retries = 6;
     while(cmd_retries--)
     {
+        if ((flags & MCI_ACMD) && /* send SD_APP_CMD before each try */
+            !send_cmd(drive, SD_APP_CMD, card_info[drive].rca, MCI_RESP, response))
+            return false;
+
         /* Clear old status flags */
         MCI_CLEAR(drive) = 0x7ff;
 
         /* Load command argument or clear if none */
-        MCI_ARGUMENT(drive) = (flags & MCI_ARG) ? arg : 0;
+        MCI_ARGUMENT(drive) = arg;
 
         /* Construct MCI_COMMAND & enable CPSM */
         MCI_COMMAND(drive) =
@@ -237,8 +244,21 @@ static bool send_cmd(const int drive, const int cmd, const int arg,
         {
             response[0] = MCI_RESP0(drive); /* Always prepare short response */
 
-            if(status & MCI_RESPONSE_ERROR) /* timeout or crc failure */
+            if(status & MCI_RESPONSE_ERROR) {/* timeout or crc failure */
+                if ((status & MCI_CMD_CRC_FAIL) &&
+                    (flags & MCI_NOCRC))
+                    break;
+                logf("sd cmd error: drive %d cmd %d arg %08x sd_status %08x resp0 %08lx",
+                     drive, cmd, arg, status, response[0]);
                 continue;
+            }
+
+            if((flags & MCI_RESP) &&
+               !(flags & MCI_LONG_RESP) &&
+               (response[0] & SD_R1_CARD_ERROR)) {
+                logf("sd card error: drive %d cmd %d arg %08x r1 %08lx",
+                     drive, cmd, arg, response[0]);
+            }
 
             if(status & MCI_CMD_RESP_END)   /* Response passed CRC check */
             {
@@ -269,6 +289,8 @@ static int sd_init_card(const int drive)
     long init_timeout;
     bool sd_v2 = false;
 
+    card_info[drive].rca = 0;
+
     /* MCLCK on and set to 400kHz ident frequency  */
     MCI_CLOCK(drive) = MCI_IDENTSPEED;
 
@@ -276,13 +298,13 @@ static int sd_init_card(const int drive)
     /*  Start of Card Identification Mode ************************************/
 
     /* CMD0 Go Idle  */
-    if(!send_cmd(drive, SD_GO_IDLE_STATE, 0, MCI_NO_FLAGS, NULL))
+    if(!send_cmd(drive, SD_GO_IDLE_STATE, 0, MCI_NO_RESP, NULL))
         return -1;
     mci_delay();
 
     /* CMD8 Check for v2 sd card.  Must be sent before using ACMD41
       Non v2 cards will not respond to this command*/
-    if(send_cmd(drive, SD_SEND_IF_COND, 0x1AA, MCI_RESP|MCI_ARG, &response))
+    if(send_cmd(drive, SD_SEND_IF_COND, 0x1AA, MCI_RESP, &response))
         if((response & 0xFFF) == 0x1AA)
             sd_v2 = true;
 
@@ -294,22 +316,19 @@ static int sd_init_card(const int drive)
         if(TIME_AFTER(current_tick, init_timeout))
             return -2;
 
-        /* app_cmd */
-        send_cmd(drive, SD_APP_CMD, 0, MCI_RESP|MCI_ARG, &response);
-
         /* ACMD41 For v2 cards set HCS bit[30] & send host voltage range to all */
         send_cmd(drive, SD_APP_OP_COND, (0x00FF8000 | (sd_v2 ? 1<<30 : 0)),
-                        MCI_RESP|MCI_ARG, &card_info[drive].ocr);
+                        MCI_ACMD|MCI_NOCRC|MCI_RESP, &card_info[drive].ocr);
 
     } while(!(card_info[drive].ocr & (1<<31)));
 
     /* CMD2 send CID */
-    if(!send_cmd(drive, SD_ALL_SEND_CID, 0, MCI_RESP|MCI_LONG_RESP|MCI_ARG,
+    if(!send_cmd(drive, SD_ALL_SEND_CID, 0, MCI_RESP|MCI_LONG_RESP,
                             card_info[drive].cid))
         return -3;
 
     /* CMD3 send RCA */
-    if(!send_cmd(drive, SD_SEND_RELATIVE_ADDR, 0, MCI_RESP|MCI_ARG,
+    if(!send_cmd(drive, SD_SEND_RELATIVE_ADDR, 0, MCI_RESP,
                 &card_info[drive].rca))
         return -4;
 
@@ -321,20 +340,19 @@ static int sd_init_card(const int drive)
     if(sd_v2)
     {
         /*  CMD7 w/rca: Select card to put it in TRAN state */
-        if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_ARG, NULL))
+        if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_RESP, &response))
             return -5;
-        mci_delay();
 
         if(sd_wait_for_tran_state(drive))
             return -6;
         /* CMD6 */
-        if(!send_cmd(drive, SD_SWITCH_FUNC, 0x80fffff1, MCI_ARG, NULL))
+        if(!send_cmd(drive, SD_SWITCH_FUNC, 0x80fffff1, MCI_NO_RESP, NULL))
             return -7;
         mci_delay();
 
         /*  go back to STBY state so we can read csd */
         /*  CMD7 w/rca=0:  Deselect card to put it in STBY state */
-        if(!send_cmd(drive, SD_DESELECT_CARD, 0, MCI_ARG, NULL))
+        if(!send_cmd(drive, SD_DESELECT_CARD, 0, MCI_NO_RESP, NULL))
             return -8;
         mci_delay();
     }
@@ -342,7 +360,7 @@ static int sd_init_card(const int drive)
 
     /* CMD9 send CSD */
     if(!send_cmd(drive, SD_SEND_CSD, card_info[drive].rca,
-                 MCI_RESP|MCI_LONG_RESP|MCI_ARG, card_info[drive].csd))
+                 MCI_RESP|MCI_LONG_RESP, card_info[drive].csd))
         return -9;
 
     sd_parse_csd(&card_info[drive]);
@@ -361,9 +379,20 @@ static int sd_init_card(const int drive)
 #endif
 
     /*  CMD7 w/rca: Select card to put it in TRAN state */
-    if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_ARG, NULL))
+    if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_RESP, &response))
         return -10;
-    mci_delay();
+
+    /*  Switch to to 4 bit widebus mode  */
+    if(sd_wait_for_tran_state(drive) < 0)
+        return -11;
+    /* ACMD42  */
+    if(!send_cmd(drive, SD_SET_CLR_CARD_DETECT, 0, MCI_ACMD|MCI_RESP, &response))
+        return -15;
+    /* ACMD6  */
+    if(!send_cmd(drive, SD_SET_BUS_WIDTH, 2, MCI_ACMD|MCI_RESP, &response))
+        return -13;
+    /* Now that card is widebus make controller aware */
+    MCI_CLOCK(drive) |= MCI_CLOCK_WIDEBUS;
 
     /*
      * enable bank switching
@@ -377,14 +406,14 @@ static int sd_init_card(const int drive)
         if(ret < 0)
             return ret -16;
 
-        /*  CMD7 w/rca = 0: Select card to put it in STBY state */
-        if(!send_cmd(drive, SD_SELECT_CARD, 0, MCI_ARG, NULL))
+        /*  CMD7 w/rca = 0: Unselect card to put it in STBY state */
+        if(!send_cmd(drive, SD_SELECT_CARD, 0, MCI_NO_RESP, NULL))
             return -17;
         mci_delay();
 
         /* CMD9 send CSD again, so we got the correct number of blocks */
         if(!send_cmd(drive, SD_SEND_CSD, card_info[drive].rca,
-                     MCI_RESP|MCI_LONG_RESP|MCI_ARG, card_info[drive].csd))
+                     MCI_RESP|MCI_LONG_RESP, card_info[drive].csd))
             return -18;
 
         sd_parse_csd(&card_info[drive]);
@@ -392,9 +421,8 @@ static int sd_init_card(const int drive)
         card_info[INTERNAL_AS3525].numblocks -= AMS_OF_SIZE;
 
         /*  CMD7 w/rca: Select card to put it in TRAN state */
-        if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_ARG, NULL))
+        if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_RESP, &response))
             return -19;
-        mci_delay();
     }
 
     card_info[drive].initialized = 1;
@@ -533,9 +561,9 @@ int sd_init(void)
             |   (AS3525_IDE_DIV << 2)
             |    AS3525_CLK_PLLA;       /* clock source = PLLA */
 
-    CGU_PERI |= CGU_NAF_CLOCK_ENABLE;
+    bitset32(&CGU_PERI, CGU_NAF_CLOCK_ENABLE);
 #ifdef HAVE_MULTIDRIVE
-    CGU_PERI |= CGU_MCI_CLOCK_ENABLE;
+    bitset32(&CGU_PERI, CGU_MCI_CLOCK_ENABLE);
     CCU_IO &= ~(1<<3);           /* bits 3:2 = 01, xpd is SD interface */
     CCU_IO |= (1<<2);
 #endif
@@ -557,10 +585,9 @@ int sd_init(void)
     create_thread(sd_thread, sd_stack, sizeof(sd_stack), 0,
             sd_thread_name IF_PRIO(, PRIORITY_USER_INTERFACE) IF_COP(, CPU));
 
-#ifndef BOOTLOADER
     sd_enabled = true;
     sd_enable(false);
-#endif
+
     return 0;
 }
 
@@ -583,8 +610,8 @@ static int sd_wait_for_tran_state(const int drive)
 
     while (1)
     {
-        if(!send_cmd(drive, SD_SEND_STATUS, card_info[drive].rca,
-                    MCI_RESP|MCI_ARG, &response))
+        if(!send_cmd(drive, SD_SEND_STATUS, card_info[drive].rca, MCI_RESP,
+                    &response))
             return -1;
 
         if (((response >> 9) & 0xf) == SD_TRAN)
@@ -625,12 +652,13 @@ static int sd_select_bank(signed char bank)
         if (ret < 0)
             return ret - 2;
 
-        if(!send_cmd(INTERNAL_AS3525, SD_SWITCH_FUNC, 0x80ffffef, MCI_ARG, NULL))
+        if(!send_cmd(INTERNAL_AS3525, SD_SWITCH_FUNC, 0x80ffffef, MCI_NO_RESP,
+                     NULL))
             return -1;
 
         mci_delay();
 
-        if(!send_cmd(INTERNAL_AS3525, 35, 0, MCI_NO_FLAGS, NULL))
+        if(!send_cmd(INTERNAL_AS3525, 35, 0, MCI_NO_RESP, NULL))
             return -2;
 
         mci_delay();
@@ -672,29 +700,28 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
 #endif
     int ret = 0;
     unsigned loops = 0;
+    unsigned long response;
+    bool aligned = !((uintptr_t)buf & (CACHEALIGN_SIZE - 1));
 
-    mutex_lock(&sd_mtx);
-#ifndef BOOTLOADER
     sd_enable(true);
     led(true);
-#endif
 
     if (card_info[drive].initialized <= 0)
     {
         ret = sd_init_card(drive);
         if (!(card_info[drive].initialized))
-            goto sd_transfer_error;
+            goto sd_transfer_error_nodma;
     }
 
     if(count < 0) /* XXX: why is it signed ? */
     {
         ret = -20;
-        goto sd_transfer_error;
+        goto sd_transfer_error_nodma;
     }
     if((start+count) > card_info[drive].numblocks)
     {
         ret = -21;
-        goto sd_transfer_error;
+        goto sd_transfer_error_nodma;
     }
 
     /* skip SanDisk OF */
@@ -705,6 +732,14 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
 
     dma_retain();
 
+    if(aligned)
+    {
+        if(write)
+            clean_dcache_range(buf, count * SECTOR_SIZE);
+        else
+            dump_dcache_range(buf, count * SECTOR_SIZE);
+    }
+
     while(count)
     {
         /* 128 * 512 = 2^16, and doesn't fit in the 16 bits of DATA_LENGTH
@@ -714,6 +749,7 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
         const int cmd =
             write ? SD_WRITE_MULTIPLE_BLOCK : SD_READ_MULTIPLE_BLOCK;
         unsigned long bank_start = start;
+        unsigned long status;
 
         /* Only switch banks for internal storage */
         if(drive == INTERNAL_AS3525)
@@ -745,12 +781,19 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
         if(!(card_info[drive].ocr & (1<<30)))   /* not SDHC */
             bank_start *= SD_BLOCK_SIZE;
 
-        dma_buf = aligned_buffer;
-        if(transfer > UNALIGNED_NUM_SECTORS)
-            transfer = UNALIGNED_NUM_SECTORS;
+        if(aligned)
+        {
+            dma_buf = AS3525_PHYSICAL_ADDR(buf);
+        }
+        else
+        {
+            dma_buf = aligned_buffer;
+            if(transfer > UNALIGNED_NUM_SECTORS)
+                transfer = UNALIGNED_NUM_SECTORS;
 
-        if(write)
-            memcpy(uncached_buffer, buf, transfer * SD_BLOCK_SIZE);
+            if(write)
+                memcpy(uncached_buffer, buf, transfer * SD_BLOCK_SIZE);
+        }
 
         ret = sd_wait_for_tran_state(drive);
         if (ret < 0)
@@ -759,7 +802,7 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
             goto sd_transfer_error;
         }
 
-        if(!send_cmd(drive, cmd, bank_start, MCI_ARG, NULL))
+        if(!send_cmd(drive, cmd, bank_start, MCI_RESP, &response))
         {
             ret -= 3*20;
             goto sd_transfer_error;
@@ -799,9 +842,16 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
         /*  Wait for FIFO to empty, card may still be in PRG state for writes */
         while(MCI_STATUS(drive) & MCI_TX_ACTIVE);
 
+        /*
+         * If the write aborted early due to a tx underrun, disable the
+         * dma channel here, otherwise there are still 4 words in the fifo
+         * and the retried write will get corrupted.
+         */
+        dma_disable_channel(0);
+
         last_disk_activity = current_tick;
 
-        if(!send_cmd(drive, SD_STOP_TRANSMISSION, 0, MCI_NO_FLAGS, NULL))
+        if(!send_cmd(drive, SD_STOP_TRANSMISSION, 0, MCI_RESP, &status))
         {
             ret = -4*20;
             goto sd_transfer_error;
@@ -809,7 +859,7 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
 
         if(!transfer_error[drive])
         {
-            if(!write)
+            if(!write && !aligned)
                 memcpy(buf, uncached_buffer, transfer * SD_BLOCK_SIZE);
             buf += transfer * SD_BLOCK_SIZE;
             start += transfer;
@@ -825,42 +875,74 @@ sd_transfer_error:
 
     dma_release();
 
-#ifndef BOOTLOADER
+sd_transfer_error_nodma:
+
     led(false);
     sd_enable(false);
-#endif
 
     if (ret)    /* error */
         card_info[drive].initialized = 0;
 
-    mutex_unlock(&sd_mtx);
     return ret;
 }
 
 int sd_read_sectors(IF_MD2(int drive,) unsigned long start, int count,
                      void* buf)
 {
-    return sd_transfer_sectors(IF_MD2(drive,) start, count, buf, false);
+    int ret;
+
+    mutex_lock(&sd_mtx);
+    ret = sd_transfer_sectors(IF_MD2(drive,) start, count, buf, false);
+    mutex_unlock(&sd_mtx);
+
+    return ret;
 }
 
 int sd_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
                      const void* buf)
 {
+#ifdef VERIFY_WRITE
+    unsigned long saved_start = start;
+    int saved_count = count;
+    void *saved_buf = (void*)buf;
+#endif
+    int ret;
 
-#ifdef BOOTLOADER /* we don't need write support in bootloader */
-#ifdef HAVE_MULTIDRIVE
-    (void) drive;
+    mutex_lock(&sd_mtx);
+
+    ret = sd_transfer_sectors(IF_MD2(drive,) start, count, (void*)buf, true);
+
+#ifdef VERIFY_WRITE
+    if (ret) /* write failed, no point in verifying */
+        goto write_error;
+
+    count = saved_count;
+    buf = saved_buf;
+    start = saved_start;
+    while (count) {
+        int transfer = count;
+        if(transfer > UNALIGNED_NUM_SECTORS)
+            transfer = UNALIGNED_NUM_SECTORS;
+
+        sd_transfer_sectors(IF_MD2(drive,) start, transfer, aligned_buffer, false);
+        if (memcmp(buf, aligned_buffer, transfer * 512) != 0) {
+            /* try the write again in the hope to repair the damage */
+            sd_transfer_sectors(IF_MD2(drive,) saved_start, saved_count, saved_buf, true);
+            panicf("sd: verify failed: sec=%ld n=%d!", start, transfer);
+        }
+
+        buf   += transfer * 512;
+        count -= transfer;
+        start += transfer;
+    }
 #endif
-    (void) start;
-    (void) count;
-    (void) buf;
-    return -1;
-#else
-    return sd_transfer_sectors(IF_MD2(drive,) start, count, (void*)buf, true);
-#endif
+
+write_error:
+    mutex_unlock(&sd_mtx);
+
+    return ret;
 }
 
-#ifndef BOOTLOADER
 long sd_last_disk_activity(void)
 {
     return last_disk_activity;
@@ -923,8 +1005,6 @@ tCardInfo *card_get_info_target(int card_no)
 {
     return &card_info[card_no];
 }
-
-#endif /* !BOOTLOADER */
 
 #ifdef CONFIG_STORAGE_MULTI
 int sd_num_drives(int first_drive)

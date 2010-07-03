@@ -35,12 +35,11 @@ The areas of the touchscreen in the 3$\times$3 grid mode are in turn referred as
     \end{tabularx}
     \end{center}
 \end{table}
-}
+}%
 Whenever a button name is prefixed by ``Long'', a long press of approximately
 one second should be performed on that button. The buttons are described in
 detail in the following paragraph.
-
-\blind{
+\blind{%
   Additional information for blind users is available on the Rockbox website at 
   \wikilink{BlindFAQ}.
   
@@ -508,10 +507,14 @@ To turn on and off your Rockbox enabled \dap{} use the following keys:
           ,GIGABEAT_PAD,MROBE100_PAD,GIGABEAT_S_PAD,sansaAMS,PBELL_VIBE500_PAD%
           }{\ButtonPower}%
       \opt{COWON_D2_PAD} {\ButtonPower{}, then \ButtonHold}%
-    \opt{HAVEREMOTEKEYMAP}{&
-      \opt{IRIVER_RC_H100_PAD}{\ButtonRCOn}%
-          }
-      & Start Rockbox.\\
+          &
+      \opt{HAVEREMOTEKEYMAP}{
+          \opt{IRIVER_RC_H100_PAD}{\ButtonRCOn}%
+          \opt{IAUDIO_RC_PAD}{\ButtonRCPlay}
+          &}
+      Start Rockbox
+          \\
+
       \opt{IRIVER_H100_PAD,IRIVER_H300_PAD}{Long \ButtonOff}%
       \opt{IPOD_4G_PAD,IPOD_3G_PAD}{Long \ButtonPlay}%
       \opt{ONDIO_PAD,recorderv2fm}{Long \ButtonOff}%
@@ -520,10 +523,13 @@ To turn on and off your Rockbox enabled \dap{} use the following keys:
       \opt{IAUDIO_X5_PAD,IRIVER_H10_PAD,SANSA_E200_PAD,SANSA_C200_PAD%
           ,GIGABEAT_PAD,MROBE100_PAD,GIGABEAT_S_PAD,sansaAMS,COWON_D2_PAD%
           ,PBELL_VIBE500_PAD}{Long \ButtonPower}%
-    \opt{HAVEREMOTEKEYMAP}{& 
-      \opt{IRIVER_RC_H100_PAD}{Long \ButtonRCStop}%
-          }
-      & Shutdown Rockbox.\\
+          &
+      \opt{HAVEREMOTEKEYMAP}{ 
+          \opt{IRIVER_RC_H100_PAD}{Long \ButtonRCStop}%
+          \opt{IAUDIO_RC_PAD}{Long \ButtonRCPlay}
+          &}
+      Shutdown Rockbox
+          \\
     \end{btnmap}
 
 \label{ref:Safeshutdown}On shutdown, Rockbox automatically saves its settings.
@@ -682,7 +688,7 @@ The default directory structure that is assumed by some parts of Rockbox
     information incorrectly if your files are not properly tagged, and you have
     your music organized in a way different than they assume when attempting to
     guess the Artist and Album names from your filetree.
-}
+}%
 \opt{swcodec}{
     See \reference{ref:Supportedaudioformats} for a list of supported audio
     formats.

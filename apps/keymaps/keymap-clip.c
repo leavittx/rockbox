@@ -77,11 +77,7 @@ static const struct button_mapping button_context_wps[]  = {
     { ACTION_WPS_BROWSE,        BUTTON_SELECT|BUTTON_REL,     BUTTON_SELECT },
     { ACTION_WPS_CONTEXT,       BUTTON_SELECT|BUTTON_REPEAT,  BUTTON_SELECT },
 
-#ifndef HAS_BUTTON_HOLD /* Clip+ */
-    { ACTION_WPS_QUICKSCREEN,   BUTTON_HOME|BUTTON_SELECT,    BUTTON_HOME },
-#else
     { ACTION_WPS_QUICKSCREEN,   BUTTON_HOME|BUTTON_REPEAT,    BUTTON_HOME },
-#endif
     { ACTION_WPS_MENU,          BUTTON_HOME|BUTTON_REL,      BUTTON_HOME },
 
     { ACTION_WPS_PITCHSCREEN,   BUTTON_SELECT|BUTTON_UP,        BUTTON_SELECT },
@@ -93,7 +89,7 @@ static const struct button_mapping button_context_wps[]  = {
 #endif
 
 #ifndef HAS_BUTTON_HOLD /* Clip+ */
-    { ACTION_STD_KEYLOCK,       BUTTON_HOME|BUTTON_REPEAT,      BUTTON_HOME },
+    { ACTION_STD_KEYLOCK,       BUTTON_HOME|BUTTON_SELECT,      BUTTON_NONE },
 #endif /* HAS_BUTTON_HOLD */
 
     LAST_ITEM_IN_LIST
@@ -223,19 +219,17 @@ static const struct button_mapping button_context_pitchscreen[]  = {
 #ifdef HAVE_RECORDING
 /** Recording Screen **/
 static const struct button_mapping button_context_recscreen[]  = {
-    { ACTION_REC_PAUSE,          BUTTON_UP|BUTTON_REL,          BUTTON_UP },
-    { ACTION_STD_CANCEL,         BUTTON_POWER|BUTTON_REL,       BUTTON_POWER },
+    { ACTION_REC_PAUSE,          BUTTON_SELECT,                 BUTTON_NONE },
     { ACTION_REC_NEWFILE,        BUTTON_HOME|BUTTON_REL,        BUTTON_HOME },
-    { ACTION_STD_MENU,           BUTTON_SELECT|BUTTON_REPEAT,   BUTTON_SELECT},
+    { ACTION_STD_MENU,           BUTTON_DOWN|BUTTON_REPEAT,     BUTTON_NONE },
     { ACTION_SETTINGS_INC,       BUTTON_RIGHT,                  BUTTON_NONE },
     { ACTION_SETTINGS_INCREPEAT, BUTTON_RIGHT|BUTTON_REPEAT,    BUTTON_NONE },
     { ACTION_SETTINGS_DEC,       BUTTON_LEFT,                   BUTTON_NONE },
     { ACTION_SETTINGS_DECREPEAT, BUTTON_LEFT|BUTTON_REPEAT,     BUTTON_NONE },
-    { ACTION_STD_PREV,           BUTTON_LEFT,                   BUTTON_NONE },
-    { ACTION_STD_PREV,           BUTTON_LEFT|BUTTON_REPEAT,     BUTTON_NONE },
-    { ACTION_STD_NEXT,           BUTTON_RIGHT,                  BUTTON_NONE },
-    { ACTION_STD_NEXT,           BUTTON_RIGHT|BUTTON_REPEAT,    BUTTON_NONE },
-    { ACTION_NONE,               BUTTON_DOWN|BUTTON_REL,        BUTTON_DOWN },
+    { ACTION_SETTINGS_INC,       BUTTON_VOL_UP,                 BUTTON_NONE },
+    { ACTION_SETTINGS_INCREPEAT, BUTTON_VOL_UP|BUTTON_REPEAT,   BUTTON_NONE },
+    { ACTION_SETTINGS_DEC,       BUTTON_VOL_DOWN,               BUTTON_NONE },
+    { ACTION_SETTINGS_DECREPEAT, BUTTON_VOL_DOWN|BUTTON_REPEAT, BUTTON_NONE },
     LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_STD)
 }; /* button_context_recscreen */
 #endif
@@ -254,7 +248,6 @@ static const struct button_mapping button_context_radio[]  = {
     { ACTION_SETTINGS_INCREPEAT,BUTTON_VOL_UP|BUTTON_REPEAT,    BUTTON_NONE },
     { ACTION_SETTINGS_DEC,      BUTTON_VOL_DOWN,                BUTTON_NONE },
     { ACTION_SETTINGS_DECREPEAT,BUTTON_VOL_DOWN|BUTTON_REPEAT,  BUTTON_NONE },
-    { ACTION_FM_QUICKSCREEN,    BUTTON_HOME|BUTTON_REPEAT,      BUTTON_HOME },
 
     LAST_ITEM_IN_LIST__NEXTLIST(CONTEXT_SETTINGS)
 }; /* button_context_radio */

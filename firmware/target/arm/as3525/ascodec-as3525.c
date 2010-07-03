@@ -160,7 +160,7 @@ static void ascodec_finish_req(struct ascodec_request *req)
      */
     while (i2c_busy());
 
-    /* disable clock */
+    /* disable clock - already in IRQ context */
     CGU_PERI &= ~CGU_I2C_AUDIO_MASTER_CLOCK_ENABLE;
 
     req->status = 1;
@@ -205,7 +205,7 @@ static void ascodec_start_req(struct ascodec_request *req)
     int unmask = 0;
 
     /* enable clock */
-    CGU_PERI |= CGU_I2C_AUDIO_MASTER_CLOCK_ENABLE;
+    bitset32(&CGU_PERI, CGU_I2C_AUDIO_MASTER_CLOCK_ENABLE);
 
     /* start transfer */
     I2C2_SADDR = req->index;
@@ -266,7 +266,7 @@ void ascodec_init(void)
     wakeup_init(&adc_wkup);
 
     /* enable clock */
-    CGU_PERI |= CGU_I2C_AUDIO_MASTER_CLOCK_ENABLE;
+    bitset32(&CGU_PERI, CGU_I2C_AUDIO_MASTER_CLOCK_ENABLE);
 
     /* prescaler for i2c clock */
     prescaler = AS3525_I2C_PRESCALER;
@@ -284,7 +284,8 @@ void ascodec_init(void)
     VIC_INT_ENABLE = INTERRUPT_AUDIO;
 
     /* detect if USB was connected at startup since there is no transition */
-    if(ascodec_read(AS3514_IRQ_ENRD0) & USB_STATUS)
+    ascodec_enrd0_shadow = ascodec_read(AS3514_IRQ_ENRD0);
+    if(ascodec_enrd0_shadow & USB_STATUS)
         usb_insert_int();
     else
         usb_remove_int();

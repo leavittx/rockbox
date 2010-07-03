@@ -57,7 +57,6 @@
 #endif
 #include "statusbar-skinned.h"
 #include "debug.h"
-#include "viewport.h"
 
 #define VPSTACK_DEPTH 16
 struct viewport_stack_item
@@ -169,6 +168,7 @@ static void toggle_theme(enum screen_type screen, bool force)
             screens[screen].set_viewport(NULL);
         }
         intptr_t force = first_boot?0:1;
+
         send_event(GUI_EVENT_ACTIONUPDATE, (void*)force);
     }
     else
@@ -182,7 +182,9 @@ static void toggle_theme(enum screen_type screen, bool force)
     send_event(GUI_EVENT_THEME_CHANGED, NULL);
     FOR_NB_SCREENS(i)
         was_enabled[i] = is_theme_enabled(i);
-
+#ifdef HAVE_TOUCHSCREEN
+    sb_bypass_touchregions(!is_theme_enabled(SCREEN_MAIN));
+#endif
     after_boot[screen] = true;
 }
 

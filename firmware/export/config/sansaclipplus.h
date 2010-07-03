@@ -123,7 +123,7 @@
 #define AB_REPEAT_ENABLE 1
 
 /* FM Tuner */
-#define CONFIG_TUNER SI4700 /* in fact SI4702 */
+#define CONFIG_TUNER (SI4700|RDA5802) /* in fact SI4702 */
 //#define HAVE_TUNER_PWR_CTRL
 
 /* Define this for LCD backlight available */
@@ -161,7 +161,7 @@
 /* #define HAVE_POWEROFF_WHILE_CHARGING */
 
 /* define current usage levels (based on battery bench) */
-#define CURRENT_NORMAL     15
+#define CURRENT_NORMAL     19
 #define CURRENT_BACKLIGHT  15
 #define CURRENT_RECORD     CURRENT_NORMAL /* TODO */
 
@@ -172,19 +172,15 @@
 /* Type of LCD */
 #define CONFIG_LCD LCD_SSD1303
 
-#ifndef BOOTLOADER
-
-#define USB_HANDLED_BY_OF
-//#define USE_ROCKBOX_USB
-
 /* USB On-the-go */
 #define CONFIG_USBOTG USBOTG_AS3525v2
 
 /* enable these for the experimental usb stack */
 #define HAVE_USBSTACK
+#define USB_HANDLED_BY_OF
+//#define USE_ROCKBOX_USB
 #define USB_VENDOR_ID 0x0781
 #define USB_PRODUCT_ID 0x74d1
-#endif /* BOOTLOADER */
 
 
 /* Virtual LED (icon) */
