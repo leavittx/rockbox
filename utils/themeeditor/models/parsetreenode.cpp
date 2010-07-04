@@ -31,6 +31,7 @@
 #include <iostream>
 
 int ParseTreeNode::openConditionals = 0;
+bool ParseTreeNode::breakFlag = false;
 
 /* Root element constructor */
 ParseTreeNode::ParseTreeNode(struct skin_element* data)
@@ -68,7 +69,7 @@ ParseTreeNode::ParseTreeNode(struct skin_element* data, ParseTreeNode* parent)
             children.append(new ParseTreeNode(data->children[i], this));
         break;
 
-    case SUBLINES:
+    case LINE_ALTERNATOR:
         for(int i = 0; i < element->children_count; i++)
         {
             children.append(new ParseTreeNode(data->children[i], this));
@@ -146,13 +147,13 @@ QString ParseTreeNode::genCode() const
                 buffer.append(children[i]->genCode());
             }
             if(openConditionals == 0
-               && !(parent && parent->element->type == SUBLINES))
+               && !(parent && parent->element->type == LINE_ALTERNATOR))
             {
                 buffer.append('\n');
             }
             break;
 
-        case SUBLINES:
+        case LINE_ALTERNATOR:
             for(int i = 0; i < children.count(); i++)
             {
                 buffer.append(children[i]->genCode());
@@ -210,6 +211,8 @@ QString ParseTreeNode::genCode() const
                 }
                 buffer.append(ARGLISTCLOSESYM);
             }
+            if(element->tag->params[strlen(element->tag->params) - 1] == '\n')
+                buffer.append('\n');
             break;
 
         case TEXT:
@@ -279,7 +282,7 @@ int ParseTreeNode::genHash() const
             break;
         case VIEWPORT:
         case LINE:
-        case SUBLINES:
+        case LINE_ALTERNATOR:
         case CONDITIONAL:
             hash += element->children_count;
             break;
@@ -368,7 +371,7 @@ QVariant ParseTreeNode::data(int column) const
             case LINE:
                 return QObject::tr("Logical Line");
 
-            case SUBLINES:
+            case LINE_ALTERNATOR:
                 return QObject::tr("Alternator");
 
             case COMMENT:
@@ -416,7 +419,7 @@ QVariant ParseTreeNode::data(int column) const
             case UNKNOWN:
             case VIEWPORT:
             case LINE:
-            case SUBLINES:
+            case LINE_ALTERNATOR:
                 return QString();
 
             case CONDITIONAL:
@@ -518,8 +521,11 @@ void ParseTreeNode::render(const RBRenderInfo &info, RBViewport* viewport,
     {
         for(int i = 0; i < children.count(); i++)
             children[i]->render(info, viewport);
-        if(!noBreak)
+        if(!noBreak && !breakFlag)
             viewport->newLine();
+
+        if(breakFlag)
+            breakFlag = false;
     }
     else if(element->type == TEXT)
     {
@@ -529,13 +535,15 @@ void ParseTreeNode::render(const RBRenderInfo &info, RBViewport* viewport,
     {
         if(!execTag(info, viewport))
             viewport->write(evalTag(info).toString());
+        if(element->tag->flags & NOBREAK)
+            breakFlag = true;
     }
     else if(element->type == CONDITIONAL)
     {
         int child = evalTag(info, true, element->children_count).toInt();
         children[element->params_count + child]->render(info, viewport, true);
     }
-    else if(element->type == SUBLINES)
+    else if(element->type == LINE_ALTERNATOR)
     {
         /* First we build a list of the times for each branch */
         QList<double> times;
@@ -628,15 +636,17 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         switch(element->tag->name[1])
         {
         case 'd':
-            info.screen()->disableStatusBar();
+            /* %wd */
+            info.screen()->breakSBS();
             return true;
 
         case 'e':
-            info.screen()->enableStatusBar();
+            /* %we */
+            /* Totally extraneous */
             return true;
 
         case 'i':
-            info.screen()->disableStatusBar();
+            /* %wi */
             viewport->enableStatusBar();
             return true;
         }
@@ -801,7 +811,10 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         case '\0':
             /* %X */
             filename = QString(element->params[0].data.text);
-            info.screen()->setBackdrop(filename);
+            if(info.sbsScreen())
+                info.sbsScreen()->setBackdrop(filename);
+            else
+                info.screen()->setBackdrop(filename);
             return true;
         }
 

@@ -37,8 +37,8 @@ enum skin_element_type
 {
     UNKNOWN = -1,
     VIEWPORT,
+    LINE_ALTERNATOR,
     LINE,
-    SUBLINES,
     CONDITIONAL,
     TAG,
     TEXT,
