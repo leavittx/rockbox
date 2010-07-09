@@ -9,10 +9,17 @@
         <file>resources/zoomeven.png</file>
         <file>resources/zoomin.png</file>
         <file>resources/zoomout.png</file>
+        <file>resources/play.png</file>
+        <file>resources/ffwd.png</file>
+        <file>resources/pause.png</file>
+        <file>resources/rwnd.png</file>
     </qresource>
     <qresource prefix="/render">
         <file alias="scenebg.png">resources/render/scenebg.png</file>
         <file alias="albumart.png">resources/render/albumart.png</file>
         <file alias="statusbar.png">resources/render/statusbar.png</file>
+    </qresource>
+    <qresource prefix="/fonts">
+        <file alias="08-Schumacher-Clean.fnt">resources/fonts/08-Schumacher-Clean.fnt</file>
     </qresource>
 </RCC>

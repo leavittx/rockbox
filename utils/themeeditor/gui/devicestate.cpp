@@ -30,7 +30,9 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QFormLayout>
+#include <QTime>
 
+#include <cstdlib>
 
 DeviceState::DeviceState(QWidget *parent) :
     QWidget(parent), tabs(this)
@@ -46,7 +48,6 @@ DeviceState::DeviceState(QWidget *parent) :
 
     /* Loading the tabs */
     QScrollArea* currentArea = 0;
-    QHBoxLayout* subLayout;
     QWidget* panel;
 
     QFile fin(":/resources/deviceoptions");
@@ -199,6 +200,217 @@ DeviceState::~DeviceState()
 QVariant DeviceState::data(QString tag, int paramCount,
                            skin_tag_parameter *params)
 {
+    /* Handling special cases */
+    if(tag.toLower() == "fm")
+    {
+        QString path = tag[0].isLower()
+                       ? data("file").toString() : data("nextfile").toString();
+        return fileName(path, true);
+    }
+    else if(tag.toLower() == "fn")
+    {
+        QString path = tag[0].isLower()
+                       ? data("file").toString() : data("nextfile").toString();
+        return fileName(path, false);
+    }
+    else if(tag.toLower() == "fp")
+    {
+        if(tag[0].isLower())
+            return data("file").toString();
+        else
+            return data("nextfile").toString();
+    }
+    else if(tag.toLower() == "d")
+    {
+        QString path = tag[0].isLower()
+                       ? data("file").toString() : data("nextfile").toString();
+        if(paramCount > 0)
+            return directory(path, params[0].data.numeric);
+        else
+            return QVariant();
+    }
+    else if(tag == "pc")
+    {
+        int secs = data("?pc").toInt();
+        return secsToString(secs);
+    }
+    else if(tag == "pr")
+    {
+        int secs = data("?pt").toInt() - data("?pc").toInt();
+        if(secs < 0)
+            secs = 0;
+        return secsToString(secs);
+    }
+    else if(tag == "pt")
+    {
+        int secs = data("?pt").toInt();
+        return secsToString(secs);
+    }
+    else if(tag == "px")
+    {
+        int totalTime = data("?pt").toInt();
+        int currentTime = data("?pc").toInt();
+        return currentTime * 100 / totalTime;
+    }
+    else if(tag == "pS")
+    {
+        double threshhold = paramCount > 0
+                            ? std::atof(params[0].data.text) : 10;
+        if(data("?pc").toDouble() <= threshhold)
+            return true;
+        else
+            return false;
+    }
+    else if(tag == "pE")
+    {
+        double threshhold = paramCount > 0
+                            ? std::atof(params[0].data.text) : 10;
+        if(data("?pt").toDouble() - data("?pc").toDouble() <= threshhold)
+            return true;
+        else
+            return false;
+    }
+    else if(tag == "ce")
+    {
+        return data("month");
+    }
+    else if(tag == "cH")
+    {
+        int hour = data("hour").toInt();
+        if(hour < 10)
+            return "0" + QString::number(hour);
+        else
+            return hour;
+    }
+    else if(tag == "cK")
+    {
+        return data("hour");
+    }
+    else if(tag == "cI")
+    {
+        int hour = data("hour").toInt();
+        if(hour > 12)
+            hour -= 12;
+        if(hour == 0)
+            hour = 12;
+
+        if(hour < 10)
+            return "0" + QString::number(hour);
+        else
+            return hour;
+    }
+    else if(tag == "cl")
+    {
+        int hour = data("hour").toInt();
+        if(hour > 12)
+            hour -= 12;
+        if(hour == 0)
+            hour = 12;
+
+        return hour;
+    }
+    else if(tag == "cm")
+    {
+        int month = data("?cm").toInt() + 1;
+        if(month < 10)
+            return "0" + QString::number(month);
+        else
+            return month;
+    }
+    else if(tag == "cd")
+    {
+        int day = data("day").toInt();
+        if(day < 10)
+            return "0" + QString::number(day);
+        else
+            return day;
+    }
+    else if(tag == "cM")
+    {
+        int minute = data("minute").toInt();
+        if(minute < 10)
+            return "0" + QString::number(minute);
+        else
+            return minute;
+    }
+    else if(tag == "cS")
+    {
+        int second = data("second").toInt();
+        if(second < 10)
+            return "0" + QString::number(second);
+        else
+            return second;
+    }
+    else if(tag == "cy")
+    {
+        QString year = data("cY").toString();
+        return year.right(2);
+    }
+    else if(tag == "cP")
+    {
+        if(data("hour").toInt() >= 12)
+            return "PM";
+        else
+            return "AM";
+    }
+    else if(tag == "cp")
+    {
+        if(data("hour").toInt() >= 12)
+            return "pm";
+        else
+            return "am";
+    }
+    else if(tag == "ca")
+    {
+        QString day = data("cw").toString();
+        return day.left(3);
+    }
+    else if(tag == "cb")
+    {
+        int month = data("cm").toInt();
+        switch(month)
+        {
+        case 1: return "Jan";
+        case 2: return "Feb";
+        case 3: return "Mar";
+        case 4: return "Apr";
+        case 5: return "May";
+        case 6: return "Jun";
+        case 7: return "Jul";
+        case 8: return "Aug";
+        case 9: return "Sep";
+        case 10: return "Oct";
+        case 11: return "Nov";
+        case 12: return "Dec";
+        }
+    }
+    else if(tag == "cu")
+    {
+        int day = data("?cw").toInt();
+        if(day == 0)
+            day = 7;
+        return day;
+    }
+    else if(tag == "?cu")
+    {
+        int day = data("?cw").toInt() - 1;
+        if(day == -1)
+            day = 6;
+        return day;
+    }
+    else if(tag == "cw")
+    {
+        return data("?cw");
+    }
+    else if(tag == "cs")
+    {
+        int seconds = data("seconds").toInt();
+        if(seconds < 10)
+            return "0" + QString::number(seconds);
+        else
+            return seconds;
+    }
+
     QPair<InputType, QWidget*> found =
             inputs.value(tag, QPair<InputType, QWidget*>(Slide, 0));
 
@@ -279,4 +491,67 @@ void DeviceState::setData(QString tag, QVariant data)
 void DeviceState::input()
 {
     emit settingsChanged();
+}
+
+QString DeviceState::fileName(QString path, bool extension)
+{
+    path = path.split("/").last();
+    if(!extension)
+    {
+        QString sum;
+        QStringList name = path.split(".");
+        for(int i = 0; i < name.count() - 1; i++)
+            sum.append(name[i]);
+        return sum;
+    }
+    else
+    {
+        return path;
+    }
+}
+
+QString DeviceState::directory(QString path, int level)
+{
+    QStringList dirs = path.split("/");
+    int index = dirs.count() - 1 - level;
+    if(index < 0)
+        index = 0;
+    return dirs[index];
+}
+
+QString DeviceState::secsToString(int secs)
+{
+    int hours = 0;
+    int minutes = 0;
+    while(secs >= 60)
+    {
+        minutes++;
+        secs -= 60;
+    }
+
+    while(minutes >= 60)
+    {
+        hours++;
+        minutes -= 60;
+    }
+
+    QString retval;
+
+    if(hours > 0)
+    {
+        retval += QString::number(hours);
+        if(minutes < 10)
+            retval += ":0";
+        else
+            retval += ":";
+    }
+
+    retval += QString::number(minutes);
+    if(secs < 10)
+        retval += ":0";
+    else
+        retval += ":";
+
+    retval += QString::number(secs);
+    return retval;
 }

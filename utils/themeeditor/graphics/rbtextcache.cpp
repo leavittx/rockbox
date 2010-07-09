@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2010 by Fred Bauer
+ * Copyright (C) 2010 Robert Bieber
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,24 +19,17 @@
  *
  ****************************************************************************/
 
-#ifndef __BUTTONMAP_H__
-#define __BUTTONMAP_H__
-/* Button maps: simulated key, x, y, radius, name */
-/* Run sim with --mapping to get coordinates      */
-/* or --debugbuttons to check                     */
-/* The First matching button is returned          */
-struct button_map {
-    int button, x, y, radius;
-    char *description;
-};
+#include "rbtextcache.h"
 
-extern struct button_map bm[];
+QHash<QString, QImage*> RBTextCache::cache;
 
-int xy2button( int x, int y);
+void RBTextCache::clearCache()
+{
+    QHash<QString, QImage*>::iterator i;
+    for(i = cache.begin(); i != cache.end(); i++)
+    {
+        delete (*i);
+    }
 
-int key_to_button(int keyboard_button);
-#ifdef HAVE_TOUCHSCREEN
-int key_to_touch(int keyboard_button, unsigned int mouse_coords);
-#endif
-
-#endif /* __BUTTONMAP_H__ */
+    cache.clear();
+}

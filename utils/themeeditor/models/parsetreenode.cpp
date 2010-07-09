@@ -29,6 +29,7 @@
 #include "rbprogressbar.h"
 
 #include <iostream>
+#include <cmath>
 
 int ParseTreeNode::openConditionals = 0;
 bool ParseTreeNode::breakFlag = false;
@@ -523,6 +524,8 @@ void ParseTreeNode::render(const RBRenderInfo &info, RBViewport* viewport,
             children[i]->render(info, viewport);
         if(!noBreak && !breakFlag)
             viewport->newLine();
+        else
+            viewport->flushText();
 
         if(breakFlag)
             breakFlag = false;
@@ -550,8 +553,16 @@ void ParseTreeNode::render(const RBRenderInfo &info, RBViewport* viewport,
         for(int i = 0; i < children.count() ; i++)
             times.append(findBranchTime(children[i], info));
 
+        double totalTime = 0;
+        for(int i = 0; i < children.count(); i++)
+            totalTime += times[i];
+
         /* Now we figure out which branch to select */
-        double timeLeft = info.device()->data(QString("?pc")).toDouble();
+        double timeLeft = info.device()->data(QString("simtime")).toDouble();
+
+        /* Skipping any full cycles */
+        timeLeft -= totalTime * std::floor(timeLeft / totalTime);
+
         int branch = 0;
         while(timeLeft > 0)
         {
@@ -616,6 +627,26 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
             /* %ar */
             viewport->alignText(RBViewport::Right);
             return true;
+
+        case 'x':
+            /* %ax */
+            return true;
+
+        case 'L':
+            /* %aL */
+            if(info.device()->data("rtl").toBool())
+                viewport->alignText(RBViewport::Right);
+            else
+                viewport->alignText(RBViewport::Left);
+            return true;
+
+        case 'R':
+            /* %aR */
+            if(info.device()->data("rtl").toBool())
+                viewport->alignText(RBViewport::Left);
+            else
+                viewport->alignText(RBViewport::Right);
+            return true;
         }
 
         return false;
@@ -627,6 +658,17 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
             /* %pb */
             new RBProgressBar(viewport, info, element->params_count,
                               element->params);
+            return true;
+        }
+
+        return false;
+
+    case 's':
+        switch(element->tag->name[1])
+        {
+        case '\0':
+            /* %s */
+            viewport->scrollText(info.device()->data("simtime").toDouble());
             return true;
         }
 
@@ -811,7 +853,7 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         case '\0':
             /* %X */
             filename = QString(element->params[0].data.text);
-            if(info.sbsScreen())
+            if(info.sbsScreen() && info.screen()->parentItem())
                 info.sbsScreen()->setBackdrop(filename);
             else
                 info.screen()->setBackdrop(filename);
@@ -831,7 +873,8 @@ QVariant ParseTreeNode::evalTag(const RBRenderInfo& info, bool conditional,
 {
     if(!conditional)
     {
-        return info.device()->data(QString(element->tag->name));
+        return info.device()->data(QString(element->tag->name),
+                                   element->params_count, element->params);
     }
     else
     {
@@ -844,7 +887,8 @@ QVariant ParseTreeNode::evalTag(const RBRenderInfo& info, bool conditional,
         int child;
         QVariant val = info.device()->data("?" + QString(element->tag->name));
         if(val.isNull())
-            val = info.device()->data(QString(element->tag->name));
+            val = info.device()->data(QString(element->tag->name),
+                                      element->params_count, element->params);
 
         if(val.isNull())
         {
@@ -882,6 +926,14 @@ QVariant ParseTreeNode::evalTag(const RBRenderInfo& info, bool conditional,
         else if(val.type() == QVariant::String)
         {
             if(val.toString().length() > 0)
+                child = 0;
+            else
+                child = 1;
+        }
+        else if(element->tag->name[0] == 'i' || element->tag->name[0] == 'I'
+                || element->tag->name[0] == 'f' || element->tag->name[0] == 'F')
+        {
+            if(info.device()->data("id3available").toBool())
                 child = 0;
             else
                 child = 1;

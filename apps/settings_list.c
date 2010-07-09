@@ -215,6 +215,8 @@ static const char graphic_numeric[] = "graphic,numeric";
   #define DEFAULT_FONTNAME "12-Adobe-Helvetica"
 #elif LCD_HEIGHT <= 320
   #define DEFAULT_FONTNAME "15-Adobe-Helvetica"
+#elif LCD_HEIGHT <= 400
+  #define DEFAULT_FONTNAME "16-Adobe-Helvetica"
 #else
   #define DEFAULT_FONTNAME "12-Adobe-Helvetica"
 #endif
@@ -987,6 +989,8 @@ const struct settings_list settings[] = {
                    ID2P(LANG_SET_BOOL_NO), ID2P(LANG_SET_BOOL_YES),
                    ID2P(LANG_ASK), ID2P(LANG_BOOKMARK_SETTINGS_RECENT_ONLY_YES),
                    ID2P(LANG_BOOKMARK_SETTINGS_RECENT_ONLY_ASK)),
+    OFFON_SETTING(0, autoupdatebookmark, LANG_BOOKMARK_SETTINGS_AUTOUPDATE,
+                   false, "autoupdate bookmarks", NULL),
     CHOICE_SETTING(0, autoloadbookmark, LANG_BOOKMARK_SETTINGS_AUTOLOAD,
                    BOOKMARK_NO, "autoload bookmarks", off_on_ask, NULL, 3,
                    ID2P(LANG_SET_BOOL_NO), ID2P(LANG_SET_BOOL_YES),

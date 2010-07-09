@@ -12,7 +12,7 @@
 CCOPTS="-W -Wall -Wundef -O -nostdlib -ffreestanding -Wstrict-prototypes -pipe"
 
 # global LD options for all platforms
-GLOBAL_LDOPTS="-Wl,-z,defs"
+GLOBAL_LDOPTS=""
 
 use_logf="#undef ROCKBOX_HAS_LOGF"
 use_bootchart="#undef DO_BOOTCHART"
@@ -43,9 +43,6 @@ prefixtools () {
 }
 
 findarmgcc() {
-  # FIXME: ipod4g buttons do not work
-  [ "$ARG_ARM_EABI" != 1 -a "$modelname" = "ipod4g" ] && ARG_ARM_EABI="0"
-
   if [ "$ARG_ARM_EABI" != "0" ]; then
     prefixtools arm-elf-eabi-
     gccchoice="4.4.4"
@@ -107,7 +104,7 @@ simcc () {
  ARG_ARM_THUMB=0 # can't use thumb in native builds
 
  simver=sdl
- winbuild="$crosscompile"
+ winbuild=""
  GCCOPTS='-W -Wall -g -fno-builtin'
  GCCOPTIMIZE=''
  LDOPTS='-lm' # button-sdl.c uses sqrt()
@@ -118,6 +115,11 @@ simcc () {
  # default share option, override below if needed
  SHARED_FLAG="-shared"
 
+ if [ "$win32crosscompile" = "yes" ]; then
+   LDOPTS="$LDOPTS -mconsole"
+   output="rockboxui.exe"
+   winbuild="yes"
+ else
  case $uname in
    CYGWIN*)
    echo "Cygwin host detected"
@@ -164,7 +166,9 @@ simcc () {
    exit 1
    ;;
  esac
+ fi
 
+ [ "$winbuild" != "yes" ] && GLOBAL_LDOPTS="$GLOBAL_LDOPTS -Wl,-z,defs"
  sdl=`findsdl $winbuild`
 
  if [ $1 = "sdl" ]; then
@@ -182,7 +186,7 @@ simcc () {
 
  GCCOPTS="$GCCOPTS -I\$(SIMDIR)"
 
- if test "X$crosscompile" != "Xyes"; then
+ if test "X$win32crosscompile" != "Xyes"; then
    case `uname -m` in
     x86_64|amd64)
       # fPIC is needed to make shared objects link
@@ -483,7 +487,7 @@ whichadvanced () {
         ;;
       [Ww])
         echo "Enabling Windows 32 cross-compiling"
-        crosscompile="yes"
+        win32crosscompile="yes"
         ;;
       *)
         if [ "$interact" ]; then
@@ -815,6 +819,7 @@ help() {
     --thumb           Build with -mthumb (for ARM builds)
     --no-thumb        The opposite of --thumb (don't use thumb even for targets
                       where this is the default
+    --prefix          Target installation directory
     --help            Shows this message (must not be used with other options)
 
 EOF
@@ -852,6 +857,7 @@ for arg in "$@"; do
 		--no-eabi)    ARG_ARM_EABI=0;;
 		--thumb)      ARG_ARM_THUMB=1;;
 		--no-thumb)   ARG_ARM_THUMB=0;;
+        --prefix=*)   PREFIX=`echo "$arg" | cut -d = -f 2`;;
 		--help)       help;;
 		*)            err=1; echo "[ERROR] Option '$arg' unsupported";;
 	esac
@@ -962,8 +968,9 @@ cat <<EOF
  142) YH-925              ==Packard Bell==       130) Lyre proto 1
  143) YP-S3               160) Vibe 500          131) Mini2440
 
- ==MPIO==
- 170) HD200
+ ==MPIO==                                        == Application ==
+ 170) HD200                                      200) SDL 320x240
+
 EOF
 
   buildfor=`input`;
@@ -2591,6 +2598,28 @@ fi
     t_model="hd200"
     ;;
 
+   200|app*)
+    target_id=100
+    modelname="application"
+    target="-DAPPLICATION"
+    memory=32
+    uname=`uname`
+    simcc "sdl"
+    tool="cp "
+    boottool="cp "
+    bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
+    bmp2rb_native="$rootdir/tools/bmp2rb -f 4"
+    output="rockbox"
+    bootoutput="bootloader-cowond2.bin"
+    appextra="recorder:gui:radio"
+    plugins=""
+    swcodec="yes"
+    # architecture, manufacturer and model for the target-tree build
+    t_cpu="hosted"
+    t_manufacturer="sdl"
+    t_model="app"
+    ;;
+
    *)
     echo "Please select a supported target platform!"
     exit 7
@@ -3058,7 +3087,7 @@ if [ "$ARG_ARM_EABI" = "1" ]; then
   cmdline="$cmdline--eabi "
 fi
 
-cmdline="$cmdline--target=\$(MODELNAME) --ram=\$(MEMORYSIZE) --rbdir=\$(RBDIR) --type=$btype$advopts"
+cmdline="$cmdline--target=\$(MODELNAME) --ram=\$(MEMORYSIZE) --rbdir=\$(RBDIR) --type=$btype$advopts --prefix=\$(PREFIX)"
 ### end of cmdline
 
 sed > Makefile \

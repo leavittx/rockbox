@@ -21,7 +21,7 @@ my $ROOT="..";
 my $ziptool="zip -r9";
 my $output="rockbox.zip";
 my $verbose;
-my $install=0;
+my $install;
 my $exe;
 my $target;
 my $modelname;
@@ -494,18 +494,27 @@ sub runone {
         print "$ziptool $output $rbdir $target >/dev/null\n";
     }
 
+    my $samedir = 0; # is the destination dir equal to source dir ?
+
     if($install) {
         if ($install =~ /\/dev\/null/) {
             die "ERROR: No PREFIX given\n"
         }
-        system("cp -r $rbdir \"$install\" >/dev/null");
+
+        $samedir = abs_path("$install/$rbdir") eq abs_path($rbdir);
+
+        if (!$samedir) {
+            system("mkdir -p \"$install\" && cp -r $rbdir \"$install/\"");
+        }
     }
     else {
         system("$ziptool $output $rbdir $target >/dev/null");
     }
 
     # remove the $rbdir afterwards
-    rmtree($rbdir);
+    if (!$samedir) {
+        rmtree($rbdir);
+    }
 };
 
 if(!$exe) {

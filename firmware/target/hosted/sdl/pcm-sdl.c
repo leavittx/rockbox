@@ -31,6 +31,13 @@
 #include "audiohw.h"
 #include "system.h"
 
+#ifdef HAVE_RECORDING
+#include "audiohw.h"
+#ifdef HAVE_SPDIF_IN
+#include "spdif.h"
+#endif
+#endif
+
 #include "pcm.h"
 #include "pcm_sampr.h"
 
@@ -284,15 +291,24 @@ void pcm_rec_dma_stop(void)
 {
 }
 
-unsigned long pcm_rec_status(void)
-{
-    return 0;
-}
-
 const void * pcm_rec_dma_get_peak_buffer(void)
 {
     return NULL;
 }
+
+void audiohw_set_recvol(int left, int right, int type)
+{
+    (void)left;
+    (void)right;
+    (void)type;
+}
+
+#ifdef HAVE_SPDIF_IN
+unsigned long spdif_measure_frequency(void)
+{
+    return 0;
+}
+#endif
 
 #endif /* HAVE_RECORDING */
 

@@ -40,6 +40,8 @@ public:
         Right
     };
 
+    static const double scrollRate;
+
     RBViewport(skin_element* node, const RBRenderInfo& info);
     virtual ~RBViewport();
 
@@ -60,6 +62,13 @@ public:
     void alignText(Alignment align){ textAlign = align; }
     int getTextOffset(){ return textOffset.y(); }
     void addTextOffset(int height){ textOffset.setY(textOffset.y() + height); }
+    void flushText()
+    {
+        alignLeft();
+        alignRight();
+        alignCenter();
+    }
+    void scrollText(double time){ scrollTime = time; }
 
     void enableStatusBar(){ showStatusBar = true; }
 
@@ -84,13 +93,19 @@ private:
 
     RBScreen* screen;
 
-    QList<QGraphicsItem*> leftText;
-    QList<QGraphicsItem*> centerText;
-    QList<QGraphicsItem*> rightText;
+    QString leftText;
+    QString centerText;
+    QString rightText;
     Alignment textAlign;
 
     bool showStatusBar;
     QPixmap statusBarTexture;
+
+    RBText* leftGraphic;
+    RBText* centerGraphic;
+    RBText* rightGraphic;
+
+    double scrollTime;
 };
 
 #endif // RBVIEWPORT_H

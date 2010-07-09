@@ -22,6 +22,8 @@
 #include "editorwindow.h"
 #include "projectmodel.h"
 #include "ui_editorwindow.h"
+#include "rbfontcache.h"
+#include "rbtextcache.h"
 
 #include <QDesktopWidget>
 #include <QFileSystemModel>
@@ -49,6 +51,9 @@ EditorWindow::~EditorWindow()
         delete project;
     delete deviceConfig;
     delete deviceDock;
+
+    RBFontCache::clearCache();
+    RBTextCache::clearCache();
 }
 
 void EditorWindow::loadTabFromSkinFile(QString fileName)
@@ -162,7 +167,18 @@ void EditorWindow::setupUI()
     deviceDock->setObjectName("deviceDock");
     deviceDock->setWidget(deviceConfig);
     deviceDock->setFloating(true);
+    deviceDock->move(QPoint(x() + width() / 2, y() + height() / 2));
     deviceDock->hide();
+
+    /* Positioning the timer panel */
+    timerDock = new QDockWidget(tr("Timer"), this);
+    timer = new SkinTimer(deviceConfig, timerDock);
+
+    timerDock->setObjectName("timerDock");
+    timerDock->setWidget(timer);
+    timerDock->setFloating(true);
+    timerDock->move(QPoint(x() + width() / 2, y() + height() / 2));
+    timerDock->hide();
 
     shiftTab(-1);
 }
@@ -178,6 +194,8 @@ void EditorWindow::setupMenus()
                      this, SLOT(showPanel()));
     QObject::connect(ui->actionDevice_Configuration, SIGNAL(triggered()),
                      deviceDock, SLOT(show()));
+    QObject::connect(ui->actionTimer, SIGNAL(triggered()),
+                     timerDock, SLOT(show()));
 
     /* Connecting the document management actions */
     QObject::connect(ui->actionNew_Document, SIGNAL(triggered()),
@@ -501,13 +519,22 @@ void EditorWindow::updateCurrent()
 
 void EditorWindow::lineChanged(int line)
 {
+    QSettings settings;
+    settings.beginGroup("EditorWindow");
+
+    if(settings.value("autoExpandTree", false).toBool())
+    {
         ui->parseTree->collapseAll();
         ParseTreeModel* model = dynamic_cast<ParseTreeModel*>
                                 (ui->parseTree->model());
         parseTreeSelection = new QItemSelectionModel(model);
-        expandLine(model, QModelIndex(), line);
+        expandLine(model, QModelIndex(), line,
+                   settings.value("autoHighlightTree", false).toBool());
         sizeColumns();
         ui->parseTree->setSelectionModel(parseTreeSelection);
+    }
+
+    settings.endGroup();
 }
 
 void EditorWindow::undo()
@@ -561,7 +588,7 @@ void EditorWindow::findReplace()
 
 
 void EditorWindow::expandLine(ParseTreeModel* model, QModelIndex parent,
-                              int line)
+                              int line, bool highlight)
 {
     for(int i = 0; i < model->rowCount(parent); i++)
     {
@@ -572,7 +599,7 @@ void EditorWindow::expandLine(ParseTreeModel* model, QModelIndex parent,
         QModelIndex data = model->index(i, ParseTreeModel::lineColumn, parent);
         QModelIndex recurse = model->index(i, 0, parent);
 
-        expandLine(model, recurse, line);
+        expandLine(model, recurse, line, highlight);
 
         if(model->data(data, Qt::DisplayRole) == line)
         {
@@ -580,12 +607,18 @@ void EditorWindow::expandLine(ParseTreeModel* model, QModelIndex parent,
             ui->parseTree->expand(data);
             ui->parseTree->scrollTo(parent, QAbstractItemView::PositionAtTop);
 
-            parseTreeSelection->select(data, QItemSelectionModel::Select);
-            parseTreeSelection->select(dataType, QItemSelectionModel::Select);
-            parseTreeSelection->select(dataVal, QItemSelectionModel::Select);
+            if(highlight)
+            {
+                parseTreeSelection->select(data,
+                                           QItemSelectionModel::Select);
+                parseTreeSelection->select(dataType,
+                                           QItemSelectionModel::Select);
+                parseTreeSelection->select(dataVal,
+                                           QItemSelectionModel::Select);
+            }
         }
-
     }
+
 }
 
 void EditorWindow::sizeColumns()

@@ -22,11 +22,8 @@
 #ifndef PDBOX_H
 #define PDBOX_H
 
-
-#if 1
 /* Use TLSF. */
 #include "codecs/lib/tlsf/src/tlsf.h"
-#endif
 
 /* Pure Data */
 #include "PDa/src/m_pd.h"
@@ -43,7 +40,17 @@
 #define calloc(elements, elem_size) tlsf_calloc(elements, elem_size)
 
 /* Audio declarations. */
-#define PD_SAMPLERATE 22050
+#ifdef SIMULATOR
+  #define PD_SAMPLERATE 44100
+#elif (HW_SAMPR_CAPS & SAMPR_CAP_22)
+  #define PD_SAMPLERATE 22050
+#elif (HW_SAMPR_CAPS & SAMPR_CAP_32)
+  #define PD_SAMPLERATE 32000
+#elif (HW_SAMPR_CAPS & SAMPR_CAP_44)
+  #define PD_SAMPLERATE 44100
+#else
+  #error No sufficient sample rate available!
+#endif
 #define PD_SAMPLES_PER_HZ ((PD_SAMPLERATE / HZ) + \
                            (PD_SAMPLERATE % HZ > 0 ? 1 : 0))
 #define PD_OUT_CHANNELS 2
@@ -255,6 +262,15 @@ enum pd_key_id
     #define PDPOD_WHEELLEFT BUTTON_SCROLL_BACK
     #define PDPOD_WHEELRIGHT BUTTON_SCROLL_FWD
     #define PDPOD_ACTION BUTTON_DOWN
+#elif (CONFIG_KEYPAD == SANSA_E200_PAD)
+    #define PDPOD_QUIT (BUTTON_POWER|BUTTON_REPEAT)
+    #define PDPOD_PLAY BUTTON_UP
+    #define PDPOD_PREVIOUS BUTTON_LEFT
+    #define PDPOD_NEXT BUTTON_RIGHT
+    #define PDPOD_MENU BUTTON_DOWN
+    #define PDPOD_WHEELLEFT BUTTON_SCROLL_BACK
+    #define PDPOD_WHEELRIGHT BUTTON_SCROLL_FWD
+    #define PDPOD_ACTION BUTTON_SELECT
 #elif (CONFIG_KEYPAD == IPOD_4G_PAD) || (CONFIG_KEYPAD == IPOD_3G_PAD) || \
       (CONFIG_KEYPAD == IPOD_1G2G_PAD)
     /* Added by wincent */

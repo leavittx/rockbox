@@ -34,6 +34,7 @@
 #include "preferencesdialog.h"
 #include "skinviewer.h"
 #include "devicestate.h"
+#include "skintimer.h"
 
 class ProjectModel;
 class TabContent;
@@ -87,7 +88,8 @@ private:
     void setupUI();
     void setupMenus();
     void addTab(TabContent* doc);
-    void expandLine(ParseTreeModel* model, QModelIndex parent, int line);
+    void expandLine(ParseTreeModel* model, QModelIndex parent, int line,
+                    bool highlight);
     void sizeColumns();
 
     Ui::EditorWindow *ui;
@@ -98,6 +100,8 @@ private:
     SkinViewer* viewer;
     DeviceState* deviceConfig;
     QDockWidget* deviceDock;
+    SkinTimer* timer;
+    QDockWidget* timerDock;
 };
 
 #endif // EDITORWINDOW_H

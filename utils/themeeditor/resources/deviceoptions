@@ -35,10 +35,13 @@ screenwidth ; Screen Width ; spin(0,800) ; 300
 screenheight ; Screen Height ; spin(0,800) ; 200
 remotewidth ; Remote Width ; spin(0,800) ; 100
 remoteheight ; Remote Height ; spin(0,800); 50
+simtime ; Simulation Time ; fspin(0, 100000) ; 60.0
 showviewports ; Show Viewports ; check ; false
 rendersbs ; Render SBS If Available ; check ; true
+rtl ; Right-To-Left Language ; check ; false
 
 [ID3 Info]
+id3available ; ID3 Info Available ; check ; true
 ia ; Artist ; text ; Current Artist
 ic ; Composer ; text ; Current Composer
 iA ; Album Artist ; text ; Current Album Artist
@@ -71,43 +74,26 @@ fb ; Bitrate (kbps) ; spin(1,2048) ; 256
 fc ; Codec ; combo(MP1, MP2, MP3, AIFF, WAV, OGG, FLAC, MPC, AC3, WV, ALAC, AAC, SHN, SID, ADX, NSF, Speex, SPC, APE, WMA) ; OGG
 ff ; Frequency (Hz) ; spin(1,100000) ; 42000
 fk ; Frequency (KHz) ; fspin(1, 100) ; 42
-fm ; Name ; text ; Current File Name.a
-fn ; Name (w/o extension) ; text ; Current File Name
-fp ; Path ; text ; /current/file/path/
+file ; File Path ; text ; /.rockbox/music/artist/album/01 - file.ogg
 fs ; Size (KB) ; spin(1,100000) ; 3000
 fv ; Variable Bit Rate ; check ; true
-d1 ; cd up ; text ; /current/file/
-d2 ; cd up x2 ; text ; /current/
-d3 ; cd up x3 ; text ; /
 
 [Next File Info]
 Fb ; Next File Bitrate (kbps) ; spin(1,2048) ; 256
 Fc ; Next File Codec ; combo(MP1, MP2, MP3, AIFF, WAV, OGG, FLAC, MPC, AC3, WV, ALAC, AAC, SHN, SID, ADX, NSF, Speex, SPC, APE, WMA) ; OGG
 Ff ; Next File Frequency (Hz) ; spin(1,100000) ; 42000
 Fk ; Next File Frequency (KHz) ; fspin(1, 100) ; 42
-Fm ; Next File Name ; text ; Next File Name.a
-Fn ; Next File Name (w/o extension) ; text ; Next File Name
-Fp ; Next File Path ; text ; /next/file/path/
+nextfile ; Next File Path ; text ; /.rockbox/music/artist/album/02 - nextfile.ogg
 Fs ; Next File Size (KB) ; spin(1,100000) ; 3000
 Fv ; Next File Variable Bit Rate ; check ; true
-D1 ; Next File cd up ; text ; /next/file/
-D2 ; Next File cd up x2 ; text ; /next/
-D3 ; Next File cd up x3 ; text ; /
 
 [Playlist/Song Info]
-px ; Percent Played ; spin(0,100) ; 50
-pc ; Current Time In Song ; text ; 1:00
-?pc ; Time In Song (Conditional) ; fspin(0,5000) ; 60
+?pc ; Time In Song (Seconds) ; fspin(0,5000) ; 60
 pe ; Playlist Entries ; spin(0,1000) ; 20
 pn ; Playlist Name ; text ; Current Playlist
 pp ; Playlist Position ; spin(0,1000) ; 10
-pr ; Time Remaining ; text ; 2:00
 ps ; Shuffle ; check ; true
-pt ; Total Track Time ; text ; 3:00
-pv ; Current Volume (dB) ; spin(-100,100) ; 0
-?pv ; Current Volume (Conditional) ; combo(Mute, Below 0 dB, 0 dB, Above 0 dB) ; 0 dB
-pS ; Track Starting ; check ; true
-pE ; Track Ending ; check ; false
+?pt ; Total Track Time ; spin(0,1000) ; 180
 Sp ; Playback Pitch ; fspin(50,200) ; 100
 rp ; Song Playcount ; spin(0,10000) ; 20
 rr ; Song Rating ; spin(0,10) ; 5
@@ -117,6 +103,8 @@ artwidth ; Album Art Width ; spin(0,500) ; 100
 artheight; Album Art Height ; spin(0,500) ; 100
 
 [Hardware Status]
+pv ; Current Volume (dB) ; spin(-100,100) ; 0
+?pv ; Current Volume (Conditional) ; combo(Mute, Below 0 dB, 0 dB, Above 0 dB) ; 0 dB
 bl ; Battery Level (-1 for unknown) ; spin(-1,100) ; 50
 bv ; Battery Volts ; spin(0,20) ; 5
 bt ; Time Left (-1 for unknown) ; spin(-1,500); 100
@@ -136,27 +124,14 @@ xf ; Crossfade Type ; combo(Off, Automatic Track Skip Only, Shuffle, Shuffle or 
 
 [Clock]
 cc ; Has Realtime Clock ; check ; true
-cd ; Day of Month ; text ; 05
-ce ; Day of Month (No Padding) ; text ; 5
 cf ; 24 Hour Format ; check ; true
-cH ; 24h Hour ; text ; 09
-ck ; 24h Hour (No Padding) ; text ; 9
-cI ; 12h Hour ; text ; 09
-cl ; 12h Hour (No Padding) ; text ; 9
-cm ; Month (Padded) ; text ; 03
-?cm ; Month (Conditional) ; combo(January, February, March, April, May, Jun, July, August, September, October, November, December) ; January
-cM ; Minute (Padded) ; text ; 29
-cS ; Second (Padded) ; text ; 50
-cy ; Last Two Digits of Year (Padded) ; text ; 09
-cY ; Year ; text ; 2009
-cP ; Uppercase AM or PM ; combo(AM,PM) ; AM
-cp ; Lowercase AM or PM ; combo(am,pm) ; am
-ca ; Abbreviated Weekday Name ; combo(Sun, Mon, Tue, Thu, Fri, Sat); Tue
-cb ; Abbreviated Month Name ; combo(Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) ; Jan
-cu ; Day of Week (1..7, 1 is Monday) ; spin(1,7) ; 2
-?cu ; Day of Week (Monday First, Conditional) ; combo(Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) ; Tuesday
-cw ; Day of Week (0..6, 0 is Sunday) ; spin(0,6) ; 2
-?cw ; Day of Week (Sunday First, Conditional) ; combo(Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) ; Tuesday
+cY ; Year ; spin(1500,2100) ; 2010
+cm ; Month ; combo(January, February, March, April, May, Jun, July, August, September, October, November, December) ; January
+day ; Day of Month ; spin(1,31) ; 20
+?cw ; Day of Week ; combo(Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday) ; Tuesday
+hour ; Hour (24h) ; spin(0, 23) ; 12
+minute ; Minute ; spin(0, 59) ; 25
+second ; Second ; spin(0, 59) ; 20
 
 [Recording Status]
 Rp ; Target Has Recorder ; check ; false

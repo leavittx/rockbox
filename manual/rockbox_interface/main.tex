@@ -22,18 +22,16 @@ picture above.
 \opt{touchscreen}{
 The areas of the touchscreen in the 3$\times$3 grid mode are in turn referred as follows:
 \begin{table}
-    \begin{center}
-    %\begin{tabularx}{.82\textwidth}{l|c|r}
-    \begin{tabularx}{.9\textwidth}{X|X|X}
-    \toprule
-        \TouchTopLeft & \TouchTopMiddle & \TouchTopRight \\
-    \midrule
-        \TouchMidLeft & \TouchCenter & \TouchMidRight \\
-    \midrule
-        \TouchBottomLeft & \TouchBottomMiddle & \TouchBottomRight \\
-    \bottomrule
-    \end{tabularx}
-    \end{center}
+    \centering
+    \begin{tabular}{|c|c|c|}
+	\hline
+        \TouchTopLeft & \TouchTopMiddle & \TouchTopRight \\ [5ex]
+	\hline        
+	\TouchMidLeft & \TouchCenter & \TouchMidRight \\ [5ex]
+	\hline        
+	\TouchBottomLeft & \TouchBottomMiddle & \TouchBottomRight \\ [5ex]
+	\hline
+    \end{tabular}
 \end{table}
 }%
 Whenever a button name is prefixed by ``Long'', a long press of approximately
@@ -503,7 +501,7 @@ To turn on and off your Rockbox enabled \dap{} use the following keys:
       \opt{IPOD_3G_PAD}{\ButtonMenu{} / \ButtonPlay}%
       \opt{ONDIO_PAD}{\ButtonOff}\opt{RECORDER_PAD,PLAYER_PAD}%
           {Long \ButtonOn}%
-      \opt{IAUDIO_X5_PAD,IRIVER_H10_PAD,SANSA_E200_PAD,SANSA_C200_PAD%
+      \opt{IAUDIO_X5_PAD,IRIVER_H10_PAD,SANSA_E200_PAD,SANSA_C200_PAD,ONDA_VX777_PAD%
           ,GIGABEAT_PAD,MROBE100_PAD,GIGABEAT_S_PAD,sansaAMS,PBELL_VIBE500_PAD%
           }{\ButtonPower}%
       \opt{COWON_D2_PAD} {\ButtonPower{}, then \ButtonHold}%
@@ -522,7 +520,7 @@ To turn on and off your Rockbox enabled \dap{} use the following keys:
       \opt{PLAYER_PAD}{From the Main Menu, select \textbf{Shutdown}}%
       \opt{IAUDIO_X5_PAD,IRIVER_H10_PAD,SANSA_E200_PAD,SANSA_C200_PAD%
           ,GIGABEAT_PAD,MROBE100_PAD,GIGABEAT_S_PAD,sansaAMS,COWON_D2_PAD%
-          ,PBELL_VIBE500_PAD}{Long \ButtonPower}%
+          ,PBELL_VIBE500_PAD,ONDA_VX777_PAD}{Long \ButtonPower}%
           &
       \opt{HAVEREMOTEKEYMAP}{ 
           \opt{IRIVER_RC_H100_PAD}{Long \ButtonRCStop}%
@@ -657,6 +655,13 @@ To turn on and off your Rockbox enabled \dap{} use the following keys:
     button and keep it pressed until the original firmware starts.
     }
 
+  \opt{ondavx777}
+    {
+    Rockbox has a dual-boot feature where it is possible to load the original firmware from
+    the file \fname{/SD/ccpmp.bin}. To boot into the original firmware press and release
+    \ButtonPower{} immediately after the Rockbox Logo appear on the screen.
+    }
+
   }
 \subsection{Putting music on your \dap{}}
 
@@ -670,21 +675,22 @@ To turn on and off your Rockbox enabled \dap{} use the following keys:
 With the \dap{} connected to the computer as an MSC/UMS device (like a
 USB Drive), music files can be put on the player via any standard file
 transfer method that you would use to copy files between drives (e.g. Drag-and-Drop).
+Files may be placed wherever you like on the \dap{}, but it is strongly suggested
+not to place them in the \fname{/.rockbox} folder.
 The default directory structure that is assumed by some parts of Rockbox
 \opt{albumart}{%
     (album art searching, and missing-tag fallback in some WPSes) uses the
     parent directory of a song as the Album name, and the parent directory of
-    that folder as the Artist name. While files may be organized however you
-    like, see \reference{ref:album_art} for the requirements for Album
-    Art to work properly, and WPSes may display information incorrectly if your
-    files are not properly tagged, and you have your music organized in a way
-    different than they assume when attempting to guess the Artist and Album
-    names from your filetree.
+    that folder as the Artist name. WPSes may display information incorrectly if
+    your files are not properly tagged, and you have your music organized in a
+    way different than they assume when attempting to guess the Artist and Album
+    names from your filetree. See \reference{ref:album_art} for the requirements
+    for Album Art to work properly. 
 }%
 \nopt{albumart}{%
     (missing-tag fallback in some WPSes) uses the parent directory of a song
     as the Album name, and the parent directory of that folder as the Artist
-    name. While files may be organized however you like, WPSes may display
+    name. WPSes may display
     information incorrectly if your files are not properly tagged, and you have
     your music organized in a way different than they assume when attempting to
     guess the Artist and Album names from your filetree.

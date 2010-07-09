@@ -21,6 +21,7 @@
 
 #include <QPainter>
 #include <QPainterPath>
+#include <cmath>
 
 #include "rbviewport.h"
 #include "rbscreen.h"
@@ -29,12 +30,15 @@
 #include "tag_table.h"
 #include "skin_parser.h"
 
+/* Pixels/second of text scrolling */
+const double RBViewport::scrollRate = 30;
+
 RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
-    : QGraphicsItem(info.screen()), font(info.screen()->getFont(0)),
-    foreground(info.screen()->foreground()),
+    : QGraphicsItem(info.screen()), foreground(info.screen()->foreground()),
     background(info.screen()->background()), textOffset(0,0),
     screen(info.screen()), textAlign(Left), showStatusBar(false),
-    statusBarTexture(":/render/statusbar.png")
+    statusBarTexture(":/render/statusbar.png"),
+    leftGraphic(0), centerGraphic(0), rightGraphic(0), scrollTime(0)
 {
     if(!node->tag)
     {
@@ -42,6 +46,7 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
         size = QRectF(0, 0, info.screen()->getWidth(),
                       info.screen()->getHeight());
         customUI = false;
+        font = screen->getFont(1);
 
         if(info.model()->rowCount(QModelIndex()) > 1)
         {
@@ -120,6 +125,10 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
             y -= screen->parentItem()->pos().y();
         }
 
+        if(node->params[++param].type == skin_tag_parameter::DEFAULT)
+            font = screen->getFont(1);
+        else
+            font = screen->getFont(node->params[param].data.numeric);
 
         setPos(x, y);
         size = QRectF(0, 0, w, h);
@@ -166,30 +175,43 @@ void RBViewport::paint(QPainter *painter,
 
 void RBViewport::newLine()
 {
+    if(leftText != "")
+        alignLeft();
+
+    if(centerText != "")
+        alignCenter();
+
+    if(rightText != "")
+        alignRight();
+
     textOffset.setY(textOffset.y() + lineHeight);
     textOffset.setX(0);
     textAlign = Left;
+
     leftText.clear();
     rightText.clear();
     centerText.clear();
+
+    leftGraphic = 0;
+    centerGraphic = 0;
+    rightGraphic = 0;
+
+    scrollTime = 0;
 }
 
 void RBViewport::write(QString text)
 {
     if(textAlign == Left)
     {
-        leftText.append(font->renderText(text, foreground, this));
-        alignLeft();
+        leftText.append(text);
     }
     else if(textAlign == Center)
     {
-        centerText.append(font->renderText(text, foreground, this));
-        alignCenter();
+        centerText.append(text);
     }
     else if(textAlign == Right)
     {
-        rightText.append(font->renderText(text, foreground, this));
-        alignRight();
+        rightText.append(text);
     }
 }
 
@@ -265,12 +287,32 @@ void RBViewport::showPlaylist(const RBRenderInfo &info, int start,
 void RBViewport::alignLeft()
 {
     int y = textOffset.y();
-    int x = 0;
 
-    for(int i = 0; i < leftText.count(); i++)
+    if(leftGraphic)
+        delete leftGraphic;
+
+    leftGraphic = font->renderText(leftText, foreground, size.width(), this);
+    leftGraphic->setPos(0, y);
+
+    /* Setting scroll position if necessary */
+    int difference = leftGraphic->realWidth()
+                     - leftGraphic->boundingRect().width();
+    if(difference > 0)
     {
-        leftText[i]->setPos(x, y);
-        x += leftText[i]->boundingRect().width();
+        /* Subtracting out complete cycles */
+        double totalTime = 2 * difference / scrollRate;
+        scrollTime -= totalTime * std::floor(scrollTime / totalTime);
+
+        /* Calculating the offset */
+        if(scrollTime < static_cast<double>(difference) / scrollRate)
+        {
+            leftGraphic->setOffset(scrollRate * scrollTime);
+        }
+        else
+        {
+            scrollTime -= static_cast<double>(difference) / scrollRate;
+            leftGraphic->setOffset(difference - scrollRate * scrollTime);
+        }
     }
 }
 
@@ -278,37 +320,84 @@ void RBViewport::alignCenter()
 {
     int y = textOffset.y();
     int x = 0;
-    int width = 0;
 
-    for(int i = 0; i < centerText.count(); i++)
-        width += centerText[i]->boundingRect().width();
+    if(centerGraphic)
+        delete centerGraphic;
 
-    x = (size.width() - width) / 2;
+    centerGraphic = font->renderText(centerText, foreground, size.width(),
+                                     this);
 
-    for(int i = 0; i < centerText.count(); i++)
+    if(centerGraphic->boundingRect().width() < size.width())
     {
-        centerText[i]->setPos(x, y);
-        x += centerText[i]->boundingRect().width();
+        x = size.width() - centerGraphic->boundingRect().width();
+        x /= 2;
     }
+    else
+    {
+        x = 0;
+    }
+
+    centerGraphic->setPos(x, y);
+
+    /* Setting scroll position if necessary */
+    int difference = centerGraphic->realWidth()
+                     - centerGraphic->boundingRect().width();
+    if(difference > 0)
+    {
+        /* Subtracting out complete cycles */
+        double totalTime = 2 * difference / scrollRate;
+        scrollTime -= totalTime * std::floor(scrollTime / totalTime);
+
+        /* Calculating the offset */
+        if(scrollTime < static_cast<double>(difference) / scrollRate)
+        {
+            centerGraphic->setOffset(scrollRate * scrollTime);
+        }
+        else
+        {
+            scrollTime -= static_cast<double>(difference) / scrollRate;
+            centerGraphic->setOffset(difference - scrollRate * scrollTime);
+        }
+    }
+
 }
 
 void RBViewport::alignRight()
 {
-
     int y = textOffset.y();
     int x = 0;
-    int width = 0;
 
-    for(int i = 0; i < rightText.count(); i++)
-        width += rightText[i]->boundingRect().width();
+    if(rightGraphic)
+        delete rightGraphic;
 
-    x = size.width() - width;
+    rightGraphic = font->renderText(rightText, foreground, size.width(), this);
 
-    for(int i = 0; i < rightText.count(); i++)
+    if(rightGraphic->boundingRect().width() < size.width())
+        x = size.width() - rightGraphic->boundingRect().width();
+    else
+        x = 0;
+
+    rightGraphic->setPos(x, y);
+
+    /* Setting scroll position if necessary */
+    int difference = rightGraphic->realWidth()
+                     - rightGraphic->boundingRect().width();
+    if(difference > 0)
     {
-        rightText[i]->setPos(x, y);
-        x += rightText[i]->boundingRect().width();
-    }
+        /* Subtracting out complete cycles */
+        double totalTime = 2 * difference / scrollRate;
+        scrollTime -= totalTime * std::floor(scrollTime / totalTime);
 
+        /* Calculating the offset */
+        if(scrollTime < static_cast<double>(difference) / scrollRate)
+        {
+            rightGraphic->setOffset(scrollRate * scrollTime);
+        }
+        else
+        {
+            scrollTime -= static_cast<double>(difference) / scrollRate;
+            rightGraphic->setOffset(difference - scrollRate * scrollTime);
+        }
+    }
 }
 

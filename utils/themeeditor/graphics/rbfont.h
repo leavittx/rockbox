@@ -24,7 +24,10 @@
 
 #include <QString>
 #include <QFile>
-#include <QGraphicsSimpleTextItem>
+#include <QGraphicsPixmapItem>
+#include <QHash>
+
+#include "rbtext.h"
 
 class RBFont
 {
@@ -32,12 +35,18 @@ public:
     RBFont(QString file);
     virtual ~RBFont();
 
-    QGraphicsSimpleTextItem* renderText(QString text, QColor color,
+    RBText* renderText(QString text, QColor color, int maxWidth,
                                         QGraphicsItem* parent = 0);
-    int lineHeight(){ return 8; }
+    int lineHeight(){ return header.value("height", 0).toInt(); }
+
+    static quint16 maxFontSizeFor16BitOffsets;
 
 private:
-    QString filename;
+    QHash<QString, QVariant> header;
+    bool valid;
+    quint8* imageData;
+    quint16* offsetData;
+    quint8* widthData;
 };
 
 #endif // RBFONT_H

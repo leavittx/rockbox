@@ -1,3 +1,7 @@
+# Enabling profiling
+QMAKE_CXXFLAGS_DEBUG += -pg
+QMAKE_LFLAGS_DEBUG += -pg
+
 # build in a separate folder.
 MYBUILDDIR = $$OUT_PWD/build/
 OBJECTS_DIR = $$MYBUILDDIR/o
@@ -14,14 +18,16 @@ INCLUDEPATH += graphics
 
 # Stuff for the parse lib
 libskin_parser.commands = @$(MAKE) \
+    TARGET_DIR=$$MYBUILDDIR \
+    CC=\"$$QMAKE_CC\" \
     BUILDDIR=$$OBJECTS_DIR \
     -C \
     $$RBBASE_DIR/lib/skin_parser \
-    CC=\"$$QMAKE_CC\"
+    libskin_parser.a
 QMAKE_EXTRA_TARGETS += libskin_parser
 PRE_TARGETDEPS += libskin_parser
 INCLUDEPATH += $$RBBASE_DIR/lib/skin_parser
-LIBS += -L$$OBJECTS_DIR \
+LIBS += -L$$MYBUILDDIR \
     -lskin_parser
 DEPENDPATH = $$INCLUDEPATH
 HEADERS += models/parsetreemodel.h \
@@ -43,7 +49,11 @@ HEADERS += models/parsetreemodel.h \
     gui/devicestate.h \
     graphics/rbalbumart.h \
     graphics/rbprogressbar.h \
-    gui/findreplacedialog.h
+    gui/findreplacedialog.h \
+    graphics/rbtext.h \
+    graphics/rbfontcache.h \
+    graphics/rbtextcache.h \
+    gui/skintimer.h
 SOURCES += main.cpp \
     models/parsetreemodel.cpp \
     models/parsetreenode.cpp \
@@ -63,7 +73,11 @@ SOURCES += main.cpp \
     gui/devicestate.cpp \
     graphics/rbalbumart.cpp \
     graphics/rbprogressbar.cpp \
-    gui/findreplacedialog.cpp
+    gui/findreplacedialog.cpp \
+    graphics/rbtext.cpp \
+    graphics/rbfontcache.cpp \
+    graphics/rbtextcache.cpp \
+    gui/skintimer.cpp
 OTHER_FILES += README \
     resources/windowicon.png \
     resources/appicon.xcf \
@@ -73,10 +87,32 @@ OTHER_FILES += README \
     resources/document-new.png \
     resources/deviceoptions \
     resources/render/statusbar.png \
-    resources/render/scenebg.png
+    resources/render/scenebg.png \
+    resources/play.xcf \
+    resources/play.png \
+    resources/rwnd.png \
+    resources/pause.xcf \
+    resources/pause.png \
+    resources/ffwd.xcf \
+    resources/ffwd.png
 FORMS += gui/editorwindow.ui \
     gui/preferencesdialog.ui \
     gui/configdocument.ui \
     gui/skinviewer.ui \
-    gui/findreplacedialog.ui
+    gui/findreplacedialog.ui \
+    gui/skintimer.ui
 RESOURCES += resources.qrc
+win32:RC_FILE = themeeditor.rc
+macx { 
+    QMAKE_MAC_SDK = /Developer/SDKs/MacOSX10.4u.sdk
+    QMAKE_LFLAGS_PPC = -mmacosx-version-min=10.4 \
+        -arch \
+        ppc
+    QMAKE_LFLAGS_X86 = -mmacosx-version-min=10.4 \
+        -arch \
+        i386
+    CONFIG += x86 \
+        ppc
+    QMAKE_INFO_PLIST = Info.plist
+    RC_FILE = resources/windowicon.icns
+}
