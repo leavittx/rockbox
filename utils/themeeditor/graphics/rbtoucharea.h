@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2008 Dan Everton (safetydan)
+ * Copyright (C) 2010 Robert Bieber
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,28 +19,32 @@
  *
  ****************************************************************************/
 
-#ifndef _ROCKMALLOC_H_
-#define _ROCKMALLOC_H_
+#ifndef RBTOUCHAREA_H
+#define RBTOUCHAREA_H
 
-#undef WIN32
-#undef _WIN32
-#define LACKS_UNISTD_H
-#define LACKS_SYS_PARAM_H
-#define LACKS_SYS_MMAN_H
-#define LACKS_STRINGS_H
-#define INSECURE 1
-#define USE_DL_PREFIX 1
-#define MORECORE_CANNOT_TRIM 1
-#define HAVE_MMAP 0
-#define HAVE_MREMAP 0
-#define NO_MALLINFO 1
-#define ABORT ((void) 0)
-/* #define DEBUG */
-#define MORECORE rocklua_morecore
+#include <QGraphicsItem>
 
-void *rocklua_morecore(int size);
-void dlmalloc_stats(void);
+#include "rbrenderinfo.h"
+#include "devicestate.h"
 
-#define printf DEBUGF
+class RBTouchArea : public QGraphicsItem
+{
+public:
+    RBTouchArea(int width, int height, QString action,
+                const RBRenderInfo& info);
+    virtual ~RBTouchArea();
 
-#endif
+    QRectF boundingRect() const;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+               QWidget *widget);
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+
+private:
+    QRectF size;
+    QString action;
+    DeviceState* device;
+    bool debug;
+};
+
+#endif // RBTOUCHAREA_H
