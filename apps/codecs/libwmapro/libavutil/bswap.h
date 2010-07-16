@@ -28,22 +28,9 @@
 
 #include <stdint.h>
 //#include "config.h"
-#include "attributes.h"
-
-#if   ARCH_ARM
-#   include "arm/bswap.h"
-#elif ARCH_AVR32
-#   include "avr32/bswap.h"
-#elif ARCH_BFIN
-#   include "bfin/bswap.h"
-#elif ARCH_SH4
-#   include "sh4/bswap.h"
-#elif ARCH_X86
-#   include "x86/bswap.h"
-#endif
 
 #ifndef bswap_16
-static av_always_inline av_const uint16_t bswap_16(uint16_t x)
+static inline uint16_t bswap_16(uint16_t x)
 {
     x= (x>>8) | (x<<8);
     return x;
@@ -51,7 +38,7 @@ static av_always_inline av_const uint16_t bswap_16(uint16_t x)
 #endif
 
 #ifndef bswap_32
-static av_always_inline av_const uint32_t bswap_32(uint32_t x)
+static inline uint32_t bswap_32(uint32_t x)
 {
     x= ((x<<8)&0xFF00FF00) | ((x>>8)&0x00FF00FF);
     x= (x>>16) | (x<<16);
@@ -60,7 +47,7 @@ static av_always_inline av_const uint32_t bswap_32(uint32_t x)
 #endif
 
 #ifndef bswap_64
-static inline uint64_t av_const bswap_64(uint64_t x)
+static inline uint64_t bswap_64(uint64_t x)
 {
 #if 0
     x= ((x<< 8)&0xFF00FF00FF00FF00ULL) | ((x>> 8)&0x00FF00FF00FF00FFULL);
@@ -82,6 +69,7 @@ static inline uint64_t av_const bswap_64(uint64_t x)
 // be2me ... big-endian to machine-endian
 // le2me ... little-endian to machine-endian
 
+#define HAVE_BIGENDIAN 0
 #if HAVE_BIGENDIAN
 #define be2me_16(x) (x)
 #define be2me_32(x) (x)

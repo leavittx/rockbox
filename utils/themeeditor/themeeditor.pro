@@ -54,7 +54,8 @@ HEADERS += models/parsetreemodel.h \
     graphics/rbfontcache.h \
     graphics/rbtextcache.h \
     gui/skintimer.h \
-    graphics/rbtoucharea.h
+    graphics/rbtoucharea.h \
+    gui/newprojectdialog.h
 SOURCES += main.cpp \
     models/parsetreemodel.cpp \
     models/parsetreenode.cpp \
@@ -79,7 +80,8 @@ SOURCES += main.cpp \
     graphics/rbfontcache.cpp \
     graphics/rbtextcache.cpp \
     gui/skintimer.cpp \
-    graphics/rbtoucharea.cpp
+    graphics/rbtoucharea.cpp \
+    gui/newprojectdialog.cpp
 OTHER_FILES += README \
     resources/windowicon.png \
     resources/appicon.xcf \
@@ -96,13 +98,18 @@ OTHER_FILES += README \
     resources/pause.xcf \
     resources/pause.png \
     resources/ffwd.xcf \
-    resources/ffwd.png
+    resources/ffwd.png \
+    resources/lines.xcf \
+    resources/lines.png \
+    resources/cursor.xcf \
+    resources/cursor.png
 FORMS += gui/editorwindow.ui \
     gui/preferencesdialog.ui \
     gui/configdocument.ui \
     gui/skinviewer.ui \
     gui/findreplacedialog.ui \
-    gui/skintimer.ui
+    gui/skintimer.ui \
+    gui/newprojectdialog.ui
 RESOURCES += resources.qrc
 win32:RC_FILE = themeeditor.rc
 macx { 

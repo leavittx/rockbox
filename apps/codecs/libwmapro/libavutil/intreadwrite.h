@@ -22,28 +22,7 @@
 #include <stdint.h>
 //#include "config.h"
 #include "bswap.h"
-#include "common.h"
-
-typedef union {
-    uint64_t u64;
-    uint32_t u32[2];
-    uint16_t u16[4];
-    uint8_t  u8 [8];
-    double   f64;
-    float    f32[2];
-} av_alias av_alias64;
-
-typedef union {
-    uint32_t u32;
-    uint16_t u16[2];
-    uint8_t  u8 [4];
-    float    f32;
-} av_alias av_alias32;
-
-typedef union {
-    uint16_t u16;
-    uint8_t  u8 [2];
-} av_alias av_alias16;
+//#include "common.h"
 
 /*
  * Arch-specific headers can provide any combination of
@@ -52,24 +31,10 @@ typedef union {
  * as inline functions.
  */
 
-#if   ARCH_ARM
-#   include "arm/intreadwrite.h"
-#elif ARCH_AVR32
-#   include "avr32/intreadwrite.h"
-#elif ARCH_MIPS
-#   include "mips/intreadwrite.h"
-#elif ARCH_PPC
-#   include "ppc/intreadwrite.h"
-#elif ARCH_TOMI
-#   include "tomi/intreadwrite.h"
-#elif ARCH_X86
-#   include "x86/intreadwrite.h"
-#endif
-
 /*
  * Map AV_RNXX <-> AV_R[BL]XX for all variants provided by per-arch headers.
  */
-
+#define HAVE_BIGENDIAN 0
 #if HAVE_BIGENDIAN
 
 #   if    defined(AV_RN16) && !defined(AV_RB16)
@@ -172,6 +137,8 @@ typedef union {
 
 #endif /* !HAVE_BIGENDIAN */
 
+#define HAVE_ATTRIBUTE_PACKED 0
+#define HAVE_FAST_UNALIGNED 0
 /*
  * Define AV_[RW]N helper macros to simplify definitions not provided
  * by per-arch headers.
