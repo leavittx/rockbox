@@ -173,9 +173,7 @@ void fiq_handler(void)
 }
 
 #if defined(SANSA_C200V2)
-#include "dbop-as3525.h"
-
-int c200v2_variant = 0;
+int c200v2_variant;
 
 static void check_model_variant(void)
 {
@@ -188,24 +186,22 @@ static void check_model_variant(void)
      * to charge the input capacitance */
     for (i=0; i<1000; i++) asm volatile ("nop\n");
     /* read the pullup/pulldown value on A7 to determine the variant */
-    if (GPIOA_PIN(7) == 0) {
-        /*
-         * Backlight on A7.
-         */
-        c200v2_variant = 1;
-    } else {
-        /*
-         * Backlight on A5.
-         */
-        c200v2_variant = 0;
-    }
+    c200v2_variant = !GPIOA_PIN(7);
     GPIOA_DIR = saved_dir;
+}
+#elif defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS)
+int amsv2_variant;
+
+static void check_model_variant(void)
+{
+    GPIOB_DIR &= ~(1<<5);
+    amsv2_variant = !!GPIOB_PIN(5);
 }
 #else
 static inline void check_model_variant(void)
 {
 }
-#endif /* SANSA_C200V2*/
+#endif /* model selection */
 
 void system_init(void)
 {
@@ -271,11 +267,6 @@ void system_init(void)
     cpu_frequency = CPUFREQ_MAX;
 #endif
 
-#if !defined(BOOTLOADER) && defined(SANSA_FUZE) || defined(SANSA_CLIP) || defined(SANSA_E200V2)
-    /* XXX: remove me when we have a new bootloader */
-    MPMC_DYNAMIC_CONTROL = 0x0; /* MPMCCLKOUT stops when all SDRAMs are idle */
-#endif  /* BOOTLOADER */
-
 #if 0 /* the GPIO clock is already enabled by the dualboot function */
     CGU_PERI |= CGU_GPIO_CLOCK_ENABLE;
 #endif
@@ -309,6 +300,9 @@ void system_init(void)
 void system_reboot(void)
 {
     _backlight_off();
+
+    disable_irq();
+
     /* use watchdog to reset */
     CGU_PERI |= (CGU_WDOCNT_CLOCK_ENABLE | CGU_WDOIF_CLOCK_ENABLE);
     WDT_LOAD = 1; /* set counter to 1 */

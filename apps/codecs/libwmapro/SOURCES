@@ -1,6 +1,4 @@
 wmaprodec.c
 wma.c
 mdct_tables.c
-bitstream.c
-wmapro_mdct.c
-//libavutil/mathematics.c
+../lib/ffmpeg_bitstream.c

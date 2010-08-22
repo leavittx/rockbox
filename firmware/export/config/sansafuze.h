@@ -64,10 +64,8 @@
 /* define this if you can invert the colours on your LCD */
 #define HAVE_LCD_INVERT
 
-#ifndef BOOTLOADER
 /* define this if you have a real-time clock */
 #define CONFIG_RTC RTC_AS3514
-#endif
 
 /* There is no hardware tone control */
 #define HAVE_SW_TONE_CONTROLS
@@ -109,7 +107,7 @@
 /* The number of bytes reserved for loadable plugins */
 #define PLUGIN_BUFFER_SIZE 0x80000
 
-#define AB_REPEAT_ENABLE 1
+#define AB_REPEAT_ENABLE
 
 /* FM Tuner - suspected to be the SI4702 */
 #define CONFIG_TUNER SI4700

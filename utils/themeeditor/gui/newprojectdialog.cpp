@@ -21,6 +21,7 @@
 
 #include "newprojectdialog.h"
 #include "ui_newprojectdialog.h"
+#include "targetdata.h"
 
 #include <QSettings>
 #include <QFileDialog>
@@ -42,9 +43,19 @@ NewProjectDialog::NewProjectDialog(QWidget *parent) :
 
     settings.endGroup();
 
-    /* Connecting the browse button */
+    /* Populating the target box */
+    TargetData targets;
+    for(int i = 0; i < targets.count(); i++)
+    {
+        ui->targetBox->insertItem(i, QIcon(), targets.name(i), targets.id(i));
+    }
+    targetChange(0);
+
+    /* Connecting the browse button and target box */
     QObject::connect(ui->browseButton, SIGNAL(clicked()),
                      this, SLOT(browse()));
+    QObject::connect(ui->targetBox, SIGNAL(currentIndexChanged(int)),
+                     this, SLOT(targetChange(int)));
 }
 
 NewProjectDialog::~NewProjectDialog()
@@ -56,6 +67,8 @@ void NewProjectDialog::accept()
 {
     status.name = ui->nameBox->text();
     status.path = ui->locationBox->text();
+    status.target = ui->targetBox->itemData(ui->targetBox->currentIndex())
+                    .toString();
     status.sbs = ui->sbsBox->isChecked();
     status.wps = ui->wpsBox->isChecked();
     status.fms = ui->fmsBox->isChecked();
@@ -77,6 +90,7 @@ void NewProjectDialog::reject()
 {
     ui->nameBox->setText(status.name);
     ui->locationBox->setText(status.path);
+    ui->targetBox->setCurrentIndex(0);
     ui->sbsBox->setChecked(status.sbs);
     ui->wpsBox->setChecked(status.wps);
     ui->fmsBox->setChecked(status.fms);
@@ -102,4 +116,42 @@ void NewProjectDialog::browse()
     path = QFileDialog::getExistingDirectory(this, "New Project Location",
                                              ui->locationBox->text());
     ui->locationBox->setText(path);
+}
+
+void NewProjectDialog::targetChange(int target)
+{
+    TargetData targets;
+
+    if(targets.fm(target))
+    {
+        ui->fmsBox->setEnabled(true);
+        ui->rfmsBox->setEnabled(true);
+    }
+    else
+    {
+        ui->fmsBox->setChecked(false);
+        ui->rfmsBox->setChecked(false);
+
+        ui->fmsBox->setEnabled(false);
+        ui->rfmsBox->setEnabled(false);
+    }
+
+    if(targets.remoteDepth(target) == TargetData::None)
+    {
+        ui->rwpsBox->setChecked(false);
+        ui->rsbsBox->setChecked(false);
+        ui->rfmsBox->setChecked(false);
+
+        ui->rsbsBox->setEnabled(false);
+        ui->rwpsBox->setEnabled(false);
+        ui->rfmsBox->setEnabled(false);
+    }
+    else
+    {
+        ui->rsbsBox->setEnabled(true);
+        ui->rwpsBox->setEnabled(true);
+        if(targets.fm(target))
+            ui->rfmsBox->setEnabled(true);
+    }
+
 }

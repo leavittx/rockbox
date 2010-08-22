@@ -8,8 +8,8 @@
  * floating point value is :
  *         quant = pow(10.0, exp/20)
  * 'exp' is an integer value which I have exmerimentally found to fall in the 
- * range (50,139). */
-const int32_t quant_tab[90] = {
+ * range (50,170). */
+const int32_t quant_tab[121] = {
     0x0000013C, 0x00000163, 0x0000018E, 0x000001BF, 
     0x000001F5, 0x00000232, 0x00000277, 0x000002C4, 
     0x0000031A, 0x0000037B, 0x000003E8, 0x00000462, 
@@ -32,11 +32,19 @@ const int32_t quant_tab[90] = {
     0x001E71FE, 0x00222901, 0x0026540E, 0x002B014F, 
     0x003040A6, 0x003623E6, 0x003CBF10, 0x00442894, 
     0x004C79A0, 0x0055CE75, 0x006046C5, 0x006C0622, 
-    0x00793472, 0x0087FE7D, 
+    0x00793472, 0x0087FE7D, 0x00989680, 0x00AB34D9, 
+    0x00C018C6, 0x00D7893F, 0x00F1D5E4, 0x010F580A, 
+    0x013073EF, 0x01559A0B, 0x017F4890, 0x01AE0D15, 
+    0x01E28679, 0x021D66FB, 0x025F769D, 0x02A995C7, 
+    0x02FCC043, 0x035A1095, 0x03C2C3B6, 0x04383D52, 
+    0x04BC0C77, 0x054FF0E6, 0x05F5E100, 0x06B01075, 
+    0x0780F7BD, 0x086B5C7A, 0x09725AE7, 0x0A997065, 
+    0x0BE48757, 0x0D580472, 0x0EF8D5A3, 0x10CC82D5,
+    0x12D940B6
 };
 
 #define EXP_MIN 50
-#define EXP_MAX 139
+#define EXP_MAX 170
 
 /* return the correct value of quant based on exp */
 #define QUANT(exp)    quant_tab[exp - EXP_MIN]

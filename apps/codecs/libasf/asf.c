@@ -191,7 +191,8 @@ int asf_read_packet(uint8_t** audiobuf, int* audiobufsize, int* packetlength,
     buf = ci->request_buffer(&bufsize, length);
     datap = buf;
 
-    if (bufsize != length) {
+#define ASF_MAX_REQUEST (1L<<15) /* 32KB */
+    if (bufsize != length && length >= ASF_MAX_REQUEST) {
         /* This should only happen with packets larger than 32KB (the
            guard buffer size).  All the streams I've seen have
            relatively small packets less than about 8KB), but I don't
@@ -404,7 +405,7 @@ int asf_seek(int ms, asf_waveformatex_t* wfx)
 
         /*check the time stamp of our packet*/
         time = asf_get_timestamp(&duration);
-        DEBUGF("seeked to %d ms with duration %d\n", time, duration);
+        /*DEBUGF("seeked to %d ms with duration %d\n", time, duration);*/
 
         if (time < 0) {
             /*unknown error, try to recover*/
@@ -415,7 +416,7 @@ int asf_seek(int ms, asf_waveformatex_t* wfx)
         }
 
         if ((time+duration>=ms && time<=ms) || count > 10) {
-            DEBUGF("Found our packet! Now at %d packet\n", packet_num);
+            /*DEBUGF("Found our packet! Now at %d packet\n", packet_num);*/
             return time;
         } else {
             /*seek again*/

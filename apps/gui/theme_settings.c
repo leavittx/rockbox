@@ -30,13 +30,20 @@
 #include "settings.h"
 #include "wps.h"
 #include "file.h"
+#include "buffer.h"
 #if CONFIG_TUNER
 #include "radio.h"
 #endif
 #include "skin_engine/skin_engine.h"
-#include "skin_engine/skin_fonts.h"
+#include "skin_buffer.h"
 #include "statusbar-skinned.h"
 #include "bootchart.h"
+
+static char *skin_buffer = NULL;
+void theme_init_buffer(void)
+{
+    skin_buffer = buffer_alloc(SKIN_BUFFER_SIZE);
+}
 
 
 /* call this after loading a .wps/.rwps or other skin files, so that the
@@ -58,7 +65,7 @@ static const struct skin_load_setting skins[] = {
 #if CONFIG_TUNER
     { global_settings.fms_file, "fms", fms_data_load},
 #endif
-#ifdef HAVE_REMOTE_LCD
+#if defined(HAVE_REMOTE_LCD) && NB_SCREENS > 1
     { global_settings.rsbs_file, "rsbs", sb_skin_data_load},
     { global_settings.rwps_file, "rwps", wps_data_load},
 #if CONFIG_TUNER
@@ -71,9 +78,10 @@ void settings_apply_skins(void)
 {
     char buf[MAX_PATH];
     /* re-initialize the skin buffer before we start reloading skins */
-    skin_buffer_init();
     enum screen_type screen = SCREEN_MAIN;
     unsigned int i;
+    
+    skin_buffer_init(skin_buffer, SKIN_BUFFER_SIZE);
 #ifdef HAVE_LCD_BITMAP
     skin_backdrop_init();
     skin_font_init();
@@ -89,7 +97,9 @@ void settings_apply_skins(void)
         CHART2(">skin load ", skins[i].suffix);
         if (skins[i].setting[0] && skins[i].setting[0] != '-')
         {
-            snprintf(buf, sizeof buf, WPS_DIR "/%s.%s",
+            char path[MAX_PATH];
+            snprintf(buf, sizeof buf, "%s/%s.%s",
+                     get_user_file_path(WPS_DIR, false, path, sizeof(path)),
                      skins[i].setting, skins[i].suffix);
             skins[i].loadfunc(screen, buf, true);
         }

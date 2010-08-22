@@ -45,12 +45,12 @@ Q_OBJECT
 public:
     static QString fileFilter()
     {
-        return tr("WPS Files (*.wps *.rwps);;"
-                  "SBS Files (*.sbs *.rsbs);;"
-                  "FMS Files (*.fms *.rfms);;"
-                  "All Skin Files (*.wps *.rwps *.sbs "
-                  "*.rsbs *.fms *.rfms);;"
-                  "All Files (*.*)");
+        return tr("WPS Files (*.wps *.WPS *.rwps *.RWPS);;"
+                  "SBS Files (*.sbs *.SBS *.rsbs *.RSBS);;"
+                  "FMS Files (*.fms *.FMS *.rfms *.RFMS);;"
+                  "All Skin Files (*.wps *.WPS *.rwps *.RWPS *.sbs *.SBS "
+                  "*.rsbs *.RSBS *.fms *.FMS *.rfms *.RFMS);;"
+                  "All Files (*)");
     }
 
     SkinDocument(QLabel* statusLabel, ProjectModel* project = 0,
@@ -66,7 +66,6 @@ public:
     QString title() const{ return titleText; }
     QString getStatus(){ return parseStatus; }
     CodeEditor* getEditor(){ return editor; }
-    void genCode(){ editor->document()->setPlainText(model->genCode()); }
     void setProject(ProjectModel* project){ this->project = project; }
 
     void save();
@@ -76,19 +75,29 @@ public:
 
     TabType type() const{ return Skin; }
 
-    QGraphicsScene* scene(){ return model->render(project, device, &fileName); }
+    RBScene* scene()
+    {
+        return model->render(project, device, this, &fileName);
+    }
 
     void showFind(){ findReplace->show(); }
     void hideFind(){ findReplace->hide(); }
 
+    bool isSynced(){ return treeInSync; }
+
+
 signals:
+    void antiSync(bool outOfSync);
 
 public slots:
     void settingsChanged();
     void cursorChanged();
+    void parseCode(){ codeChanged(); }
+    void genCode(){ editor->document()->setPlainText(model->genCode()); }
 
 private slots:
     void codeChanged();
+    void modelChanged();
     void deviceChanged(){ scene(); }
 
 private:
@@ -119,6 +128,8 @@ private:
     QTime lastUpdate;
     static const int updateInterval;
     QTimer checkUpdate;
+
+    bool treeInSync;
 };
 
 #endif // SKINDOCUMENT_H

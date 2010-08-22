@@ -25,6 +25,7 @@
 #include <limits.h>
 #include <string.h>
 #include "file.h"
+#include "format.h"
 
 static const char hexdigit[] = "0123456789ABCDEF";
 
@@ -122,7 +123,6 @@ int format(
             break;
 
         case 'l':
-        case 'z': /* assume sizeof(size_t) == sizeof(long) */
             ch = *fmt++;
             switch(ch) {
                 case 'x':

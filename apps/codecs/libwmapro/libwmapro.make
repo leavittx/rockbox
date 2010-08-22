@@ -17,12 +17,14 @@ $(WMAPROLIB): $(WMAPROLIB_OBJ)
 	$(SILENT)$(shell rm -f $@)
 	$(call PRINTS,AR $(@F))$(AR) rcs $@ $^ >/dev/null
 
-ifdef APP_TYPE
-# wmapro needs libm in the simulator
-$(CODECDIR)/wmapro.codec: $(CODECDIR)/wmapro.o
-	$(call PRINTS,LD $(@F))$(CC) $(CODECFLAGS) -o $(CODECDIR)/wmapro.elf \
-	$(filter %.o, $^) \
-	$(filter %.a, $+) \
-	-lgcc -lm $(CODECLDFLAGS)
-	$(SILENT)cp $(CODECDIR)/wmapro.elf $@
+WMAPROFLAGS = -I$(APPSDIR)/codecs/libwmapro $(filter-out -O%,$(CODECFLAGS))
+
+ifeq ($(CPU),coldfire)
+	WMAPROFLAGS += -O2
+else
+	WMAPROFLAGS += -O1
 endif
+
+$(CODECDIR)/libwmapro/%.o: $(ROOTDIR)/apps/codecs/libwmapro/%.c
+	$(SILENT)mkdir -p $(dir $@)
+	$(call PRINTS,CC $(subst $(ROOTDIR)/,,$<))$(CC) $(WMAPROFLAGS) -c $< -o $@

@@ -517,6 +517,9 @@ static void unplug_change(bool inserted)
 
 long default_event_handler_ex(long event, void (*callback)(void *), void *parameter)
 {
+#if CONFIG_PLATFORM & PLATFORM_ANDROID
+    static bool resume = false;
+#endif
     switch(event)
     {
         case SYS_BATTERY_UPDATE:
@@ -605,6 +608,22 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
         case SYS_IAP_HANDLEPKT:
             iap_handlepkt();
             return SYS_IAP_HANDLEPKT;
+#endif
+#if CONFIG_PLATFORM & PLATFORM_ANDROID
+        /* stop playback if we receive a call */
+        case SYS_CALL_INCOMING:
+            resume = (audio_status() & AUDIO_STATUS_PLAY) != 0;
+            list_stop_handler();
+            return SYS_CALL_INCOMING;
+        /* resume playback if needed */
+        case SYS_CALL_HUNG_UP:
+            if (resume && playlist_resume() != -1)
+            {
+                playlist_start(global_status.resume_index,
+                    global_status.resume_offset);
+            }
+            resume = false;
+            return SYS_CALL_HUNG_UP;
 #endif
     }
     return 0;
@@ -740,35 +759,6 @@ char* strrsplt(char* str, int c)
     }
 
     return s;
-}
-
-/* Test file existence, using dircache of possible */
-bool file_exists(const char *file)
-{
-    int fd;
-
-    if (!file || strlen(file) <= 0)
-        return false;
-
-#ifdef HAVE_DIRCACHE
-    if (dircache_is_enabled())
-        return (dircache_get_entry_ptr(file) != NULL);
-#endif
-
-    fd = open(file, O_RDONLY);
-    if (fd < 0)
-        return false;
-    close(fd);
-    return true;
-}
-
-bool dir_exists(const char *path)
-{
-    DIR* d = opendir(path);
-    if (!d)
-        return false;
-    closedir(d);
-    return true;
 }
 
 /*
@@ -937,143 +927,36 @@ int hex_to_rgb(const char* hex, int* color)
 #endif /* HAVE_LCD_COLOR */
 
 #ifdef HAVE_LCD_BITMAP
-/* A simplified scanf - used (at time of writing) by wps parsing functions.
-
-   fmt - char array specifying the format of each list option.  Valid values
-         are:  d - int
-               s - string (sets pointer to string, without copying)
-               c - hex colour (RGB888 - e.g. ff00ff)
-               g - greyscale "colour" (0-3)
-   set_vals - if not NULL 1 is set in the bitplace if the item was read OK
-                0 if not read.
-                first item is LSB, (max 32 items! )
-                Stops parseing if an item is invalid unless the item == '-'
-   sep - list separator (e.g. ',' or '|')
-   str  - string to parse, must be terminated by 0 or sep
-   ... - pointers to store the parsed values
-
-   return value - pointer to char after parsed data, 0 if there was an error.
-
-*/
-
 /* '0'-'3' are ASCII 0x30 to 0x33 */
 #define is0123(x) (((x) & 0xfc) == 0x30)
-
-const char* parse_list(const char *fmt, uint32_t *set_vals,
-                       const char sep, const char* str, ...)
+#if !defined(__PCTOOL__) || defined(CHECKWPS)
+bool parse_color(enum screen_type screen, char *text, int *value)
 {
-    va_list ap;
-    const char* p = str, *f = fmt;
-    const char** s;
-    int* d;
-    bool set, is_negative;
-    int i=0;
-
-    va_start(ap, str);
-    if (set_vals)
-        *set_vals = 0;
-    while (*fmt)
-    {
-        /* Check for separator, if we're not at the start */
-        if (f != fmt)
-        {
-            if (*p != sep)
-                goto err;
-            p++;
-        }
-        set = false;
-        switch (*fmt++) 
-        {
-            case 's': /* string - return a pointer to it (not a copy) */
-                s = va_arg(ap, const char **);
-
-                *s = p;
-                while (*p && *p != sep && *p != ')')
-                    p++;
-                set = (s[0][0]!='-') && (s[0][1]!=sep && s[0][1]!=')') ;
-                break;
-
-            case 'd': /* int */
-                is_negative = false;
-                d = va_arg(ap, int*);
-
-                if (*p == '-' && isdigit(*(p+1)))
-                {
-                    is_negative = true;
-                    p++;
-                }
-                if (!isdigit(*p))
-                {
-                    if (!set_vals || *p != '-')
-                        goto err;
-                    p++;
-                }
-                else
-                {
-                    *d = *p++ - '0';
-                    while (isdigit(*p))
-                        *d = (*d * 10) + (*p++ - '0');
-                    set = true;
-                    if (is_negative)
-                        *d *= -1;
-                }
-
-                break;
-
+    (void)text; (void)value; /* silence warnings on mono bitmap */
+    (void)screen;
+    
 #ifdef HAVE_LCD_COLOR
-            case 'c': /* colour (rrggbb - e.g. f3c1a8) */
-                d = va_arg(ap, int*);
-
-                if (hex_to_rgb(p, d) < 0)
-                {
-                    if (!set_vals || *p != '-')
-                        goto err;
-                    p++;
-                }
-                else
-                {
-                    p += 6;
-                    set = true;
-                }
-
-                break;
+    if (screens[screen].depth > 2)
+    {
+        if (hex_to_rgb(text, value) < 0)
+            return false;
+        else
+            return true;
+    }
 #endif
 
 #if LCD_DEPTH == 2 || (defined(HAVE_REMOTE_LCD) && LCD_REMOTE_DEPTH == 2)
-            case 'g': /* greyscale colour (0-3) */
-                d = va_arg(ap, int*);
-
-                if (!is0123(*p))
-                {
-                    if (!set_vals || *p != '-')
-                        goto err;
-                    p++;
-                }
-                else
-                {
-                    *d = *p++ - '0';
-                    set = true;
-                }
-
-                break;
-#endif
-
-            default:  /* Unknown format type */
-                goto err;
-                break;
-        }
-        if (set_vals && set)
-            *set_vals |= BIT_N(i);
-        i++;
+    if (screens[screen].depth == 2)
+    {
+        if (text[1] != '\0' || !is0123(*text))
+            return false;
+        *value = *text - '0';
+        return true;
     }
-
-    va_end(ap);
-    return p;
-
-err:
-    va_end(ap);
-    return NULL;
+#endif
+    return false;
 }
+#endif /* !defined(__PCTOOL__) || defined(CHECKWPS) */
 
 /* only used in USB HID and set_time screen */
 #if defined(USB_ENABLE_HID) || (CONFIG_RTC != 0)

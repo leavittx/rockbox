@@ -24,16 +24,22 @@ TOOLS = $(TOOLSDIR)/rdf2binary $(TOOLSDIR)/convbdf \
 
 
 ifeq (,$(PREFIX))
-ifeq ($(APP_TYPE),sdl-sim)
+ifdef APP_TYPE
 # for sims, set simdisk/ as default
-PREFIX = simdisk
-INSTALL = --install="$(PREFIX)"
+ifeq ($(APP_TYPE),sdl-sim)
+RBPREFIX = simdisk
+else ifeq ($(APP_TYPE),sdl-app)
+RBPREFIX = /usr/local
+endif
+
+INSTALL = --install="$(RBPREFIX)"
 else
 # /dev/null as magic to tell it wasn't set, error out later in buildzip.pl
 INSTALL = --install=/dev/null
 endif
 else
-INSTALL = --install="$(PREFIX)"
+RBPREFIX = $(PREFIX)
+INSTALL = --install="$(RBPREFIX)"
 endif
 
 RBINFO = $(BUILDDIR)/rockbox-info.txt
@@ -70,6 +76,7 @@ else ifneq (,$(findstring bootbox,$(APPSDIR)))
   include $(APPSDIR)/bootbox.make
 else ifneq (,$(findstring checkwps,$(APPSDIR)))
   include $(APPSDIR)/checkwps.make
+  include $(ROOTDIR)/lib/skin_parser/skin_parser.make
 else ifneq (,$(findstring database,$(APPSDIR)))
   include $(APPSDIR)/database.make
 else
@@ -103,12 +110,11 @@ $(RBINFO): $(BUILDDIR)/$(BINARY)
 
 $(DEPFILE) dep:
 	$(call PRINTS,Generating dependencies)
-	@echo foo > /dev/null # there must be a "real" command in the rule
-	$(call mkdepfile,$(DEPFILE),$(SRC))
-	$(call mkdepfile,$(DEPFILE),$(OTHER_SRC:%.lua=))
-	$(call mkdepfile,$(DEPFILE),$(ASMDEFS_SRC))
+	$(call mkdepfile,$(DEPFILE)_,$(SRC))
+	$(call mkdepfile,$(DEPFILE)_,$(OTHER_SRC:%.lua=))
+	$(call mkdepfile,$(DEPFILE)_,$(ASMDEFS_SRC))
+	$(call bmpdepfile,$(DEPFILE)_,$(BMP) $(PBMP))
 	@mv $(DEPFILE)_ $(DEPFILE)
-	$(call bmpdepfile,$(DEPFILE),$(BMP) $(PBMP))
 
 bin: $(DEPFILE) $(TOOLS) $(BUILDDIR)/$(BINARY) $(RBINFO)
 rocks: $(DEPFILE) $(TOOLS) $(ROCKS)
@@ -170,7 +176,8 @@ $(BUILDDIR)/rockbox.elf : $$(OBJ) $$(FIRMLIB) $$(VOICESPEEXLIB) $$(SKINLIB) $$(L
 $(BUILDDIR)/rombox.elf : $$(OBJ) $$(FIRMLIB) $$(VOICESPEEXLIB) $$(SKINLIB) $$(LINKROM)
 	$(call PRINTS,LD $(@F))$(CC) $(GCCOPTS) -Os -nostdlib -o $@ $(OBJ) \
 		$(VOICESPEEXLIB) $(FIRMLIB) -lgcc $(GLOBAL_LDOPTS) \
-                -L$(BUILDDIR)/firmware -T$(LINKROM) -Wl,-Map,$(BUILDDIR)/rombox.map
+		-L$(BUILDDIR)/lib -lskin_parser \
+        -L$(BUILDDIR)/firmware -T$(LINKROM) -Wl,-Map,$(BUILDDIR)/rombox.map
 
 $(BUILDDIR)/rockbox.bin : $(BUILDDIR)/rockbox.elf
 	$(call PRINTS,OC $(@F))$(OC) $(if $(filter yes, $(USE_ELF)), -S -x, -O binary) $< $@
@@ -212,8 +219,8 @@ $(BUILDDIR)/rombox.ucl: $(BUILDDIR)/rombox.bin $(MAXOUTFILE)
 
 $(MAXOUTFILE):
 	$(call PRINTS,Creating $(@F))
-	$(SILENT)$(shell echo '#include "config.h"' > $(MAXINFILE))
-	$(SILENT)$(shell echo "ROM_START" >> $(MAXINFILE))
+	$(SILENT)echo '#include "config.h"' > $(MAXINFILE)
+	$(SILENT)echo "ROM_START" >> $(MAXINFILE)
 	$(call preprocess2file,$(MAXINFILE),$(MAXOUTFILE))
 	$(SILENT)rm $(MAXINFILE)
 
@@ -278,15 +285,15 @@ voice: voicetools $(BUILDDIR)/apps/features
 endif
 
 bininstall: $(BUILDDIR)/$(BINARY)
-	@echo "Installing your rockbox binary in your '$(PREFIX)' dir"
-	$(SILENT)cp $(BINARY) "$(PREFIX)/.rockbox/"
+	@echo "Installing your rockbox binary in your '$(RBPREFIX)' dir"
+	$(SILENT)cp $(BINARY) "$(RBPREFIX)/.rockbox/"
 
 install:
-	@echo "Installing your build in your '$(PREFIX)' dir"
+	@echo "Installing your build in your '$(RBPREFIX)' dir"
 	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m "$(MODELNAME)" -i "$(TARGET_ID)" $(INSTALL) -z "zip -r0" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 0 $(TARGET) $(BINARY)
 
 fullinstall:
-	@echo "Installing a full setup in your '$(PREFIX)' dir"
+	@echo "Installing a full setup in your '$(RBPREFIX)' dir"
 	$(SILENT)$(TOOLSDIR)/buildzip.pl $(VERBOSEOPT) -m "$(MODELNAME)" -i "$(TARGET_ID)" $(INSTALL) -z "zip -r0" -r "$(ROOTDIR)" --rbdir="$(RBDIR)" -f 2 $(TARGET) $(BINARY)
 
 help:
@@ -349,4 +356,4 @@ ifneq (reconf,$(MAKECMDGOALS))
 endif
 
 reconf:
-	$(SILENT$)PREFIX=$(PREFIX) $(TOOLSDIR)/configure $(CONFIGURE_OPTIONS)
+	$(SILENT$)$(TOOLSDIR)/configure $(CONFIGURE_OPTIONS)

@@ -24,13 +24,17 @@
 
 #include "skin_parser.h"
 #include "rbfont.h"
+#include "rbmovable.h"
 
 class RBScreen;
 class RBRenderInfo;
+class ParseTreeNode;
 
 #include <QGraphicsItem>
 
-class RBViewport : public QGraphicsItem
+class SkinDocument;
+
+class RBViewport : public RBMovable
 {
 public:
     enum Alignment
@@ -42,11 +46,11 @@ public:
 
     static const double scrollRate;
 
-    RBViewport(skin_element* node, const RBRenderInfo& info);
+    RBViewport(skin_element* node, const RBRenderInfo& info,
+               ParseTreeNode* pNode);
     virtual ~RBViewport();
 
     QPainterPath shape() const;
-    QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                QWidget *widget);
 
@@ -74,8 +78,13 @@ public:
 
     void enableStatusBar(){ showStatusBar = true; }
 
-    void showPlaylist(const RBRenderInfo& info, int start, skin_element* id3,
-                      skin_element* noId3);
+    void showPlaylist(const RBRenderInfo& info, int start,
+                      ParseTreeNode* lines);
+
+    void makeFullScreen();
+
+protected:
+    void saveGeometry();
 
 private:
 
@@ -83,7 +92,6 @@ private:
     void alignCenter();
     void alignRight();
 
-    QRectF size;
     RBFont* font;
     QColor foreground;
     QColor background;
@@ -108,6 +116,12 @@ private:
     RBText* rightGraphic;
 
     double scrollTime;
+
+    int baseParam;
+    ParseTreeNode* node;
+    SkinDocument* doc;
+
+    bool mirrored;
 };
 
 #endif // RBVIEWPORT_H

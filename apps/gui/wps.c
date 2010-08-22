@@ -175,7 +175,7 @@ void fade(bool fade_in, bool updatewps)
             if (updatewps)
             {
                 FOR_NB_SCREENS(i)
-                    skin_update(&gui_wps[i], WPS_REFRESH_NON_STATIC);
+                    skin_update(&gui_wps[i], SKIN_REFRESH_NON_STATIC);
             }
             sleep(1);
         }
@@ -191,7 +191,7 @@ void fade(bool fade_in, bool updatewps)
             if (updatewps)
             {
                 FOR_NB_SCREENS(i)
-                    skin_update(&gui_wps[i], WPS_REFRESH_NON_STATIC);
+                    skin_update(&gui_wps[i], SKIN_REFRESH_NON_STATIC);
             }
             sleep(1);
         }
@@ -212,7 +212,7 @@ void fade(bool fade_in, bool updatewps)
 
 static bool update_onvol_change(struct gui_wps * gwps)
 {
-    skin_update(gwps, WPS_REFRESH_NON_STATIC);
+    skin_update(gwps, SKIN_REFRESH_NON_STATIC);
 
 #ifdef HAVE_LCD_CHARCELLS
     splashf(0, "Vol: %3d dB",
@@ -224,7 +224,7 @@ static bool update_onvol_change(struct gui_wps * gwps)
 
 
 #ifdef HAVE_TOUCHSCREEN
-int skintouch_to_wps(struct wps_data *data)
+static int skintouch_to_wps(struct wps_data *data)
 {
     int offset = 0;
     int button = skin_get_touchaction(data, &offset);
@@ -274,7 +274,7 @@ int skintouch_to_wps(struct wps_data *data)
     }
     return button;
 }
-#endif
+#endif /* HAVE_TOUCHSCREEN */
 
 bool ffwd_rew(int button)
 {
@@ -372,8 +372,8 @@ bool ffwd_rew(int button)
                 FOR_NB_SCREENS(i)
                 {
                     skin_update(&gui_wps[i],
-                                WPS_REFRESH_PLAYER_PROGRESS |
-                                WPS_REFRESH_DYNAMIC);
+                                SKIN_REFRESH_PLAYER_PROGRESS |
+                                SKIN_REFRESH_DYNAMIC);
                 }
 
                 break;
@@ -390,7 +390,7 @@ bool ffwd_rew(int button)
 #endif
 #ifdef HAVE_LCD_CHARCELLS
                 FOR_NB_SCREENS(i)
-                    skin_update(&gui_wps[i], WPS_REFRESH_ALL);
+                    skin_update(&gui_wps[i], SKIN_REFRESH_ALL);
 #endif
                 exit = true;
                 break;
@@ -633,6 +633,9 @@ static void gwps_leave_wps(void)
 #endif
     /* unhandle statusbar update delay */
     sb_skin_set_update_delay(DEFAULT_UPDATE_DELAY);
+#ifdef HAVE_TOUCHSCREEN
+    touchscreen_set_mode(global_settings.touch_mode);
+#endif
 }
 
 /*
@@ -652,9 +655,14 @@ static void gwps_enter_wps(void)
 #if LCD_DEPTH > 1
         if (display->depth > 1)
         {
-            struct viewport *vp = &find_viewport(VP_DEFAULT_LABEL, gwps->data)->vp;
-            vp->fg_pattern = display->get_foreground();
-            vp->bg_pattern = display->get_background();
+            struct skin_viewport *svp = find_viewport(VP_DEFAULT_LABEL, 
+                                                      false, gwps->data);
+            if (svp)
+            {
+                struct viewport *vp = &svp->vp;
+                vp->fg_pattern = display->get_foreground();
+                vp->bg_pattern = display->get_background();
+            }
         }
 #endif
         /* make the backdrop actually take effect */
@@ -662,12 +670,14 @@ static void gwps_enter_wps(void)
         display->backdrop_show(gwps->data->backdrop);
 #endif
         display->clear_display();
-        skin_update(gwps, WPS_REFRESH_ALL);
+        skin_update(gwps, SKIN_REFRESH_ALL);
 
-#ifdef HAVE_TOUCHSCREEN
-        skin_disarm_touchregions(gui_wps[i].data);
-#endif
     }
+#ifdef HAVE_TOUCHSCREEN
+    skin_disarm_touchregions(gui_wps[SCREEN_MAIN].data);
+    if (!gui_wps[SCREEN_MAIN].data->touchregions)
+        touchscreen_set_mode(TOUCHSCREEN_BUTTON);
+#endif
     /* force statusbar/skin update since we just cleared the whole screen */
     send_event(GUI_EVENT_ACTIONUPDATE, (void*)1);
 }
@@ -888,10 +898,6 @@ long gui_wps_show(void)
                     {
                         ab_jump_to_A_marker();
                         break;
-#if (AB_REPEAT_ENABLE == 2)
-                    } else {
-                        ab_reset_markers();
-#endif
                     }
                 }
                 else
@@ -915,10 +921,6 @@ long gui_wps_show(void)
                     {
                         ab_jump_to_A_marker();
                         break;
-#if (AB_REPEAT_ENABLE == 2)
-                    } else {
-                        ab_reset_markers();
-#endif
                     }
                 }
                 else
@@ -1115,6 +1117,7 @@ long gui_wps_show(void)
 #if defined(HAVE_BACKLIGHT) || defined(HAVE_REMOTE_LCD)
             gwps_caption_backlight(&wps_state);
 #endif
+            bool full_update = wps_sync_data.do_full_update;
             FOR_NB_SCREENS(i)
             {
 #if defined(HAVE_LCD_ENABLE) || defined(HAVE_LCD_SLEEP)
@@ -1123,11 +1126,19 @@ long gui_wps_show(void)
                 if (lcd_active() || (i != SCREEN_MAIN))
 #endif
                 {
-                    skin_update(&gui_wps[i], wps_sync_data.do_full_update ?
-                                            WPS_REFRESH_ALL : WPS_REFRESH_NON_STATIC);
+#if NB_SCREENS > 1
+                    if (i==SCREEN_MAIN && wps_sync_data.do_full_update)
+                    {
+                        wps_sync_data.do_full_update = false;
+                    }
+                    
+#else
+                    wps_sync_data.do_full_update = false;
+#endif
+                    skin_update(&gui_wps[i], full_update ?
+                                     SKIN_REFRESH_ALL : SKIN_REFRESH_NON_STATIC);
                 }
             }
-            wps_sync_data.do_full_update = false;
             update = false;
         }
 

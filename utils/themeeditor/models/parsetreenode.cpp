@@ -31,24 +31,29 @@
 
 #include <iostream>
 #include <cmath>
+#include <cassert>
+
+#include <QDebug>
 
 int ParseTreeNode::openConditionals = 0;
 bool ParseTreeNode::breakFlag = false;
 
 /* Root element constructor */
-ParseTreeNode::ParseTreeNode(struct skin_element* data)
-    : parent(0), element(0), param(0), children()
+ParseTreeNode::ParseTreeNode(struct skin_element* data, ParseTreeModel* model)
+    : parent(0), element(0), param(0), children(), model(model)
 {
     while(data)
     {
-        children.append(new ParseTreeNode(data, this));
+        children.append(new ParseTreeNode(data, this, model));
         data = data->next;
     }
 }
 
 /* Normal element constructor */
-ParseTreeNode::ParseTreeNode(struct skin_element* data, ParseTreeNode* parent)
-    : parent(parent), element(data), param(0), children()
+ParseTreeNode::ParseTreeNode(struct skin_element* data, ParseTreeNode* parent,
+                             ParseTreeModel* model)
+                                 : parent(parent), element(data), param(0),
+                                 children(), model(model)
 {
     switch(element->type)
     {
@@ -58,29 +63,30 @@ ParseTreeNode::ParseTreeNode(struct skin_element* data, ParseTreeNode* parent)
         {
             if(element->params[i].type == skin_tag_parameter::CODE)
                 children.append(new ParseTreeNode(element->params[i].data.code,
-                                              this));
+                                              this, model));
             else
-                children.append(new ParseTreeNode(&element->params[i], this));
+                children.append(new ParseTreeNode(&element->params[i], this,
+                                                  model));
         }
         break;
 
     case CONDITIONAL:
         for(int i = 0; i < element->params_count; i++)
-            children.append(new ParseTreeNode(&data->params[i], this));
+            children.append(new ParseTreeNode(&data->params[i], this, model));
         for(int i = 0; i < element->children_count; i++)
-            children.append(new ParseTreeNode(data->children[i], this));
+            children.append(new ParseTreeNode(data->children[i], this, model));
         break;
 
     case LINE_ALTERNATOR:
         for(int i = 0; i < element->children_count; i++)
         {
-            children.append(new ParseTreeNode(data->children[i], this));
+            children.append(new ParseTreeNode(data->children[i], this, model));
         }
         break;
 
 case VIEWPORT:
         for(int i = 0; i < element->params_count; i++)
-            children.append(new ParseTreeNode(&data->params[i], this));
+            children.append(new ParseTreeNode(&data->params[i], this, model));
         /* Deliberate fall-through here */
 
     case LINE:
@@ -89,7 +95,7 @@ case VIEWPORT:
             for(struct skin_element* current = data->children[i]; current;
                 current = current->next)
             {
-                children.append(new ParseTreeNode(current, this));
+                children.append(new ParseTreeNode(current, this, model));
             }
         }
         break;
@@ -100,8 +106,10 @@ case VIEWPORT:
 }
 
 /* Parameter constructor */
-ParseTreeNode::ParseTreeNode(skin_tag_parameter *data, ParseTreeNode *parent)
-    : parent(parent), element(0), param(data), children()
+ParseTreeNode::ParseTreeNode(skin_tag_parameter *data, ParseTreeNode *parent,
+                             ParseTreeModel *model)
+                                 : parent(parent), element(0), param(data),
+                                 children(), model(model)
 {
 
 }
@@ -149,7 +157,10 @@ QString ParseTreeNode::genCode() const
                 buffer.append(children[i]->genCode());
             }
             if(openConditionals == 0
-               && !(parent && parent->element->type == LINE_ALTERNATOR))
+               && !(parent && parent->element->type == LINE_ALTERNATOR)
+               && !(children.count() > 0 &&
+                    children[children.count() - 1]->getElement()->type
+                    == COMMENT))
             {
                 buffer.append('\n');
             }
@@ -523,7 +534,7 @@ void ParseTreeNode::render(const RBRenderInfo& info)
         return;
     }
 
-    rendered = new RBViewport(element, info);
+    rendered = new RBViewport(element, info, this);
 
     for(int i = element->params_count; i < children.count(); i++)
         children[i]->render(info, dynamic_cast<RBViewport*>(rendered));
@@ -534,6 +545,9 @@ void ParseTreeNode::render(const RBRenderInfo& info)
 void ParseTreeNode::render(const RBRenderInfo &info, RBViewport* viewport,
                            bool noBreak)
 {
+    if(!element)
+        return;
+
     if(element->type == LINE)
     {
         for(int i = 0; i < children.count(); i++)
@@ -560,7 +574,12 @@ void ParseTreeNode::render(const RBRenderInfo &info, RBViewport* viewport,
     else if(element->type == CONDITIONAL)
     {
         int child = evalTag(info, true, element->children_count).toInt();
-        children[element->params_count + child]->render(info, viewport, true);
+        int max = children.count() - element->params_count;
+        if(child < max)
+        {
+            children[element->params_count + child]
+                    ->render(info, viewport, true);
+        }
     }
     else if(element->type == LINE_ALTERNATOR)
     {
@@ -621,6 +640,8 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
     int x, y, tiles, tile, maxWidth, maxHeight, width, height;
     char c, hAlign, vAlign;
     RBImage* image;
+    QPixmap temp;
+    RBFont* fLoad;
 
     /* Two switch statements to narrow down the tag name */
     switch(element->tag->name[0])
@@ -646,6 +667,7 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
 
         case 'x':
             /* %ax */
+            info.screen()->RtlMirror();
             return true;
 
         case 'L':
@@ -672,16 +694,14 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         {
         case 'b':
             /* %pb */
-            new RBProgressBar(viewport, info, element->params_count,
-                              element->params);
+            new RBProgressBar(viewport, info, this);
             return true;
 
         case 'v':
             /* %pv */
             if(element->params_count > 0)
             {
-                new RBProgressBar(viewport, info, element->params_count,
-                                  element->params, true);
+                new RBProgressBar(viewport, info, this, true);
                 return true;
             }
             else
@@ -748,6 +768,7 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
                 image = new RBImage(*(info.screen()->getImage(id)), viewport);
                 image->setTile(tile);
                 image->show();
+                image->enableMovement();
             }
 
             return true;
@@ -755,17 +776,30 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         case 'l':
             /* %xl */
             id = element->params[0].data.text;
-            filename = info.settings()->value("imagepath", "") + "/" +
-                       element->params[1].data.text;
+            if(element->params[1].data.text == QString("__list_icons__"))
+            {
+                filename = info.settings()->value("iconset", "");
+                filename.replace(".rockbox",
+                                 info.settings()->value("themebase"));
+                temp.load(filename);
+                if(!temp.isNull())
+                {
+                    tiles = temp.height() / temp.width();
+                }
+            }
+            else
+            {
+                filename = info.settings()->value("imagepath", "") + "/" +
+                           element->params[1].data.text;
+                tiles = 1;
+            }
             x = element->params[2].data.number;
             y = element->params[3].data.number;
             if(element->params_count > 4)
                 tiles = element->params[4].data.number;
-            else
-                tiles = 1;
 
             info.screen()->loadImage(id, new RBImage(filename, tiles, x, y,
-                                                     viewport));
+                                                     this, viewport));
             return true;
 
         case '\0':
@@ -775,10 +809,11 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
                        element->params[1].data.text;
             x = element->params[2].data.number;
             y = element->params[3].data.number;
-            image = new RBImage(filename, 1, x, y, viewport);
-            info.screen()->loadImage(id, new RBImage(filename, 1, x, y,
-                                                     viewport));
-            info.screen()->getImage(id)->show();
+            image = new RBImage(filename, 1, x, y, this, viewport);
+            info.screen()->loadImage(id, image);
+            image->show();
+            image->enableMovement();
+            
             return true;
 
         }
@@ -807,7 +842,7 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
             height = info.device()->data("artheight").toInt();
             info.screen()->setAlbumArt(new RBAlbumArt(viewport, x, y, maxWidth,
                                                       maxHeight, width, height,
-                                                      hAlign, vAlign));
+                                                      this, hAlign, vAlign));
             return true;
         }
 
@@ -823,7 +858,11 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
             x = element->params[0].data.number;
             filename = info.settings()->value("themebase", "") + "/fonts/" +
                        element->params[1].data.text;
-            info.screen()->loadFont(x, new RBFont(filename));
+            fLoad = new RBFont(filename);
+            if(!fLoad->isValid())
+                dynamic_cast<RBScene*>(info.screen()->scene())
+                ->addWarning(QObject::tr("Missing font file: ") + filename);
+            info.screen()->loadFont(x, fLoad);
             return true;
 
         }
@@ -843,8 +882,6 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
             int height = element->params[3].data.number;
             QString action(element->params[4].data.text);
             RBTouchArea* temp = new RBTouchArea(width, height, action, info);
-            x += viewport->x();
-            y += viewport->y();
             temp->setPos(x, y);
             return true;
         }
@@ -881,8 +918,7 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         case 'p':
             /* %Vp */
             viewport->showPlaylist(info, element->params[0].data.number,
-                                   element->params[1].data.code,
-                                   element->params[2].data.code);
+                                   children[1]);
             return true;
 
         case 'I':
@@ -901,10 +937,7 @@ bool ParseTreeNode::execTag(const RBRenderInfo& info, RBViewport* viewport)
         case '\0':
             /* %X */
             filename = QString(element->params[0].data.text);
-            if(info.sbsScreen() && info.screen()->parentItem())
-                info.sbsScreen()->setBackdrop(filename);
-            else
-                info.screen()->setBackdrop(filename);
+            info.screen()->setBackdrop(filename);
             return true;
         }
 
@@ -921,6 +954,11 @@ QVariant ParseTreeNode::evalTag(const RBRenderInfo& info, bool conditional,
 {
     if(!conditional)
     {
+        if(element->tag->name[0] == 'c' && !info.device()->data("cc").toBool())
+            return QString();
+
+        if(QString(element->tag->name) == "Sx")
+            return element->params[0].data.text;
         return info.device()->data(QString(element->tag->name),
                                    element->params_count, element->params);
     }
@@ -991,17 +1029,17 @@ QVariant ParseTreeNode::evalTag(const RBRenderInfo& info, bool conditional,
             else
                 child = 1;
         }
-        else if(val.type() == QVariant::String)
-        {
-            if(val.toString().length() > 0)
-                child = 0;
-            else
-                child = 1;
-        }
         else if(element->tag->name[0] == 'i' || element->tag->name[0] == 'I'
                 || element->tag->name[0] == 'f' || element->tag->name[0] == 'F')
         {
             if(info.device()->data("id3available").toBool())
+                child = 0;
+            else
+                child = 1;
+        }
+        else if(val.type() == QVariant::String)
+        {
+            if(val.toString().length() > 0)
                 child = 0;
             else
                 child = 1;
@@ -1016,6 +1054,8 @@ QVariant ParseTreeNode::evalTag(const RBRenderInfo& info, bool conditional,
 
         if(child < branches)
             return child;
+        else if(branches == 1)
+            return 2;
         else
             return branches - 1;
     }
@@ -1049,5 +1089,56 @@ double ParseTreeNode::findConditionalTime(ParseTreeNode *conditional,
 {
     int child = conditional->evalTag(info, true,
                                      conditional->children.count()).toInt();
+    if(child >= conditional->children.count())
+        child = conditional->children.count() - 1;
+
     return findBranchTime(conditional->children[child], info);
+}
+
+void ParseTreeNode::modParam(QVariant value, int index)
+{
+    if(element)
+    {
+        if(index < 0)
+            return;
+        while(index >= children.count())
+        {
+            /* Padding children with defaults until we make the necessary
+             * parameter available
+             */
+            skin_tag_parameter* newParam = new skin_tag_parameter;
+            newParam->type = skin_tag_parameter::DEFAULT;
+            /* We'll need to manually delete the extra parameters in the
+             * destructor
+             */
+            extraParams.append(children.count());
+
+            children.append(new ParseTreeNode(newParam, this, model));
+            element->params_count++;
+        }
+
+        children[index]->modParam(value);
+    }
+    else if(param)
+    {
+        if(value.type() == QVariant::Double)
+        {
+            param->type = skin_tag_parameter::DECIMAL;
+            param->data.number = static_cast<int>(value.toDouble() * 10);
+        }
+        else if(value.type() == QVariant::String)
+        {
+            param->type = skin_tag_parameter::STRING;
+            free(param->data.text);
+            param->data.text = strdup(value.toString().toStdString().c_str());
+        }
+        else if(value.type() == QVariant::Int)
+        {
+            param->type = skin_tag_parameter::INTEGER;
+            param->data.number = value.toInt();
+        }
+
+        model->paramChanged(this);
+
+    }
 }

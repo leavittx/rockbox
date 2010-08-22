@@ -25,7 +25,11 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <time.h>
-#ifndef WIN32
+#include "config.h"
+
+#define HAVE_STATVFS (0 == (CONFIG_PLATFORM & PLATFORM_ANDROID) && !defined(WIN32))
+
+#if HAVE_STATVFS
 #include <sys/statvfs.h>
 #endif
 
@@ -40,19 +44,25 @@
 #include "dir-win32.h"
 #endif
 
-#define MAX_PATH 260
-#define MAX_OPEN_FILES 11
-
 #include <fcntl.h>
+#if (CONFIG_PLATFORM & PLATFORM_SDL)
 #include <SDL.h>
 #include <SDL_thread.h>
+#include "thread-sdl.h"
+#else
+#define sim_thread_unlock() NULL
+#define sim_thread_lock(a)
+#endif
 #include "thread.h"
 #include "kernel.h"
 #include "debug.h"
-#include "config.h"
 #include "ata.h" /* for IF_MV2 et al. */
-#include "thread-sdl.h"
+#include "rbpaths.h"
 
+/* keep this in sync with file.h! */
+#undef MAX_PATH /* this avoids problems when building simulator */
+#define MAX_PATH 260
+#define MAX_OPEN_FILES 11
 
 /* Windows (and potentially other OSes) distinguish binary and text files.
  * Define a dummy for the others. */
@@ -191,7 +201,7 @@ static unsigned int rockbox2sim(int opt)
 /** Simulator I/O engine routines **/
 #define IO_YIELD_THRESHOLD 512
 
-enum
+enum io_dir
 {
     IO_READ,
     IO_WRITE,
@@ -223,7 +233,7 @@ int ata_spinup_time(void)
     return HZ;
 }
 
-static ssize_t io_trigger_and_wait(int cmd)
+static ssize_t io_trigger_and_wait(enum io_dir cmd)
 {
     void *mythread = NULL;
     ssize_t result;
@@ -244,6 +254,9 @@ static ssize_t io_trigger_and_wait(int cmd)
     case IO_WRITE:
         result = write(io.fd, io.buf, io.count);
         break;
+        /* shut up gcc */
+    default:
+        result = -1;
     }
 
     /* Regain our status as current */
@@ -255,7 +268,7 @@ static ssize_t io_trigger_and_wait(int cmd)
     return result;
 }
 
-#ifndef __PCTOOL__
+#if !defined(__PCTOOL__) && !defined(APPLICATION)
 static const char *get_sim_pathname(const char *name)
 {
     static char buffer[MAX_PATH]; /* sufficiently big */
@@ -478,7 +491,7 @@ void fat_size(IF_MV2(int volume,) unsigned long* size, unsigned long* free)
         if (free)
             *free = free_clusters * secperclus / 2 * (bytespersec / 512);
     }
-#else
+#elif HAVE_STATVFS
     struct statvfs vfs;
 
     if (!statvfs(".", &vfs)) {
@@ -488,9 +501,9 @@ void fat_size(IF_MV2(int volume,) unsigned long* size, unsigned long* free)
             *size = vfs.f_blocks / 2 * (vfs.f_frsize / 512);
         if (free)
             *free = vfs.f_bfree / 2 * (vfs.f_frsize / 512);
-    }
+    } else
 #endif
-    else {
+    {
         if (size)
             *size = 0;
         if (free)
@@ -520,7 +533,6 @@ int sim_fsync(int fd)
 void *sim_codec_load_ram(char* codecptr, int size, void **pd)
 {
     void *hdr;
-    char name[MAX_PATH];
     char path[MAX_PATH];
     int fd;
     int codec_count;
@@ -536,8 +548,19 @@ void *sim_codec_load_ram(char* codecptr, int size, void **pd)
        to find an unused filename */
     for (codec_count = 0; codec_count < 10; codec_count++)
     {
-        snprintf(name, sizeof(name), "/_temp_codec%d.dll", codec_count);
-        snprintf(path, sizeof(path), "%s", get_sim_pathname(name));
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+        /* we need that path fixed, since get_user_file_path()
+         * gives us the folder on the sdcard where we cannot load libraries
+         * from (no exec permissions)
+         */
+        snprintf(path, sizeof(path),
+                 "/data/data/org.rockbox/app_rockbox/libtemp_codec_%d.so",
+                 codec_count);
+#else
+        char name[MAX_PATH];
+        const char *_name = get_user_file_path(ROCKBOX_DIR, 0, name, sizeof(name));
+        snprintf(path, sizeof(path), "%s/_temp_codec%d.dll", get_sim_pathname(_name), codec_count);
+#endif
         fd = OPEN(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, S_IRWXU);
         if (fd >= 0)
             break;  /* Created a file ok */

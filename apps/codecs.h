@@ -31,7 +31,6 @@
 #define MEM 2
 #endif
 
-#include <_ansi.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include "strlcpy.h"
@@ -50,6 +49,8 @@
 #include "dsp.h"
 #endif
 #include "settings.h"
+
+#include "gcc_extensions.h"
 
 #ifdef CODEC
 #if defined(DEBUG) || defined(SIMULATOR)
@@ -155,7 +156,7 @@ struct codec_api {
     void (*configure)(int setting, intptr_t value);
 
     /* kernel/ system */
-#ifdef CPU_ARM
+#if defined(CPU_ARM) && CONFIG_PLATFORM & PLATFORM_NATIVE
     void (*__div0)(void);
 #endif
     void (*sleep)(int ticks);

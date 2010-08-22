@@ -48,6 +48,9 @@ public slots:
 private slots:
     void colorClicked();
     void browseFont();
+    void browseDB();
+    void dlFonts();
+    void dlTargetDB();
 
 private:
     Ui::PreferencesDialog *ui;

@@ -35,6 +35,7 @@
 #include "skinviewer.h"
 #include "devicestate.h"
 #include "skintimer.h"
+#include "targetdata.h"
 
 class ProjectModel;
 class TabContent;
@@ -48,6 +49,8 @@ class EditorWindow : public QMainWindow
 {
     Q_OBJECT
 public:
+    static const int numRecent;
+
     EditorWindow(QWidget *parent = 0);
     virtual ~EditorWindow();
 
@@ -71,8 +74,11 @@ private slots:
     void closeProject();
     void saveCurrent();
     void saveCurrentAs();
+    void exportProject();
     void openFile();
     void openProject();
+    void openRecentFile();
+    void openRecentProject();
     void tabTitleChanged(QString title);
     void updateCurrent(); /* Generates code in the current tab */
     void lineChanged(int line); /* Used for auto-expand */
@@ -98,6 +104,11 @@ private:
     void loadProjectFile(QString fileName);
     static void createFile(QString filename, QString contents);
 
+    /* Functions to manipulate the recent projects/documents menus */
+    void docToTop(QString file);
+    void projectToTop(QString file);
+    void refreshRecentMenus();
+
     Ui::EditorWindow *ui;
     PreferencesDialog* prefs;
     QLabel* parseStatus;
@@ -108,6 +119,11 @@ private:
     QDockWidget* deviceDock;
     SkinTimer* timer;
     QDockWidget* timerDock;
+
+    QStringList recentDocs;
+    QStringList recentProjects;
+    QList<QAction*> recentDocsMenu;
+    QList<QAction*> recentProjectsMenu;
 };
 
 #endif // EDITORWINDOW_H

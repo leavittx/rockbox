@@ -34,12 +34,12 @@
 ****************************************************************************/
 
 #include <QtGui>
+#include <QApplication>
 
 #include "codeeditor.h"
 
-//![constructor]
-
-CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
+CodeEditor::CodeEditor(QWidget *parent)
+    : QPlainTextEdit(parent), completer(this)
 {
     lineNumberArea = new LineNumberArea(this);
 
@@ -49,11 +49,12 @@ CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
             this, SLOT(updateLineNumberArea(QRect,int)));
 
     updateLineNumberAreaWidth(0);
+
+    QObject::connect(this, SIGNAL(cursorPositionChanged()),
+                     this, SLOT(cursorMoved()));
+    completer.hide();
+    settings.beginGroup("CodeEditor");
 }
-
-//![constructor]
-
-//![extraAreaWidth]
 
 int CodeEditor::lineNumberAreaWidth()
 {
@@ -69,18 +70,11 @@ int CodeEditor::lineNumberAreaWidth()
     return space;
 }
 
-//![extraAreaWidth]
-
-//![slotUpdateExtraAreaWidth]
 
 void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
 { 
     setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
 }
-
-//![slotUpdateExtraAreaWidth]
-
-//![slotUpdateRequest]
 
 void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
 {
@@ -93,9 +87,41 @@ void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
         updateLineNumberAreaWidth(0);
 }
 
-//![slotUpdateRequest]
+void CodeEditor::cursorMoved()
+{
+    /* Closing the completer if the cursor has moved out of its bounds */
+    if(completer.isVisible())
+    {
+        if(document()->toPlainText().length() > docLength)
+            tagEnd++;
+        else if(document()->toPlainText().length() < docLength)
+            tagEnd--;
 
-//![resizeEvent]
+        if(textCursor().position() < tagBegin
+           || textCursor().position() > tagEnd)
+        {
+            completer.hide();
+        }
+    }
+}
+
+void CodeEditor::insertTag()
+{
+    /* Clearing the typed tag and inserting one from the completer */
+    QTextCursor at(document());
+    at.setPosition(tagBegin, QTextCursor::MoveAnchor);
+    while(document()->characterAt(at.position()) == QChar('%')
+          || document()->characterAt(at.position()) == '?')
+        at.movePosition(QTextCursor::NextCharacter, QTextCursor::MoveAnchor, 1);
+
+    at.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor,
+                    tagEnd - at.position());
+    at.removeSelectedText();
+
+    at.insertText(completer.currentItem()->text(0));
+
+    completer.hide();
+}
 
 void CodeEditor::resizeEvent(QResizeEvent *e)
 {
@@ -106,25 +132,121 @@ void CodeEditor::resizeEvent(QResizeEvent *e)
                                       lineNumberAreaWidth(), cr.height()));
 }
 
-//![resizeEvent]
+void CodeEditor::keyPressEvent(QKeyEvent *event)
+{
 
-//![extraAreaPaintEvent_0]
+    if(!settings.value("completeSyntax", true).toBool())
+    {
+        QPlainTextEdit::keyPressEvent(event);
+        return;
+    }
+
+    if(completer.isVisible())
+    {
+        /* Handling the completer */
+        if(event->key() == Qt::Key_Up)
+        {
+            /* Up/down arrow presses get sent right along to the completer
+             * to navigate through the list
+             */
+            if(completer.currentIndex().row() > 0)
+                QApplication::sendEvent(&completer, event);
+        }
+        else if(event->key() == Qt::Key_Down)
+        {
+            if(completer.currentIndex().row()
+                < completer.topLevelItemCount() - 1)
+                QApplication::sendEvent(&completer, event);
+        }
+        else if(event->key() == Qt::Key_Backspace
+                || event->key() == Qt::Key_Delete)
+        {
+            docLength = document()->toPlainText().length();
+            QPlainTextEdit::keyPressEvent(event);
+
+            QString filterText;
+
+            for(int i = tagBegin; i < tagEnd; i++)
+            {
+                QChar c = document()->characterAt(i);
+                if(c != '%' && c != '?')
+                    filterText.append(c);
+            }
+
+            completer.filter(filterText);
+        }
+        else if(event->key() == Qt::Key_Escape)
+        {
+            /* Escape hides the completer */
+            completer.hide();
+            QPlainTextEdit::keyPressEvent(event);
+        }
+        else if(event->key() == Qt::Key_Return)
+        {
+            /* The enter key inserts the currently selected tag */
+            insertTag();
+        }
+        else if(event->key() == Qt::Key_Question)
+        {
+            /* The question mark doesn't filter the list */
+            docLength = document()->toPlainText().length();
+            QPlainTextEdit::keyPressEvent(event);
+        }
+        else if(event->key() == Qt::Key_Left
+                || event->key() == Qt::Key_Right)
+        {
+            /* Left and right keys shouldn't affect tagEnd */
+            QPlainTextEdit::keyPressEvent(event);
+        }
+        else
+        {
+            /* Otherwise, we have to filter the list */
+            docLength = document()->toPlainText().length();
+            QPlainTextEdit::keyPressEvent(event);
+
+            QString filterText;
+
+            for(int i = tagBegin; i < tagEnd; i++)
+            {
+                QChar c = document()->characterAt(i);
+                if(c != '%' && c != '?')
+                    filterText.append(c);
+            }
+
+            completer.filter(filterText);
+        }
+    }
+    else
+    {
+        /* Deciding whether to show the completer */
+        QPlainTextEdit::keyPressEvent(event);
+        if(event->key() == Qt::Key_Percent)
+        {
+            tagBegin = textCursor().position();
+            tagEnd = textCursor().position();
+            completer.filter("");
+            completer.move(cursorRect().left(), cursorRect().bottom());
+            if(completer.frameGeometry().right() > width())
+                completer.move(width() - completer.width(), completer.y());
+            if(completer.frameGeometry().bottom() > height())
+                completer.move(completer.x(),
+                               cursorRect().top() - completer.height());
+            completer.show();
+        }
+    }
+
+}
 
 void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
     painter.fillRect(event->rect(), Qt::lightGray);
 
-//![extraAreaPaintEvent_0]
-
-//![extraAreaPaintEvent_1]
     QTextBlock block = firstVisibleBlock();
     int blockNumber = block.blockNumber();
     int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
     int bottom = top + (int) blockBoundingRect(block).height();
-//![extraAreaPaintEvent_1]
 
-//![extraAreaPaintEvent_2]
     while (block.isValid() && top <= event->rect().bottom()) {
         if (block.isVisible() && bottom >= event->rect().top()) {
             QString number = QString::number(blockNumber + 1);
@@ -145,5 +267,4 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
         ++blockNumber;
     }
 }
-//![extraAreaPaintEvent_2]
 

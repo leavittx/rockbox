@@ -21,6 +21,8 @@
 
 #include "preferencesdialog.h"
 #include "ui_preferencesdialog.h"
+#include "fontdownloader.h"
+#include "targetdownloader.h"
 
 #include <QSettings>
 #include <QColorDialog>
@@ -45,6 +47,12 @@ void PreferencesDialog::loadSettings()
     loadColors();
     loadFont();
     loadRender();
+
+    QSettings settings;
+    settings.beginGroup("CodeEditor");
+    ui->completionBox->setChecked(settings.value("completeSyntax",
+                                                 true).toBool());
+    settings.endGroup();
 }
 
 void PreferencesDialog::loadColors()
@@ -112,7 +120,10 @@ void PreferencesDialog::loadRender()
     QSettings settings;
     settings.beginGroup("RBFont");
 
-    ui->fontBox->setText(settings.value("fontDir", "/").toString());
+    QString confDir = QDir::homePath() + "/.rbthemeeditor";
+
+    ui->fontBox->setText(settings.value("fontDir", confDir + "/fonts/")
+                         .toString());
 
     settings.endGroup();
 
@@ -124,6 +135,14 @@ void PreferencesDialog::loadRender()
                                                     false).toBool());
 
     settings.endGroup();
+
+    settings.beginGroup("TargetData");
+
+    ui->dbBox->setText(settings.value("targetDbPath",
+                                      confDir + "/targetdb")
+                       .toString());
+
+    settings.endGroup();
 }
 
 void PreferencesDialog::saveSettings()
@@ -131,6 +150,12 @@ void PreferencesDialog::saveSettings()
     saveColors();
     saveFont();
     saveRender();
+
+    QSettings settings;
+    settings.beginGroup("CodeEditor");
+    settings.setValue("completeSyntax", ui->completionBox->isChecked());
+    settings.endGroup();
+
 }
 
 void PreferencesDialog::saveColors()
@@ -183,6 +208,10 @@ void PreferencesDialog::saveRender()
     settings.setValue("autoHighlightTree", ui->autoHighlightBox->isChecked());
 
     settings.endGroup();
+
+    settings.beginGroup("TargetData");
+    settings.setValue("targetDbPath", ui->dbBox->text());
+    settings.endGroup();
 }
 
 void PreferencesDialog::setupUI()
@@ -203,6 +232,12 @@ void PreferencesDialog::setupUI()
 
     QObject::connect(ui->fontBrowseButton, SIGNAL(clicked()),
                      this, SLOT(browseFont()));
+    QObject::connect(ui->browseDB, SIGNAL(clicked()),
+                     this, SLOT(browseDB()));
+    QObject::connect(ui->dlFontsButton, SIGNAL(clicked()),
+                     this, SLOT(dlFonts()));
+    QObject::connect(ui->dlTargetButton, SIGNAL(clicked()),
+                     this, SLOT(dlTargetDB()));
 }
 
 void PreferencesDialog::colorClicked()
@@ -241,6 +276,27 @@ void PreferencesDialog::browseFont()
                    getExistingDirectory(this, "Font Directory",
                                         ui->fontBox->text());
     ui->fontBox->setText(path);
+}
+
+void PreferencesDialog::browseDB()
+{
+    QString path = QFileDialog::getOpenFileName(this, tr("Target DB"),
+                                                QDir(ui->dbBox->text()).
+                                                absolutePath(),
+                                                "All Files (*)");
+    ui->dbBox->setText(path);
+}
+
+void PreferencesDialog::dlFonts()
+{
+    FontDownloader* dl = new FontDownloader(this, ui->fontBox->text());
+    dl->show();
+}
+
+void PreferencesDialog::dlTargetDB()
+{
+    TargetDownloader* dl = new TargetDownloader(this, ui->dbBox->text());
+    dl->show();
 }
 
 void PreferencesDialog::accept()

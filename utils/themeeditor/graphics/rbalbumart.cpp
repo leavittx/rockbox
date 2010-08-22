@@ -22,23 +22,21 @@
 #include "rbalbumart.h"
 
 #include <QPainter>
-#include <QDebug>
+
+#include "parsetreenode.h"
 
 RBAlbumArt::RBAlbumArt(QGraphicsItem *parent, int x, int y, int maxWidth,
-                       int maxHeight, int artWidth, int artHeight, char hAlign,
-                       char vAlign)
-                           : QGraphicsItem(parent), size(x, y, maxWidth,
-                                                         maxHeight),
-                           artWidth(artWidth), artHeight(artHeight),
-                           hAlign(hAlign), vAlign(vAlign),
-                           texture(":/render/albumart.png")
+                       int maxHeight, int artWidth, int artHeight,
+                       ParseTreeNode* node, char hAlign, char vAlign)
+                           : RBMovable(parent),artWidth(artWidth),
+                           artHeight(artHeight), hAlign(hAlign), vAlign(vAlign),
+                           texture(":/render/albumart.png"), node(node)
 {
-    hide();
-}
+    size = QRectF(0, 0, maxWidth, maxHeight);
+    setFlag(ItemSendsGeometryChanges, false);
 
-QRectF RBAlbumArt::boundingRect() const
-{
-    return size;
+    setPos(x, y);
+    hide();
 }
 
 void RBAlbumArt::paint(QPainter *painter,
@@ -92,4 +90,18 @@ void RBAlbumArt::paint(QPainter *painter,
     }
 
     painter->fillRect(drawArea, texture);
+
+    RBMovable::paint(painter, option, widget);
+}
+
+void RBAlbumArt::saveGeometry()
+{
+
+    QPointF origin = pos();
+    QRectF bounds = boundingRect();
+
+    node->modParam(static_cast<int>(origin.x()), 0);
+    node->modParam(static_cast<int>(origin.y()), 1);
+    node->modParam(static_cast<int>(bounds.width()), 2);
+    node->modParam(static_cast<int>(bounds.height()), 3);
 }

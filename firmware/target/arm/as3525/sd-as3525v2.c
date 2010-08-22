@@ -23,6 +23,7 @@
 #include "config.h" /* for HAVE_MULTIVOLUME */
 #include "fat.h"
 #include "thread.h"
+#include "gcc_extensions.h"
 #include "led.h"
 #include "sdmmc.h"
 #include "system.h"
@@ -45,7 +46,7 @@
 #include "disk.h"
 #endif
 
-#ifdef SANSA_FUZEV2
+#if defined(SANSA_FUZEV2)
 #include "backlight-target.h"
 #endif
 
@@ -327,9 +328,6 @@
 static unsigned char aligned_buffer[UNALIGNED_NUM_SECTORS* SD_BLOCK_SIZE] __attribute__((aligned(32)));   /* align on cache line size */
 static unsigned char *uncached_buffer = AS3525_UNCACHED_ADDR(&aligned_buffer[0]);
 
-static void init_controller(void);
-static int sd_wait_for_tran_state(const int drive);
-
 static tCardInfo card_info[NUM_DRIVES];
 
 /* for compatibility */
@@ -397,12 +395,21 @@ static inline bool card_detect_target(void)
 static bool send_cmd(const int drive, const int cmd, const int arg, const int flags,
         unsigned long *response)
 {
+    int card_no;
+
 #if defined(HAVE_MULTIDRIVE)
     if(sd_present(SD_SLOT_AS3525))
         GPIOB_PIN(5) = (1-drive) << 5;
 #endif
 
     MCI_ARGUMENT = arg;
+
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS)
+    if (amsv2_variant == 1)
+        card_no = 1 << 16;
+    else
+#endif
+        card_no = CMD_CARD_NO(drive);
 
     /* Construct MCI_COMMAND  */
     MCI_COMMAND =
@@ -417,18 +424,21 @@ static bool send_cmd(const int drive, const int cmd, const int arg, const int fl
       /*b13 */  | (TRANSFER_CMD                      ? CMD_WAIT_PRV_DAT_BIT:  0)
       /*b14     | CMD_ABRT_CMD_BIT        unused  */
       /*b15     | CMD_SEND_INIT_BIT       unused  */
-   /*b20:16 */  |                                      CMD_CARD_NO(drive)
+   /*b20:16 */  |                                      card_no
       /*b21     | CMD_SEND_CLK_ONLY       unused  */
       /*b22     | CMD_READ_CEATA          unused  */
       /*b23     | CMD_CCS_EXPECTED        unused  */
       /*b31 */  |                                      CMD_DONE_BIT;
 
-#ifdef SANSA_FUZEV2
-    extern int buttonlight_is_on;
-    if(buttonlight_is_on)
-        _buttonlight_on();
-    else
-        _buttonlight_off();
+#if defined(SANSA_FUZEV2)
+    if (amsv2_variant == 0)
+    {
+        extern int buttonlight_is_on;
+        if(buttonlight_is_on)
+            _buttonlight_on();
+        else
+            _buttonlight_off();
+    }
 #endif
     wakeup_wait(&command_completion_signal, TIMEOUT_BLOCK);
 
@@ -450,6 +460,30 @@ static bool send_cmd(const int drive, const int cmd, const int arg, const int fl
     }
     return true;
 }
+
+static int sd_wait_for_tran_state(const int drive)
+{
+    unsigned long response;
+    unsigned int timeout = current_tick + 5*HZ;
+
+    while (1)
+    {
+        while(!(send_cmd(drive, SD_SEND_STATUS, card_info[drive].rca, MCI_RESP, &response)));
+
+        if (((response >> 9) & 0xf) == SD_TRAN)
+            return 0;
+
+        if(TIME_AFTER(current_tick, timeout))
+            return -10 * ((response >> 9) & 0xf);
+
+        if (TIME_AFTER(current_tick, next_yield))
+        {
+            yield();
+            next_yield = current_tick + MIN_YIELD_PERIOD;
+        }
+    }
+}
+
 
 static int sd_init_card(const int drive)
 {
@@ -559,18 +593,31 @@ static int sd_init_card(const int drive)
     /* ACMD42  */
     if(!send_cmd(drive, SD_SET_CLR_CARD_DETECT, 0, MCI_NO_RESP, NULL))
         return -17;
+
     /* Now that card is widebus make controller aware */
-    MCI_CTYPE |= (1<<drive);
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS)
+    if (amsv2_variant == 1)
+        MCI_CTYPE |= 1<<1;
+    else
 #endif
+        MCI_CTYPE |= (1<<drive);
+
+#endif /* ! BOOTLOADER */
+
+    /*  Set low power mode  */
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS)
+    if (amsv2_variant == 1)
+        MCI_CLKENA |= 1<<16;
+    else
+#endif
+        MCI_CLKENA |= 1<<(drive + 16);
 
     card_info[drive].initialized = 1;
-
-    MCI_CLKENA |= 1<<(drive + 16);      /*  Set low power mode  */
 
     return 0;
 }
 
-static void sd_thread(void) __attribute__((noreturn));
+static void sd_thread(void) NORETURN_ATTR;
 static void sd_thread(void)
 {
     struct queue_event ev;
@@ -661,14 +708,17 @@ static void init_controller(void)
 {
     int hcon_numcards = ((MCI_HCON>>1) & 0x1F) + 1;
     int card_mask = (1 << hcon_numcards) - 1;
+    int pwr_mask;
 
-    MCI_PWREN &= ~card_mask;            /*  power off all cards  */
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS)
+    if (amsv2_variant == 1)
+        pwr_mask = 1 << 1;
+    else
+#endif
+        pwr_mask = card_mask;
 
-    MCI_CLKSRC = 0x00;                  /* All CLK_SRC_CRD set to 0*/
-    MCI_CLKDIV = 0x00;                  /* CLK_DIV_0 : bits 7:0  */
-
-    MCI_PWREN |= card_mask;             /*  power up cards  */
-    mci_delay();
+    MCI_PWREN &= ~pwr_mask;             /*  power off all cards  */
+    MCI_PWREN = pwr_mask;               /*  power up cards  */
 
     MCI_CTRL |= CTRL_RESET;
     while(MCI_CTRL & CTRL_RESET)
@@ -724,6 +774,12 @@ int sd_init(void)
 
     wakeup_init(&transfer_completion_signal);
     wakeup_init(&command_completion_signal);
+
+#if defined(SANSA_FUZEV2) || defined(SANSA_CLIPPLUS)
+    if (amsv2_variant == 1)
+        GPIOB_DIR |= 1 << 5;
+#endif
+
 #ifdef HAVE_MULTIDRIVE
     /* clear previous irq */
     GPIOA_IC = EXT_SD_BITS;
@@ -733,9 +789,11 @@ int sd_init(void)
     GPIOA_IBE |= EXT_SD_BITS;
     /* enable the card detect interrupt */
     GPIOA_IE |= EXT_SD_BITS;
+#endif /* HAVE_MULTIDRIVE */
 
+#ifndef SANSA_CLIPV2
     /* Configure XPD for SD-MCI interface */
-    CCU_IO |= (1<<2);
+    bitset32(&CCU_IO, 1<<2);
 #endif
 
     VIC_INT_ENABLE = INTERRUPT_NAND;
@@ -757,29 +815,6 @@ int sd_init(void)
     sd_enable(false);
 #endif
     return 0;
-}
-
-static int sd_wait_for_tran_state(const int drive)
-{
-    unsigned long response;
-    unsigned int timeout = current_tick + 5*HZ;
-
-    while (1)
-    {
-        while(!(send_cmd(drive, SD_SEND_STATUS, card_info[drive].rca, MCI_RESP, &response)));
-
-        if (((response >> 9) & 0xf) == SD_TRAN)
-            return 0;
-
-        if(TIME_AFTER(current_tick, timeout))
-            return -10 * ((response >> 9) & 0xf);
-
-        if (TIME_AFTER(current_tick, next_yield))
-        {
-            yield();
-            next_yield = current_tick + MIN_YIELD_PERIOD;
-        }
-    }
 }
 
 static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
@@ -928,6 +963,11 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
     } while(retry || count);
 
     dma_release();
+
+    /* CMD lines are separate, not common, so we need to actively deselect */
+    /*  CMD7 w/rca =0 : deselects card & puts it in STBY state */
+    if(!send_cmd(drive, SD_DESELECT_CARD, 0, MCI_NO_RESP, NULL))
+        return -21;
 
 #ifndef BOOTLOADER
     sd_enable(false);

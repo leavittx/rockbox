@@ -24,9 +24,9 @@
 #include <stdlib.h>
 #include "string-extra.h"
 #include "settings.h"
-#include "skin_buffer.h"
 #include "wps_internals.h"
 #include "skin_engine.h"
+#include "skin_buffer.h"
 
 #if (LCD_DEPTH > 1) || (defined(HAVE_REMOTE_LCD) && (LCD_REMOTE_DEPTH > 1))
 
@@ -52,6 +52,7 @@ char* skin_backdrop_load(char* backdrop, char *bmpdir, enum screen_type screen)
 {
     int i;
     struct skin_backdrop *bdrop = NULL;
+    char dir[MAX_PATH];
     char filename[MAX_PATH];
     size_t buf_size;
     bool loaded = false;
@@ -78,12 +79,14 @@ char* skin_backdrop_load(char* backdrop, char *bmpdir, enum screen_type screen)
                 return NULL; /* backdrop setting not set */
             }
             snprintf(filename, sizeof(filename), "%s/%s.bmp",
-                     BACKDROP_DIR, global_settings.backdrop_file);
+                     get_user_file_path(BACKDROP_DIR, 0, dir, sizeof(dir)),
+                     global_settings.backdrop_file);
         }
     }
     else
     {
-        get_image_filename(backdrop, bmpdir, filename, sizeof(filename));
+        const char *bd_dir = get_user_file_path(bmpdir, 0, dir, sizeof(dir));
+        get_image_filename(backdrop, bd_dir, filename, sizeof(filename));
     }
     
     for(i=0;i<SKINNABLE_SCREENS_COUNT*NB_SCREENS;i++)
@@ -100,7 +103,7 @@ char* skin_backdrop_load(char* backdrop, char *bmpdir, enum screen_type screen)
     if (!bdrop)
         return NULL; /* too many backdrops loaded */
     
-    bdrop->buffer = skin_buffer_alloc(buf_size);
+    bdrop->buffer = (char*)skin_buffer_alloc(buf_size);
     if (!bdrop->buffer)
         return NULL;
     loaded = screens[screen].backdrop_load(filename, bdrop->buffer);

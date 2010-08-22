@@ -27,7 +27,7 @@ md5sum.c
 dice.c
 disktidy.c
 flipit.c
-
+shopper.c
 
 
 #ifdef USB_ENABLE_HID

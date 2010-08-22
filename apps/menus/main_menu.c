@@ -45,13 +45,10 @@
 #include "buffer.h"
 #include "splash.h"
 #include "debug_menu.h"
-#if defined(SIMULATOR) && defined(ROCKBOX_HAS_LOGF)
-#include "logfdisp.h"
-#endif
 #include "version.h"
 #include "time.h"
 #include "wps.h"
-#include "skin_engine/skin_buffer.h"
+#include "skin_buffer.h"
 
 static const struct browse_folder_info config = {ROCKBOX_DIR, SHOW_CFG};
 
@@ -113,9 +110,12 @@ MAKE_MENU(manage_settings, ID2P(LANG_MANAGE_MENU), NULL, Icon_Config,
 /***********************************/
 /*      INFO MENU                  */
 
+
 static bool show_credits(void)
 {
-    if (plugin_load(VIEWERS_DIR "/credits.rock",NULL) != PLUGIN_OK)
+    char credits[MAX_PATH] = { '\0' };
+    snprintf(credits, MAX_PATH, "%s/credits.rock", VIEWERS_DIR);
+    if (plugin_load(credits, NULL) != PLUGIN_OK)
     {
         /* show the rockbox logo and version untill a button is pressed */
         show_logo();

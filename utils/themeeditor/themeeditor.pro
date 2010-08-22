@@ -1,6 +1,22 @@
+# Setting the binary name
+TARGET = rbthemeeditor
+VERSION = 0.5
+CONFIG(debug) { 
+    REVISION = $$system(svnversion)
+    VERSION = $$join(VERSION,,,r)
+    VERSION = $$join(VERSION,,,$$REVISION)
+}
+
+# Adding network support
+QT += network
+
 # Enabling profiling
 QMAKE_CXXFLAGS_DEBUG += -pg
 QMAKE_LFLAGS_DEBUG += -pg
+
+# Adding zlib dependency for QuaZip
+LIBS += -lz
+INCLUDEPATH += zlib
 
 # build in a separate folder.
 MYBUILDDIR = $$OUT_PWD/build/
@@ -15,11 +31,26 @@ RBBASE_DIR = $$replace(RBBASE_DIR,/utils/themeeditor,)
 INCLUDEPATH += gui
 INCLUDEPATH += models
 INCLUDEPATH += graphics
+INCLUDEPATH += quazip
+INCLUDEPATH += qtfindreplacedialog
+DEFINES += FINDREPLACE_NOLIB
+cross { 
+    message("Crossbuilding for W32 binary")
+    
+    # retrieve ar binary for w32 cross compile. This might be specific to
+    # Fedora mingw32 packages of Qt. Using member() here is needed because at
+    # least the F13 packages add ar options to the variable.
+    CROSSOPTIONS += AR=$$member(QMAKE_LIB)
+    
+    # make sure we use the correct subsystem to prevent a console window coming up.
+    LIBS += -Wl,-subsystem,windows
+}
 
 # Stuff for the parse lib
 libskin_parser.commands = @$(MAKE) \
     TARGET_DIR=$$MYBUILDDIR \
     CC=\"$$QMAKE_CC\" \
+    $$CROSSOPTIONS \
     BUILDDIR=$$OBJECTS_DIR \
     -C \
     $$RBBASE_DIR/lib/skin_parser \
@@ -49,13 +80,36 @@ HEADERS += models/parsetreemodel.h \
     gui/devicestate.h \
     graphics/rbalbumart.h \
     graphics/rbprogressbar.h \
-    gui/findreplacedialog.h \
     graphics/rbtext.h \
     graphics/rbfontcache.h \
     graphics/rbtextcache.h \
     gui/skintimer.h \
     graphics/rbtoucharea.h \
-    gui/newprojectdialog.h
+    gui/newprojectdialog.h \
+    models/targetdata.h \
+    quazip/zip.h \
+    quazip/unzip.h \
+    quazip/quazipnewinfo.h \
+    quazip/quazipfileinfo.h \
+    quazip/quazipfile.h \
+    quazip/quazip.h \
+    quazip/ioapi.h \
+    quazip/crypt.h \
+    zlib/zlib.h \
+    zlib/zconf.h \
+    gui/fontdownloader.h \
+    qtfindreplacedialog/varianteditor.h \
+    qtfindreplacedialog/findreplace_global.h \
+    qtfindreplacedialog/findreplaceform.h \
+    qtfindreplacedialog/findreplacedialog.h \
+    qtfindreplacedialog/findform.h \
+    qtfindreplacedialog/finddialog.h \
+    gui/projectexporter.h \
+    gui/targetdownloader.h \
+    gui/syntaxcompleter.h \
+    graphics/rbmovable.h \
+    graphics/rbscene.h \
+    gui/rbconsole.h
 SOURCES += main.cpp \
     models/parsetreemodel.cpp \
     models/parsetreenode.cpp \
@@ -75,13 +129,31 @@ SOURCES += main.cpp \
     gui/devicestate.cpp \
     graphics/rbalbumart.cpp \
     graphics/rbprogressbar.cpp \
-    gui/findreplacedialog.cpp \
     graphics/rbtext.cpp \
     graphics/rbfontcache.cpp \
     graphics/rbtextcache.cpp \
     gui/skintimer.cpp \
     graphics/rbtoucharea.cpp \
-    gui/newprojectdialog.cpp
+    gui/newprojectdialog.cpp \
+    models/targetdata.cpp \
+    quazip/zip.c \
+    quazip/unzip.c \
+    quazip/quazipnewinfo.cpp \
+    quazip/quazipfile.cpp \
+    quazip/quazip.cpp \
+    quazip/ioapi.c \
+    gui/fontdownloader.cpp \
+    qtfindreplacedialog/varianteditor.cpp \
+    qtfindreplacedialog/findreplaceform.cpp \
+    qtfindreplacedialog/findreplacedialog.cpp \
+    qtfindreplacedialog/findform.cpp \
+    qtfindreplacedialog/finddialog.cpp \
+    gui/projectexporter.cpp \
+    gui/targetdownloader.cpp \
+    gui/syntaxcompleter.cpp \
+    graphics/rbmovable.cpp \
+    graphics/rbscene.cpp \
+    gui/rbconsole.cpp
 OTHER_FILES += README \
     resources/windowicon.png \
     resources/appicon.xcf \
@@ -102,14 +174,32 @@ OTHER_FILES += README \
     resources/lines.xcf \
     resources/lines.png \
     resources/cursor.xcf \
-    resources/cursor.png
+    resources/cursor.png \
+    resources/targetdb \
+    quazip/README.ROCKBOX \
+    quazip/LICENSE.GPL \
+    qtfindreplacedialog/dialogs.pro \
+    resources/tagdb \
+    resources/document-save-as.png \
+    resources/edit-undo.png \
+    resources/edit-redo.png \
+    resources/edit-paste.png \
+    resources/edit-cut.png \
+    resources/edit-copy.png \
+    resources/edit-find-replace.png \
+    resources/applications-system.png
 FORMS += gui/editorwindow.ui \
     gui/preferencesdialog.ui \
     gui/configdocument.ui \
     gui/skinviewer.ui \
-    gui/findreplacedialog.ui \
     gui/skintimer.ui \
-    gui/newprojectdialog.ui
+    gui/newprojectdialog.ui \
+    gui/fontdownloader.ui \
+    qtfindreplacedialog/findreplaceform.ui \
+    qtfindreplacedialog/findreplacedialog.ui \
+    gui/projectexporter.ui \
+    gui/targetdownloader.ui \
+    gui/rbconsole.ui
 RESOURCES += resources.qrc
 win32:RC_FILE = themeeditor.rc
 macx { 

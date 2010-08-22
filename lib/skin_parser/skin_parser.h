@@ -27,6 +27,7 @@ extern "C"
 {
 #endif
 #include <stdlib.h>
+#include <stdbool.h>
 
 /********************************************************************
  ****** Data Structures *********************************************
@@ -101,7 +102,7 @@ struct skin_element
     void* data;
 
     /* The tag or conditional name */
-    struct tag_info *tag;
+    const struct tag_info *tag;
 
     /* Pointer to and size of an array of parameters */
     int params_count;
@@ -115,18 +116,31 @@ struct skin_element
     struct skin_element* next;
 };
 
+enum skin_cb_returnvalue
+{
+    CALLBACK_ERROR = -666,
+    FEATURE_NOT_AVAILABLE,
+    CALLBACK_OK = 0,
+    /* > 0 reserved for future use */
+};
+typedef int (*skin_callback)(struct skin_element* element, void* data);
+
 /***********************************************************************
  ***** Functions *******************************************************
  **********************************************************************/
 
 /* Parses a WPS document and returns a list of skin_element
    structures. */
+#ifdef ROCKBOX
+struct skin_element* skin_parse(const char* document, 
+                                skin_callback callback, void* callback_data);
+#else
 struct skin_element* skin_parse(const char* document);
-
+#endif
 /* Memory management functions */
 struct skin_element* skin_alloc_element(void);
 struct skin_element** skin_alloc_children(int count);
-struct skin_tag_parameter* skin_alloc_params(int count);
+struct skin_tag_parameter* skin_alloc_params(int count, bool use_shared_params);
 char* skin_alloc_string(int length);
 
 void skin_free_tree(struct skin_element* root);

@@ -24,26 +24,36 @@
 
 #include <QGraphicsItem>
 
-class RBAlbumArt : public QGraphicsItem
+#include "rbmovable.h"
+
+class ParseTreeNode;
+
+class RBAlbumArt : public RBMovable
 {
 public:
     RBAlbumArt(QGraphicsItem* parent, int x, int y, int maxWidth, int maxHeight,
-               int artWidth, int artHeight, char hAlign = 'c',
-               char vAlign = 'c');
+               int artWidth, int artHeight, ParseTreeNode* node,
+               char hAlign = 'c', char vAlign = 'c');
 
-    QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                QWidget *widget);
 
     void position(){ this->setPos(size.x(), size.y()); }
+    void enableMove(){
+        setFlag(ItemSendsGeometryChanges, true);
+    }
+
+protected:
+    void saveGeometry();
 
 private:
-    QRectF size;
     int artWidth;
     int artHeight;
     char hAlign;
     char vAlign;
     QPixmap texture;
+
+    ParseTreeNode* node;
 };
 
 #endif // RBALBUMART_H

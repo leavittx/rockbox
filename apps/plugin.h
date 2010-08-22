@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "string-extra.h"
+#include "gcc_extensions.h"
 
 char* strncpy(char *, const char *, size_t);
 void* plugin_get_buffer(size_t *buffer_size);
@@ -65,6 +66,7 @@ void* plugin_get_buffer(size_t *buffer_size);
 #include "profile.h"
 #endif
 #include "misc.h"
+#include "filefuncs.h"
 #if (CONFIG_CODEC == SWCODEC)
 #include "dsp.h"
 #include "codecs.h"
@@ -448,7 +450,7 @@ struct plugin_api {
     bool (*dir_exists)(const char *path);
 
     /* kernel/ system */
-#ifdef CPU_ARM
+#if defined(CPU_ARM) && CONFIG_PLATFORM & PLATFORM_NATIVE
     void (*__div0)(void);
 #endif
     void (*sleep)(int ticks);

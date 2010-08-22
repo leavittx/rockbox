@@ -51,6 +51,10 @@ show the information for the next song to be played.
         \config{\%Vf([fgcolour])}\newline
         \config{\%Vb([bgcolour])}
         & See section \ref{ref:Viewports}\\}
+        
+      \config{\%Vl('identifier',\newline\dots)} & Preloads a viewport for later
+      display. `identifier' is a single lowercase letter (a-z) and the `\dots'
+      parameters use the same logic as the \%V tag explained above.\\
 
       \config{\%Vd('identifier')} & Display the `identifier' viewport. E.g.
       \config{\%?C<\%Vd(a)|\%Vd(b)>}
@@ -77,9 +81,10 @@ show the information for the next song to be played.
                     Can also be used in a conditional: 
                     \config{\%?bl<-1|0|1|2|\ldots|N>},
                     where the value $-1$ is used when the battery level isn't
-                    known (it usually is).
+                    known (it usually is). The value $N$ is only used when the
+                    battery level is exactly 100 percent.
                     An image can also be used, the proportion of the image
-                    shown correspinds to the battery level:
+                    shown corresponds to the battery level:
                     \config{\%bl(x,y,[width],[height],image.bmp)}\\
     \config{\%bv} & The battery level in volts\\
     \config{\%bt} & Estimated battery time left\\
@@ -161,6 +166,29 @@ or \config{\%D(2)}), produce the information for the next file to be played.
            the rest of the track>}\\
     \config{\%Sp} & Current playback pitch\\
   \end{tagmap}
+  
+\section{Playlist Viewer}
+  \begin{tagmap}
+    \config{\%Vp(start,code to render)} & Display the playlist viewer in
+            the current viewport.\\
+  \end{tagmap}
+
+  \begin{itemize}
+    \item `start' is the offset relative to the currently playing track for the
+    playlist to display from (0 the current track, 1 is the next track, etc.).
+    \item `code to render' is a line of skin code which will be displayed for
+    each line in the viewer. All text tags are supporte (including conditionals
+    and sublines)
+  \end{itemize}
+
+  The entire viewport will be used, so don't expect other tags in the same
+  viewport to work well.  Supported tags are \%pp, all tags starting with \%i,
+  most tags starting with \%f, \%pt and \%s.\\
+
+  Example: \config{\%Vp(1,\%pp - \%it,\%pp - \%fn)} -- Display the playlist
+  position, then either the track title (from the tags) or
+  the filename. The viewer will display as many tracks as will fit in the
+  viewport.
 
 \section{Runtime Database}
   \begin{tagmap}
@@ -202,8 +230,7 @@ or \config{\%D(2)}), produce the information for the next file to be played.
   \begin{tagmap}
     \config{\%mm} & Repeat mode, 0-4, in the order: Off, All, One, Shuffle, A-B\\
   \end{tagmap}
-Example: \config{\%?mm<Off|All|One|Shuffle%
-|A-B>}
+Example: \config{\%?mm<Off|All|One|Shuffle|A-B>}
 
 \section{Playback Mode}
   \begin{tagmap}
@@ -211,9 +238,7 @@ Example: \config{\%?mm<Off|All|One|Shuffle%
            Fast Forward, Rewind, Recording, Recording paused, FM Radio playing,
            FM Radio muted\\
   \end{tagmap}
-Example: \config{\%?mp<Stop|Play|Pause|%
-Ffwd|Rew|Rec|Rec pause|FM|%
-FM pause>}
+Example: \config{\%?mp<Stop|Play|Pause|Ffwd|Rew|Rec|Rec pause|FM|FM pause>}
 
 \section{Current Screen}
   \begin{tagmap}
@@ -223,8 +248,7 @@ FM pause>}
 The tag can also be used as the switch in a conditional tag. For players without
 some capabilities (e.g. having no FM radio) some values will be never yielded.
 
-Example: \config{You are in the \%?cs<Main menu|WPS|%
-Recording screen|FM Radio screen>}
+Example: \config{You are in the \%?cs<Main menu|WPS|Recording screen|FM Radio screen>}
 
 \section{List Title (\fname{.sbs} only)}
   \begin{tagmap}
@@ -293,14 +317,20 @@ Examples:
         & Preload an image for later display (useful for when your images are displayed conditionally).\newline
           \config{n}: image ID (a-z and A-Z) for later referencing in \config{\%xd}\newline
           \config{filename}: file name relative to \fname{/.rockbox/} and including ``.bmp''\newline
+            If the filename is ``\_\_list\_icons\_\_'' the list icon bitmap will be used instead\newline
           \config{x}: x coordinate\newline
           \config{y}: y coordinate\newline
           \config{nimages}: (optional) number of sub-images (tiled vertically, of the same height)
           contained in the bitmap. Default is 1.\\
-    \config{\%xd(n[i])} & Display a preloaded image.
+    \config{\%xd(n[i] [,tag] [,offset])} & Display a preloaded image.
           \config{n}: image ID (a-z and A-Z) as it was specified in \config{\%x} or \config{\%xl}\newline
-          \config{i}: (optional) number of the sub-image to display (a-z for 1-26 and A-Z for 27-52).
-          By default the first (i.e. top most) sub-image will be used.\\
+          \config{i}: (optional) number of the sub-image to display (a-z for 1-26 and A-Z for 27-52). 
+          (ignored when \config{tag} is used)
+          By default the first (i.e. top most) sub-image will be used.\newline
+          \config{tag}: (optional) Another tag to calculate the subimage from e.g \config{\%xd(A, \%mh)} would
+          use the first subimage when \config{\%mh} is on and the second when it is off\newline
+          \config{offset}: (optional) Add this number to the value from the \config{tag} when 
+          chosing the subimage (may be negative)\\
   \end{tagmap}
 
 Examples:
@@ -320,9 +350,9 @@ with image ID ``M'', and then reference the individual sub-images in a condition
   \item The images must be in BMP format
   \item The image tag must be on its own line
   \item The ID is case sensitive, giving 52 different ID's
-  \item The size of the LCD screen for each player varies. See table below 
+  \item The size of the LCD screen for each \dap{} varies. See table below 
         for appropriate sizes of each device. The x and y coordinates must 
-        repect each of the players' limits.
+        respect each of the \daps{} limits.
   \end{itemize}
 }
 }
@@ -435,16 +465,26 @@ and must have the same name as the preset. They need to be in either
 and tuned to a preset (and not recording) in order for them to be shown.
 }
 
-\section{Alignment}
+\section{Alignment and language direction}
   \begin{tagmap}
     \config{\%al} & Align the text left\\
     \config{\%aL} & Align the text left, or to the right if RTL language is in use\\
     \config{\%ac} & Centre the text\\
     \config{\%ar} & Align the text right\\
     \config{\%aR} & Align the text right, or to the left if RTL language is in use\\
+    \config{\%ax} & The next tag should follow the set language direction. When
+                    prepended to a viewport declaration, the viewport will
+                    be horizontally mirrored if the user language is set to
+                    a RTL language. Currently the \%Cl, \%V and \%Vl tags
+                    support this.\\
+    \config{\%Sr} & Use as a conditional to define options for left to right, or
+                    right to left languages. \%?Sr<RTL|LTR>\\
   \end{tagmap}
+  
 All alignment tags may be present in one line, but they need to be in the 
 order left -- centre -- right. If the aligned texts overlap, they are merged.
+
+Example: \config{\%ax\%V(\dots)}
 
 \section{Conditional Tags}
 

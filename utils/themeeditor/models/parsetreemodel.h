@@ -29,10 +29,10 @@
 
 #include <QAbstractItemModel>
 #include <QList>
-#include <QGraphicsScene>
 
 #include "parsetreenode.h"
 #include "devicestate.h"
+#include "rbscene.h"
 
 class ParseTreeModel : public QAbstractItemModel
 {
@@ -53,6 +53,8 @@ public:
     QString genCode();
     /* Changes the parse tree to a new document */
     QString changeTree(const char* document);
+
+    /* Model implementation stuff */
     QModelIndex index(int row, int column, const QModelIndex& parent) const;
     QModelIndex parent(const QModelIndex &child) const;
     int rowCount(const QModelIndex &parent) const;
@@ -62,8 +64,8 @@ public:
     Qt::ItemFlags flags(const QModelIndex &index) const;
     bool setData(const QModelIndex &index, const QVariant &value, int role);
 
-    QGraphicsScene* render(ProjectModel* project, DeviceState* device,
-                           const QString* file = 0);
+    RBScene* render(ProjectModel* project, DeviceState* device,
+                    SkinDocument* doc, const QString* file = 0);
 
     static QString safeSetting(ProjectModel* project, QString key,
                                QString fallback)
@@ -74,11 +76,16 @@ public:
             return fallback;
     }
 
+    void paramChanged(ParseTreeNode* param);
+    QModelIndex indexFromPointer(ParseTreeNode* p);
 
 private:
+    void setChildrenUnselectable(QGraphicsItem* root);
+
     ParseTreeNode* root;
+    ParseTreeModel* sbsModel;
     struct skin_element* tree;
-    QGraphicsScene* scene;
+    RBScene* scene;
 };
 
 

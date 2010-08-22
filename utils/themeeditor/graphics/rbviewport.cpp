@@ -21,6 +21,11 @@
 
 #include <QPainter>
 #include <QPainterPath>
+#include <QGraphicsSceneMouseEvent>
+#include <QTransform>
+
+#include <QDebug>
+
 #include <cmath>
 
 #include "rbviewport.h"
@@ -29,17 +34,21 @@
 #include "parsetreemodel.h"
 #include "tag_table.h"
 #include "skin_parser.h"
+#include "skindocument.h"
 
 /* Pixels/second of text scrolling */
 const double RBViewport::scrollRate = 30;
 
-RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
-    : QGraphicsItem(info.screen()), foreground(info.screen()->foreground()),
+RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info,
+                       ParseTreeNode* pNode)
+    : RBMovable(info.screen()), foreground(info.screen()->foreground()),
     background(info.screen()->background()), textOffset(0,0),
     screen(info.screen()), textAlign(Left), showStatusBar(false),
     statusBarTexture(":/render/statusbar.png"),
-    leftGraphic(0), centerGraphic(0), rightGraphic(0), scrollTime(0)
+    leftGraphic(0), centerGraphic(0), rightGraphic(0), scrollTime(0),
+    node(pNode), doc(info.document())
 {
+
     if(!node->tag)
     {
         /* Default viewport takes up the entire screen */
@@ -47,6 +56,20 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
                       info.screen()->getHeight());
         customUI = false;
         font = screen->getFont(1);
+
+        screen->setDefault(this);
+
+        if(screen->getCustomUI())
+        {
+            RBViewport* cui = screen->getCustomUI();
+            size = cui->boundingRect();
+            setPos(cui->pos());
+
+        }
+
+        /* Making sure the default viewport can't be graphically manipulated */
+        setFlag(ItemIsSelectable, false);
+        setFlag(ItemIsMovable, false);
 
         if(info.model()->rowCount(QModelIndex()) > 1)
         {
@@ -60,7 +83,6 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
     }
     else
     {
-        int param = 0;
         QString ident;
         int x,y,w,h;
         /* Rendering one of the other types of viewport */
@@ -68,7 +90,7 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
         {
         case '\0':
             customUI = false;
-            param = 0;
+            baseParam= 0;
             break;
 
         case 'l':
@@ -78,13 +100,13 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
             if(!screen->viewPortDisplayed(ident))
                 hide();
             info.screen()->loadViewport(ident, this);
-            param = 1;
+            baseParam= 1;
             break;
 
         case 'i':
             /* Custom UI Viewport */
             customUI = true;
-            param = 1;
+            baseParam= 1;
             if(node->params[0].type == skin_tag_parameter::DEFAULT)
             {
                 setVisible(true);
@@ -97,6 +119,7 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
             break;
         }
         /* Now we grab the info common to all viewports */
+        int param = baseParam;
         x = node->params[param++].data.number;
         if(x < 0)
             x = info.screen()->boundingRect().right() + x;
@@ -136,6 +159,17 @@ RBViewport::RBViewport(skin_element* node, const RBRenderInfo& info)
 
     debug = info.device()->data("showviewports").toBool();
     lineHeight = font->lineHeight();
+
+    if(info.screen()->isRtlMirrored() && info.device()->data("rtl").toBool())
+    {
+        /* Mirroring the viewport */
+        double x = screen->boundingRect().width() - 2 * pos().x();
+        QTransform t;
+        t.translate(x, 0);
+        t.scale(-1, 1);
+        setTransform(t);
+    }
+
     if(customUI)
         screen->setCustomUI(this);
 }
@@ -149,11 +183,6 @@ QPainterPath RBViewport::shape() const
     QPainterPath retval;
     retval.addRect(size);
     return retval;
-}
-
-QRectF RBViewport::boundingRect() const
-{
-    return size;
 }
 
 void RBViewport::paint(QPainter *painter,
@@ -171,6 +200,8 @@ void RBViewport::paint(QPainter *painter,
 
     if(showStatusBar)
         painter->fillRect(QRectF(0, 0, size.width(), 8), statusBarTexture);
+
+    RBMovable::paint(painter, option, widget);
 }
 
 void RBViewport::newLine()
@@ -207,87 +238,52 @@ void RBViewport::write(QString text)
     if(textOffset.x() < 0)
         return;
 
-    if(textAlign == Left)
+    Alignment align = textAlign;
+
+    if(align == Left)
     {
         leftText.append(text);
     }
-    else if(textAlign == Center)
+    else if(align == Center)
     {
         centerText.append(text);
     }
-    else if(textAlign == Right)
+    else if(align == Right)
     {
         rightText.append(text);
     }
 }
 
 void RBViewport::showPlaylist(const RBRenderInfo &info, int start,
-                              skin_element *id3, skin_element *noId3)
+                              ParseTreeNode* lines)
 {
-    /* Determining whether ID3 info is available */
-    skin_element* root = id3;
-
-    /* The line will be a linked list */
-    if(root->children_count > 0)
-        root = root->children[0];
 
     int song = start + info.device()->data("pp").toInt();
     int numSongs = info.device()->data("pe").toInt();
-    int halfWay = (numSongs - song) / 2 + 1 + song;
 
     while(song <= numSongs && textOffset.y() + lineHeight < size.height())
     {
-        if(song == halfWay)
-        {
-            root = noId3;
-            if(root->children_count > 0)
-                root = root->children[0];
-        }
-        skin_element* current = root;
-        while(current)
-        {
-
-            if(current->type == TEXT)
-            {
-                write(QString((char*)current->data));
-            }
-
-            if(current->type == TAG)
-            {
-                QString tag(current->tag->name);
-                if(tag == "pp")
-                {
-                    write(QString::number(song));
-                }
-                else if(tag == "pt")
-                {
-                    write(QObject::tr("00:00"));
-                }
-                else if(tag[0] == 'i' || tag[0] == 'f')
-                {
-                    if(song == info.device()->data("pp").toInt())
-                    {
-                        write(info.device()->data(tag).toString());
-                    }
-                    else
-                    {
-                        /* If we're not on the current track, use the next
-                         * track info
-                         */
-                        if(tag[0] == 'i')
-                            tag = QString("I") + tag.right(1);
-                        else
-                            tag = QString("F") + tag.right(1);
-                        write(info.device()->data(tag).toString());
-                    }
-                }
-            }
-
-            current = current->next;
-        }
+        lines->render(info, this);
         newLine();
         song++;
     }
+}
+
+void RBViewport::makeFullScreen()
+{
+    size = screen->boundingRect();
+    setPos(screen->pos());
+}
+
+void RBViewport::saveGeometry()
+{
+    QRectF bounds = boundingRect();
+    QPointF origin = pos();
+
+    node->modParam(static_cast<int>(origin.x()), baseParam);
+    node->modParam(static_cast<int>(origin.y()), baseParam + 1);
+    node->modParam(static_cast<int>(bounds.width()), baseParam + 2);
+    node->modParam(static_cast<int>(bounds.height()), baseParam + 3);
 }
 
 void RBViewport::alignLeft()

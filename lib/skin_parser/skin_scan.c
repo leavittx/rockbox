@@ -32,7 +32,7 @@
 /* Scanning Functions */
 
 /* Simple function to advance a char* past a comment */
-void skip_comment(char** document)
+void skip_comment(const char** document)
 {
     while(**document != '\n' && **document != '\0')
         (*document)++;
@@ -40,13 +40,7 @@ void skip_comment(char** document)
         (*document)++;
 }
 
-void skip_whitespace(char** document)
-{
-    while(**document == ' ' || **document == '\t')
-        (*document)++;
-}
-
-void skip_arglist(char** document)
+void skip_arglist(const char** document)
 {
     if(**document == ARGLISTOPENSYM)
         (*document)++;
@@ -72,7 +66,7 @@ void skip_arglist(char** document)
         (*document)++;
 }
 
-void skip_enumlist(char** document)
+void skip_enumlist(const char** document)
 {
     if(**document == ENUMLISTOPENSYM)
         (*document)++;
@@ -99,10 +93,10 @@ void skip_enumlist(char** document)
         (*document)++;
 }
 
-char* scan_string(char** document)
+char* scan_string(const char** document)
 {
 
-    char* cursor = *document;
+    const char* cursor = *document;
     int length = 0;
     char* buffer = NULL;
     int i;
@@ -121,7 +115,7 @@ char* scan_string(char** document)
 
         if(*cursor == '\n')
         {
-            skin_error(UNEXPECTED_NEWLINE);
+            skin_error(UNEXPECTED_NEWLINE, cursor);
             return NULL;
         }
 
@@ -132,6 +126,8 @@ char* scan_string(char** document)
     /* Copying the string */
     cursor = *document;
     buffer = skin_alloc_string(length);
+    if (!buffer)
+        return NULL;
     buffer[length] = '\0';
     for(i = 0; i < length; i++)
     {
@@ -153,10 +149,10 @@ char* scan_string(char** document)
     return buffer;
 }
 
-int scan_int(char** document)
+int scan_int(const char** document)
 {
 
-    char* cursor = *document, *end;
+    const char *cursor = *document, *end;
     int length = 0;
     char buffer[16];
     int retval;
@@ -198,7 +194,7 @@ int scan_int(char** document)
     return retval;
 }
 
-int check_viewport(char* document)
+int check_viewport(const char* document)
 {
     if(strlen(document) < 3)
         return 0;

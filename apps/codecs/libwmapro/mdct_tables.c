@@ -1,3 +1,4 @@
+#include "wmaprodec.h"
 #include <inttypes.h>
   
 /* Tables for fixed-point trig tables for windowing and mdct */
@@ -689,7 +690,7 @@ const int32_t sine_4096[] = {
     0x8000078F, 0x800003DC, 0x80000164, 0x80000028
 };
 
-const int32_t sine_2048[] = {
+const int32_t sine_2048[] ICONST_ATTR_WMAPRO_WIN_VS_TMP = {
     0xFFF36F03, 0xFFDA4D09, 0xFFC12B0F, 0xFFA80918, 0xFF8EE725, 0xFF75C536, 
     0xFF5CA34B, 0xFF438168, 0xFF2A5F8C, 0xFF113DB7, 0xFEF81BEE, 0xFEDEFA2D, 
     0xFEC5D876, 0xFEACB6CE, 0xFE939531, 0xFE7A73A2, 0xFE615224, 0xFE4830B4, 
@@ -1297,7 +1298,7 @@ const int32_t sine_512[] = {
     0x800058D4, 0x800009DF
 };
 
-const int32_t sine_256[] = {
+const int32_t sine_256[] ICONST_ATTR_WMAPRO_WIN_VS_TMP = {
     0xFF9B781E, 0xFED26950, 0xFE095D6B, 0xFD40565E, 0xFC775617, 0xFBAE5E8D, 
     0xFAE571A2, 0xFA1C9157, 0xF953BF94, 0xF88AFE40, 0xF7C24F61, 0xF6F9B4C9, 
     0xF6313075, 0xF568C463, 0xF4A07264, 0xF3D83C74, 0xF3102493, 0xF2482C8D, 
@@ -1343,7 +1344,7 @@ const int32_t sine_256[] = {
     0x80078E60, 0x8003DAF2, 0x8001634E, 0x8000277B
 };
 
-const int32_t sine_128[] = {
+const int32_t sine_128[] ICONST_ATTR = {
     0xFF36F079, 0xFDA4D929, 0xFC12D91C, 0xFA80FFCF, 0xF8EF5CBC, 0xF75DFF6C, 
     0xF5CCF73F, 0xF43C53CB, 0xF2AC2474, 0xF11C7895, 0xEF8D5FC8, 0xEDFEE931, 
     0xEC71244A, 0xEAE4208A, 0xE957ED00, 0xE7CC9912, 0xE642341D, 0xE4B8CD16, 
@@ -1377,6 +1378,7 @@ const int32_t *sine_windows[6] = {
    the table should be in s.31 format, but in wma pro, all the tables are scaled
    down to preserve energy in the signal, so this downscaling is equivalent to 
    having the tables in ~s15.16 instead. */
+/* rockbox: not used
 const int32_t sincos_lookup_wmap[8064] = {
     0x0000011C, 0x00016A09, 0x000009FE, 0x000169E6, 
     0x000012DF, 0x0001698B, 0x00001BBD, 0x000168F9, 
@@ -3386,4 +3388,4 @@ const int32_t sincos_lookup_wmap[8064] = {
     0x00003FFD, 0x00000112, 0x00003FFD, 0x00000106, 
     0x00003FFE
 };
-
+*/

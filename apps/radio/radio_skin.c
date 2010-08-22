@@ -85,6 +85,11 @@ void fms_fix_displays(enum fms_exiting toggle_state)
             viewportmanager_theme_undo(i, skin_has_sbs(i, fms_skin[i].data));
         }
     }
+#ifdef HAVE_TOUCHSCREEN
+    if (!fms_skin[SCREEN_MAIN].data->touchregions)
+        touchscreen_set_mode(toggle_state == FMS_ENTER ? 
+                              TOUCHSCREEN_BUTTON : global_settings.touch_mode);
+#endif
 }
         
 
@@ -109,7 +114,7 @@ void fms_skin_init(void)
 int fms_do_button_loop(bool update_screen)
 {
     int button = skin_wait_for_action(fms_skin, CONTEXT_FM, 
-                                      update_screen ? TIMEOUT_NOBLOCK : HZ);
+                                      update_screen ? TIMEOUT_NOBLOCK : HZ/5);
 #ifdef HAVE_TOUCHSCREEN
     int offset;
     if (button == ACTION_TOUCHSCREEN)

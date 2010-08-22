@@ -124,7 +124,8 @@
 #define CURRENT_NORMAL     68  /* measured during playback unboosted */
 #define CURRENT_BACKLIGHT  24  /* measured */
 #define CURRENT_RECORD     40  /* additional current while recording */
-#define CURRENT_REMOTE      0  /* additional current when remote connected */
+#define CURRENT_ATA       100  /* additional current when ata system is ON */
+/* #define CURRENT_REMOTE      0  additional current when remote connected */
 
 #define CONFIG_CHARGING CHARGING_MONITOR
 

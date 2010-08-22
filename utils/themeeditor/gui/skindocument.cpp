@@ -36,7 +36,8 @@ const int SkinDocument::updateInterval = 500;
 SkinDocument::SkinDocument(QLabel* statusLabel, ProjectModel* project,
                            DeviceState* device, QWidget *parent)
                                :TabContent(parent), statusLabel(statusLabel),
-                               project(project), device(device)
+                               project(project), device(device),
+                               treeInSync(true)
 {
     setupUI();
 
@@ -53,7 +54,7 @@ SkinDocument::SkinDocument(QLabel* statusLabel, QString file,
                            QWidget *parent)
                                :TabContent(parent), fileName(file),
                                statusLabel(statusLabel), project(project),
-                               device(device)
+                               device(device), treeInSync(true)
 {
     setupUI();
     blockUpdate = false;
@@ -72,6 +73,21 @@ SkinDocument::SkinDocument(QLabel* statusLabel, QString file,
     /* Setting the title */
     QStringList decomposed = fileName.split('/');
     titleText = decomposed.last();
+
+    /* Setting the current screen device setting */
+    QString extension = titleText.split(".").last().toLower().right(3);
+    if(extension == "wps")
+    {
+        device->setData("cs", "WPS");
+    }
+    else if(extension == "sbs")
+    {
+        device->setData("cs", "Menus");
+    }
+    else if(extension == "fms")
+    {
+        device->setData("cs", "FM Radio Screen");
+    }
 
     lastUpdate = QTime::currentTime();
 }
@@ -148,6 +164,9 @@ void SkinDocument::setupUI()
     /* Setting up the model */
     model = new ParseTreeModel("");
 
+    QObject::connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+                     this, SLOT(modelChanged()));
+
     /* Connecting the editor's signal */
     QObject::connect(editor, SIGNAL(textChanged()),
                      this, SLOT(codeChanged()));
@@ -211,7 +230,9 @@ void SkinDocument::cursorChanged()
         skin_parse(line.selectedText().toAscii());
         if(skin_error_line() > 0)
             parseStatus = tr("Error on line ") +
-                          QString::number(line.blockNumber() + 1) + tr(": ") +
+                          QString::number(line.blockNumber() + 1)
+                          + tr(", column ") + QString::number(skin_error_col())
+                          + tr(": ") +
                           skin_error_message();
         statusLabel->setText(parseStatus);
     }
@@ -243,6 +264,10 @@ void SkinDocument::codeChanged()
     editor->clearErrors();
     parseStatus = model->changeTree(editor->document()->
                                     toPlainText().toAscii());
+
+    treeInSync = true;
+    emit antiSync(false);
+
     if(skin_error_line() > 0)
         parseStatus = tr("Errors in document");
     statusLabel->setText(parseStatus);
@@ -284,7 +309,7 @@ void SkinDocument::codeChanged()
 
     if(lastUpdate.msecsTo(QTime::currentTime()) >= updateInterval)
     {
-        model->render(project, device, &fileName);
+        model->render(project, device, this, &fileName);
         checkUpdate.stop();
         lastUpdate = QTime::currentTime();
     }
@@ -294,6 +319,12 @@ void SkinDocument::codeChanged()
     }
     cursorChanged();
 
+}
+
+void SkinDocument::modelChanged()
+{
+    treeInSync = false;
+    emit antiSync(true);
 }
 
 void SkinDocument::save()

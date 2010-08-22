@@ -41,6 +41,7 @@
 #include "pcmbuf.h"
 #include "errno.h"
 #include "diacritic.h"
+#include "filefuncs.h"
 
 #if CONFIG_CHARGING
 #include "power.h"
@@ -344,7 +345,7 @@ static const struct plugin_api rockbox_api = {
     dir_exists,
 
     /* kernel/ system */
-#ifdef CPU_ARM
+#if defined(CPU_ARM) && CONFIG_PLATFORM & PLATFORM_NATIVE
     __div0,
 #endif
     PREFIX(sleep),
@@ -879,7 +880,7 @@ int plugin_load(const char* plugin, const void* parameter)
 #endif
 
     lcd_clear_display();
-#ifdef HAVE_LCD_REMOTE
+#ifdef HAVE_REMOTE_LCD
     lcd_remote_clear_display();
 #endif
 

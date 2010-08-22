@@ -27,12 +27,31 @@ extern "C"
 {
 #endif
 
+#define MAX_TAG_PARAMS 12
+
+
     /* Flag to tell the renderer not to insert a line break */
 #define NOBREAK 0x1
 
+/* constants used in line_type and as refresh_mode for wps_refresh */
+#define SKIN_REFRESH_SHIFT           16
+#define SKIN_REFRESH_STATIC          (1u<<SKIN_REFRESH_SHIFT)  /* line doesn't change over time */
+#define SKIN_REFRESH_DYNAMIC         (1u<<(SKIN_REFRESH_SHIFT+1))  /* line may change (e.g. time flag) */
+#define SKIN_REFRESH_SCROLL          (1u<<(SKIN_REFRESH_SHIFT+2))  /* line scrolls */
+#define SKIN_REFRESH_PLAYER_PROGRESS (1u<<(SKIN_REFRESH_SHIFT+3))  /* line contains a progress bar */
+#define SKIN_REFRESH_PEAK_METER      (1u<<(SKIN_REFRESH_SHIFT+4))  /* line contains a peak meter */
+#define SKIN_REFRESH_STATUSBAR       (1u<<(SKIN_REFRESH_SHIFT+5))  /* refresh statusbar */
+#define SKIN_RTC_REFRESH             (1u<<(SKIN_REFRESH_SHIFT+6))  /* refresh rtc, convert at parse time */
+#define SKIN_REFRESH_ALL             (0xffffu<<SKIN_REFRESH_SHIFT)   /* to refresh all line types */
+
+/* to refresh only those lines that change over time */
+#define SKIN_REFRESH_NON_STATIC (SKIN_REFRESH_DYNAMIC| \
+                                 SKIN_REFRESH_PLAYER_PROGRESS| \
+                                 SKIN_REFRESH_PEAK_METER)
 
 enum skin_token_type {
     
+    SKIN_TOKEN_NO_TOKEN,
     SKIN_TOKEN_UNKNOWN,
 
     /* Markers */
@@ -54,6 +73,7 @@ enum skin_token_type {
     SKIN_TOKEN_SUBLINE_SCROLL,
     
     /* Conditional */
+    SKIN_TOKEN_LOGICAL_IF,
     SKIN_TOKEN_CONDITIONAL,
     SKIN_TOKEN_CONDITIONAL_START,
     SKIN_TOKEN_CONDITIONAL_OPTION,
@@ -91,7 +111,7 @@ enum skin_token_type {
     /* The begin/end values allow us to know if a token is an RTC one.
        New RTC tokens should be added between the markers. */
 
-    SKIN_TOKENs_RTC_BEGIN, /* just the start marker, not an actual token */
+    SKIN_TOKENS_RTC_BEGIN, /* just the start marker, not an actual token */
 
     SKIN_TOKEN_RTC_DAY_OF_MONTH,
     SKIN_TOKEN_RTC_DAY_OF_MONTH_BLANK_PADDED,
@@ -137,6 +157,7 @@ enum skin_token_type {
     SKIN_TOKEN_IMAGE_PRELOAD,
     SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY,
     SKIN_TOKEN_IMAGE_DISPLAY,
+    SKIN_TOKEN_IMAGE_DISPLAY_LISTICON,
     
     /* Albumart */
     SKIN_TOKEN_ALBUMART_LOAD,
@@ -254,6 +275,7 @@ enum skin_token_type {
  *             F - Required file name
  *             f - Nullable file name
  *             C - Required skin code
+ *             T - Required single skin tag
  *             N - any amount of strings.. must be the last param in the list
  *             \n - causes the parser to eat everything up to and including the \n
  *                  MUST be the last character of the prams string
@@ -270,6 +292,10 @@ enum skin_token_type {
  *             2s
  *          will specify two strings.  An asterisk (*) at the beginning of the
  *          string will specify that you may choose to omit all arguments
+ * 
+ *          You may also group param types in [] which will tell the parser to 
+ *          accept any *one* of those types for that param. i.e [IT] will
+ *          accept either an integer or tag type. [ITs] will also accept a string or -
  *
  */
 struct tag_info
@@ -284,7 +310,7 @@ struct tag_info
  * Finds a tag by name and returns its parameter list, or an empty
  * string if the tag is not found in the table
  */
-struct tag_info* find_tag(char* name);
+const struct tag_info* find_tag(const char* name);
 
 /*
  * Determines whether a character is legal to escape or not.  If 

@@ -22,8 +22,11 @@
 #ifndef AVCODEC_WMA_H
 #define AVCODEC_WMA_H
 
-#include "get_bits.h"
-#include "put_bits.h"
+#include "ffmpeg_get_bits.h"
+#include "ffmpeg_put_bits.h"
+
+#define WMAPRO_FRACT (17)
+#define WMAPRO_DSP_SAMPLE_DEPTH (WMAPRO_FRACT + 8)
 
 /* size of blocks */
 #define BLOCK_MIN_BITS 7
@@ -50,8 +53,6 @@
 #define VLCBITS 9
 #define VLCMAX ((22+VLCBITS-1)/VLCBITS)
 
-typedef float WMACoef;          ///< type for decoded coefficients, int16_t would be enough for wma 1/2
-
 typedef struct CoefVLCTable {
     int n;                      ///< total number of codes
     int max_level;
@@ -63,7 +64,6 @@ typedef struct CoefVLCTable {
 
 int ff_wma_get_frame_len_bits(int sample_rate, int version,
                                       unsigned int decode_flags);
-int ff_wma_total_gain_to_bits(int total_gain);
 unsigned int ff_wma_get_large_val(GetBitContext* gb);
 int ff_wma_run_level_decode(GetBitContext* gb,
                             VLC *vlc,

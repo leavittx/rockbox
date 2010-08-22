@@ -81,12 +81,20 @@ public:
         if(albumArt)
         {
             albumArt->setParentItem(view);
-            albumArt->position();
             albumArt->show();
+            albumArt->enableMove();
         }
     }
 
+    void setDefault(RBViewport* view){ defaultView = view; }
+    void endSbsRender();
     void breakSBS();
+
+    void RtlMirror(){ ax = true; }
+    bool isRtlMirrored(){ bool ret = ax; ax = false; return ret; }
+
+protected:
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event);
 
 private:
     int width;
@@ -108,6 +116,11 @@ private:
 
     RBAlbumArt* albumArt;
     RBViewport* customUI;
+    RBViewport* defaultView;
+
+    QList<QGraphicsItem*> sbsChildren;
+
+    bool ax;
 };
 
 #endif // RBSCREEN_H

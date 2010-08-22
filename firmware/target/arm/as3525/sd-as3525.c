@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "gcc_extensions.h"
 #include "as3525.h"
 #include "pl180.h"  /* SD controller */
 #include "pl081.h"  /* DMA controller */
@@ -52,7 +53,7 @@
 #include "disk.h"
 #endif
 
-#define VERIFY_WRITE 1
+//#define VERIFY_WRITE 1
 
 /* command flags */
 #define MCI_NO_RESP     (0<<0)
@@ -382,6 +383,7 @@ static int sd_init_card(const int drive)
     if(!send_cmd(drive, SD_SELECT_CARD, card_info[drive].rca, MCI_RESP, &response))
         return -10;
 
+#if 0 /* FIXME : it seems that reading fails on some models */
     /*  Switch to to 4 bit widebus mode  */
     if(sd_wait_for_tran_state(drive) < 0)
         return -11;
@@ -393,6 +395,7 @@ static int sd_init_card(const int drive)
         return -13;
     /* Now that card is widebus make controller aware */
     MCI_CLOCK(drive) |= MCI_CLOCK_WIDEBUS;
+#endif
 
     /*
      * enable bank switching
@@ -430,7 +433,7 @@ static int sd_init_card(const int drive)
     return 0;
 }
 
-static void sd_thread(void) __attribute__((noreturn));
+static void sd_thread(void) NORETURN_ATTR;
 static void sd_thread(void)
 {
     struct queue_event ev;
@@ -564,8 +567,8 @@ int sd_init(void)
     bitset32(&CGU_PERI, CGU_NAF_CLOCK_ENABLE);
 #ifdef HAVE_MULTIDRIVE
     bitset32(&CGU_PERI, CGU_MCI_CLOCK_ENABLE);
-    CCU_IO &= ~(1<<3);           /* bits 3:2 = 01, xpd is SD interface */
-    CCU_IO |= (1<<2);
+    bitclr32(&CCU_IO, 1<<3);    /* bits 3:2 = 01, xpd is SD interface */
+    bitset32(&CCU_IO, 1<<2);
 #endif
 
     wakeup_init(&transfer_completion_signal);
@@ -913,8 +916,11 @@ int sd_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
     ret = sd_transfer_sectors(IF_MD2(drive,) start, count, (void*)buf, true);
 
 #ifdef VERIFY_WRITE
-    if (ret) /* write failed, no point in verifying */
-        goto write_error;
+    if (ret) {
+        /* write failed, no point in verifying */
+        mutex_unlock(&sd_mtx);
+        return ret;
+    }
 
     count = saved_count;
     buf = saved_buf;
@@ -937,7 +943,6 @@ int sd_write_sectors(IF_MD2(int drive,) unsigned long start, int count,
     }
 #endif
 
-write_error:
     mutex_unlock(&sd_mtx);
 
     return ret;
@@ -968,7 +973,7 @@ void sd_enable(bool on)
 #if defined(HAVE_BUTTON_LIGHT) && defined(HAVE_MULTIDRIVE)
         /* buttonlight AMSes need a bit of special handling for the buttonlight
          * here due to the dual mapping of GPIOD and XPD */
-        CCU_IO |= (1<<2);              /* XPD is SD-MCI interface (b3:2 = 01) */
+        bitset32(&CCU_IO, 1<<2);    /* XPD is SD-MCI interface (b3:2 = 01) */
         if (buttonlight_is_on)
             GPIOD_DIR &= ~(1<<7);
         else
@@ -994,7 +999,7 @@ void sd_enable(bool on)
 #endif  /* defined(HAVE_HOTSWAP) && defined (HAVE_ADJUSTABLE_CPU_VOLTAGE) */
 
 #if defined(HAVE_BUTTON_LIGHT) && defined(HAVE_MULTIDRIVE)
-        CCU_IO &= ~(1<<2);           /* XPD is general purpose IO (b3:2 = 00) */
+        bitclr32(&CCU_IO, 1<<2);    /* XPD is general purpose IO (b3:2 = 00) */
         if (buttonlight_is_on)
             _buttonlight_on();
 #endif

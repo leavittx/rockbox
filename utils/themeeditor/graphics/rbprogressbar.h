@@ -25,26 +25,33 @@
 #include <QGraphicsItem>
 #include <QPixmap>
 
+#include "rbmovable.h"
 #include "rbrenderinfo.h"
 #include "rbviewport.h"
 #include "devicestate.h"
 #include "skin_parser.h"
 
-class RBProgressBar : public QGraphicsItem
+class ParseTreeNode;
+
+class RBProgressBar : public RBMovable
 {
 public:
     RBProgressBar(RBViewport* parent, const RBRenderInfo& info,
-                  int paramCount, skin_tag_parameter* params, bool pv = 0);
+                  ParseTreeNode* node, bool pv = 0);
     virtual ~RBProgressBar();
 
-    QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                QWidget *widget);
+
+protected:
+    void saveGeometry();
 
 private:
     QPixmap* bitmap;
     QColor color;
-    QRectF size;
+    QRectF renderSize;
+
+    ParseTreeNode* node;
 
 };
 
