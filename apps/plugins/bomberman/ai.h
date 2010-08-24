@@ -27,6 +27,8 @@
 
 #include "game.h"
 
+#define UNREAL_F 10000
+
 
 typedef struct
 {
@@ -40,7 +42,13 @@ typedef struct
 typedef struct
 {
   int X, Y;
-  int F;
+  //int F;
 } PATHELEM;
+
+typedef struct
+{
+  PATHELEM Path[MAP_W * MAP_H];
+  int Distance;
+} PATH;
 
 #endif /* _AI_H_ */
