@@ -111,7 +111,8 @@ void Draw(Game *game)
 	int xcoord[3] = { -4, 0, 4 };
 	//int ycoord[3] = { 3, 9, 14 };
 	//int ycoord[3] = { 1, 6, 12 };
-	int ycoord[3] = { 12, 6, 1 };
+	//int ycoord[3] = { 12, 6, 1 };
+	int ycoord[3] = { 9, 3, -2 };
 
 	if (game->player.ismove)
 	{

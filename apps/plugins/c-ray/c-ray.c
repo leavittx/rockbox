@@ -37,11 +37,6 @@
  * (uint8_t, uint32_t), this will make everything for us */
 #include <inttypes.h>
 
-/* This macros must always be included. 
- * Should be placed at the top by convention,
- * although the actual position doesn't matter */
-PLUGIN_HEADER
-
 #define SLEEP_TIME 10
 bool DEBUG = false;
 

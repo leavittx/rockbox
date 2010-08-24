@@ -27,10 +27,6 @@
 #include "lib/pluginlib_touchscreen.c"
 #include "lib/helper.h"
 
-/* This macros must always be included. Should be placed at the top by
-   convention, although the actual position doesn't matter */
-PLUGIN_HEADER
-
 #define SLEEP_TIME 3
 
 struct Color
