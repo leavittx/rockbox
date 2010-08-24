@@ -53,11 +53,21 @@ void Draw(Game *game)
 				case SQUARE_FREE:
 					break;
 				case SQUARE_BOX:
+					/*
 					rb->lcd_bitmap_transparent(bomberman_box,
 						i * SQUARE_SIZE + XMAPOFFSET,
 						j * SQUARE_SIZE + YMAPOFFSET,
 						BMPWIDTH_bomberman_box,
 						BMPHEIGHT_bomberman_box);
+					*/
+					rb->lcd_bitmap_transparent_part(bomberman_box,
+						game->field.boxes[i][j].state * SQUARE_SIZE,
+						0,
+						STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_box, BMPHEIGHT_bomberman_box),
+						i * SQUARE_SIZE + XMAPOFFSET,
+						j * SQUARE_SIZE + YMAPOFFSET,
+						SQUARE_SIZE,
+						SQUARE_SIZE);
 					break;
 				case SQUARE_BLOCK:
 					rb->lcd_bitmap_transparent(bomberman_block,

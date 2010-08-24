@@ -28,12 +28,14 @@
 #define MAP_H 11
 
 #define BOMBS_MAX_NUM 100
-#define BOMB_DELAY_DET (HZ * 7) /* Two seconds before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 5) /* Two seconds before bomb detanates */
 #define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 90)
-#define BOMB_DELAY_PHASE1 (HZ * 7.1)
-#define BOMB_DELAY_PHASE2 (HZ * 7.2)
-#define BOMB_DELAY_PHASE3 (HZ * 7.3)
-#define BOMB_DELAY_PHASE4 (HZ * 7.4)
+#define BOMB_DELAY_PHASE1 (HZ * 5.1)
+#define BOMB_DELAY_PHASE2 (HZ * 5.2)
+#define BOMB_DELAY_PHASE3 (HZ * 5.3)
+#define BOMB_DELAY_PHASE4 (HZ * 5.4)
+
+#define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1)
 
 #define PLAYER_MOVE_PART_TIME (HZ * 0.005)
 
@@ -130,11 +132,27 @@ typedef enum {
 	DET_PHASE3
 } BombDetonation;
 
+typedef enum {
+	HUNKY,
+	EXPL_PHASE1,
+	EXPL_PHASE2,
+	EXPL_PHASE3,
+	EXPL_PHASE4,
+	EXPL_PHASE5
+} BoxState;
+
+typedef struct
+{
+	BoxState state;
+	unsigned long expl_time;
+} BoxDetonation;
+
 typedef struct {
 	SqType map[MAP_W][MAP_H];
 	Bomb bombs[BOMBS_MAX_NUM];
 	Fire firemap[MAP_W][MAP_H];
 	BombDetonation det[MAP_W][MAP_H];
+	BoxDetonation boxes[MAP_W][MAP_H];
 	//Bonus bonuses[BONUSES_MAX_NUM];
 } Field;
 
@@ -151,5 +169,6 @@ void PlayerMoveLeft(Game *game, Player *player);
 void UpdatePlayer(Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
+void UpdateBoxes(Game *game);
 
 #endif /* _GAME_H */

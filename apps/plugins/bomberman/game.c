@@ -284,7 +284,9 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 			if (game->field.map[curx][cury] == SQUARE_BOX)
 			{
 				game->field.firemap[curx][cury].state = BOMB_NONE;
-				game->field.map[curx][cury] = SQUARE_FREE;
+				//game->field.map[curx][cury] = SQUARE_FREE;
+				game->field.boxes[curx][cury].state = EXPL_PHASE1;
+				game->field.boxes[curx][cury].expl_time = get_tick();
 				break;
 			}
 			if (game->field.map[curx][cury] == SQUARE_BLOCK)
@@ -543,7 +545,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 void UpdateBombs(Game *game)
 {
 	int i;
-	static int detphases[4] = {	0, 1, 2, 1 };
+	static int detphases[4] = { 0, 1, 2, 1 }; // This helps with detonation animation
 	
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 	{
@@ -553,6 +555,7 @@ void UpdateBombs(Game *game)
 		int x = game->field.bombs[i].xpos, y = game->field.bombs[i].ypos;
 		int rad = game->bomb_rad[game->field.bombs[i].power];
 		
+		/* Update detonation animation */
 		game->field.det[x][y] = detphases[((get_tick() - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
 		
 		if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
@@ -619,4 +622,21 @@ void UpdateBombs(Game *game)
 			FirePhase1(game, x, y, rad, FIRE_UP);
 		}
 	}
+}
+
+void UpdateBoxes(Game *game)
+{
+	int i, j;
+	
+	for (i = 0; i < MAP_W; i++)
+		for (j = 0; j < MAP_H; j++)
+			if (game->field.map[i][j] == SQUARE_BOX && game->field.boxes[i][j].state > HUNKY)
+			{
+				//game->field.boxes[i][j].state++;
+				//	break;
+				game->field.boxes[i][j].state = 
+					(get_tick() - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
+				if (game->field.boxes[i][j].state > EXPL_PHASE5)
+					game->field.map[i][j] = SQUARE_FREE;
+			}
 }

@@ -78,6 +78,7 @@ void InitGame(Game *game)
 		{
 			game->field.map[i][j] = DefaultMap[j][i];//SQUARE_FREE;
 			game->field.firemap[i][j].state = BOMB_NONE;
+			game->field.boxes[i][j].state = HUNKY;
 		}
 			
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
@@ -124,6 +125,7 @@ int plugin_main(void)
 	
 		UpdatePlayer(&game.player);
 		UpdateBombs(&game);
+		UpdateBoxes(&game);
 		
 		rb->sleep(SLEEP_TIME);
 		
