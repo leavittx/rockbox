@@ -71,6 +71,7 @@ typedef struct {
 	bool ismove;
 	int move_phase;
 	unsigned long move_start_time;
+	bool IsAIPlayer;
 } Player;
 
 typedef enum {
