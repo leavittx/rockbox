@@ -34,6 +34,8 @@
 #define BOMB_DELAY_PHASE3 (HZ * 2.3)
 #define BOMB_DELAY_PHASE4 (HZ * 2.4)
 
+#define PLAYER_MOVE_PART_TIME (HZ * 0.005)
+
 typedef enum {
 	SQUARE_FREE,
 	SQUARE_BOX,
@@ -64,6 +66,11 @@ typedef struct {
 	int bombs_max;
 	int bombs_placed;
 	BombPower bomb_power;
+	
+	int rxpos, rypos;
+	bool ismove;
+	int move_phase;
+	unsigned long move_start_time;
 } Player;
 
 typedef enum {
@@ -114,7 +121,8 @@ void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
 void PlayerMoveRight(Game *game, Player *player);
 void PlayerMoveLeft(Game *game, Player *player);
+void UpdatePlayer(Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
-void BombsUpdate(Game *game);
+void UpdateBombs(Game *game);
 
 #endif /* _GAME_H */

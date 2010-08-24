@@ -37,26 +37,176 @@ inline unsigned long get_tick(void)
 
 void PlayerMoveUp(Game *game, Player *player)
 {
-	if (player->ypos > 0 && game->field.map[player->xpos][player->ypos - 1] == SQUARE_FREE)
-		player->ypos--;
+	if (player->ismove)
+		return;
+		
+	if (player->rxpos != 0)
+	{
+		if (player->rxpos == -1)
+			PlayerMoveRight(game, player);
+		else
+			PlayerMoveLeft(game, player);
+		return;
+	}
+	
+	if (player->look != LOOK_UP)
+	{
+		player->look = LOOK_UP;
+		return;
+	}
+	
+	if ((player->ypos > 0 && game->field.map[player->xpos][player->ypos - 1] == SQUARE_FREE)
+		|| player->rypos == 1)
+	{
+		player->ismove = true;
+		player->move_phase = 1;
+		player->move_start_time = get_tick();
+	}
 }
 
 void PlayerMoveDown(Game *game, Player *player)
-{
-	if (player->ypos < MAP_H - 1 && game->field.map[player->xpos][player->ypos + 1] == SQUARE_FREE)
-		player->ypos++;
+{		
+	if (player->ismove)
+		return;
+		
+	if (player->rxpos != 0)
+	{
+		if (player->rxpos == -1)
+			PlayerMoveRight(game, player);
+		else
+			PlayerMoveLeft(game, player);
+		return;
+	}
+	
+	if (player->look != LOOK_DOWN)
+	{
+		player->look = LOOK_DOWN;
+		return;
+	}
+	
+	if ((player->ypos < MAP_H - 1 && game->field.map[player->xpos][player->ypos + 1] == SQUARE_FREE)
+		|| player->rypos == -1)
+	{
+		player->ismove = true;
+		player->move_phase = 1;
+		player->move_start_time = get_tick();
+	}
 }
 
 void PlayerMoveRight(Game *game, Player *player)
 {
-	if (player->xpos < MAP_W - 1 && game->field.map[player->xpos + 1][player->ypos] == SQUARE_FREE)
-		player->xpos++;
+	if (player->ismove)
+		return;
+		
+	if (player->rypos != 0)
+	{
+		if (player->rypos == -1)
+			PlayerMoveDown(game, player);
+		else
+			PlayerMoveUp(game, player);
+		return;
+	}
+	
+	if (player->look != LOOK_RIGHT)
+	{
+		player->look = LOOK_RIGHT;
+		return;
+	}
+	
+	if ((player->xpos < MAP_W - 1 && game->field.map[player->xpos + 1][player->ypos] == SQUARE_FREE)
+		|| player->rxpos == -1)
+	{
+		player->ismove = true;
+		player->move_phase = 1;
+		player->move_start_time = get_tick();
+	}
 }
 
 void PlayerMoveLeft(Game *game, Player *player)
 {
-	if (player->xpos > 0 && game->field.map[player->xpos - 1][player->ypos] == SQUARE_FREE)
-		player->xpos--;
+	if (player->ismove)
+		return;
+		
+	if (player->rypos != 0)
+	{
+		if (player->rypos == -1)
+			PlayerMoveDown(game, player);
+		else
+			PlayerMoveUp(game, player);
+		return;
+	}
+	
+	if (player->look != LOOK_LEFT)
+	{
+		player->look = LOOK_LEFT;
+		return;
+	}
+	
+	if ((player->xpos > 0 && game->field.map[player->xpos - 1][player->ypos] == SQUARE_FREE)
+		|| player->rxpos == 1)
+	{
+		player->ismove = true;
+		player->move_phase = 1;
+		player->move_start_time = get_tick();
+	}
+}
+
+void UpdatePlayer(Player *player)
+{
+	if (player->ismove)
+	{
+		if ((get_tick() - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
+		{
+			if (player->move_phase == 5)
+			{
+				player->ismove = false;
+				player->move_phase = 0;
+				
+				if (player->look == LOOK_UP)
+				{
+					if (player->rypos == -1)
+					{
+						player->ypos--;
+						player->rypos = 1;
+					}
+					else
+						player->rypos--;
+				}
+				else if (player->look == LOOK_DOWN)
+				{
+					if (player->rypos == 1)
+					{
+						player->ypos++;
+						player->rypos = -1;
+					}
+					else
+						player->rypos++;
+				}
+				else if (player->look == LOOK_RIGHT)
+				{
+					if (player->rxpos == 1)
+					{
+						player->xpos++;
+						player->rxpos = -1;
+					}
+					else
+						player->rxpos++;
+				}
+				else /* LOOK_LEFT */
+				{
+					if (player->rxpos == -1)
+					{
+						player->xpos--;
+						player->rxpos = 1;
+					}
+					else
+						player->rxpos--;
+				}
+			}
+			else
+				player->move_phase++;
+		}
+	}
 }
 
 void PlayerPlaceBomb(Game *game, Player *player)
@@ -389,7 +539,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 	}
 }
 
-void BombsUpdate(Game *game)
+void UpdateBombs(Game *game)
 {
 	int i;
 	

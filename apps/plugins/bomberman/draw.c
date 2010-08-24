@@ -29,6 +29,7 @@
 #include "pluginbitmaps/bomberman_block.h"
 #include "pluginbitmaps/bomberman_bomb.h"
 #include "pluginbitmaps/bomberman_explode.h"
+#include "pluginbitmaps/bomberman_player_move.h"
 
 #include "game.h"
 #include "draw.h"
@@ -41,8 +42,7 @@ void Draw(Game *game)
 {	
 	int i, j;
 	
-	rb->lcd_clear_display();
-	
+	rb->lcd_clear_display();	
 	
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)
@@ -96,12 +96,105 @@ void Draw(Game *game)
 		}
 	}
 	*/
+	
+	// player without movement
+	/*
 	rb->lcd_bitmap_transparent(bomberman_player,
 		game->player.xpos * SQUARE_SIZE + XMAPOFFSET,
 		game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
 			(BMPHEIGHT_bomberman_player - SQUARE_SIZE),
 		BMPWIDTH_bomberman_player,
 		BMPHEIGHT_bomberman_player);
+	*/
+	
+	//int xcoord[3] = { 1, 6, 12 };
+	int xcoord[3] = { -4, 0, 4 };
+	//int ycoord[3] = { 3, 9, 14 };
+	//int ycoord[3] = { 1, 6, 12 };
+	int ycoord[3] = { 12, 6, 1 };
+
+	if (game->player.ismove)
+	{
+		int curphase;
+		
+		if (game->player.move_phase <= 3)
+			curphase = game->player.move_phase;
+		else if (game->player.move_phase == 4)
+			curphase = 2;
+		else if (game->player.move_phase == 5)
+			curphase = 0;
+			
+		if (game->player.look == LOOK_UP)
+		{
+			rb->lcd_bitmap_transparent_part(bomberman_player_move,
+				curphase * BMPWIDTH_bomberman_player,
+				game->player.look * BMPHEIGHT_bomberman_player,
+				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
+					xcoord[game->player.rxpos + 1],
+				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+					 ycoord[game->player.rypos + 1] - game->player.move_phase,
+				BMPWIDTH_bomberman_player,
+				BMPHEIGHT_bomberman_player);
+		}
+		else if (game->player.look == LOOK_DOWN)
+		{
+			rb->lcd_bitmap_transparent_part(bomberman_player_move,
+				curphase * BMPWIDTH_bomberman_player,
+				game->player.look * BMPHEIGHT_bomberman_player,
+				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
+					xcoord[game->player.rxpos + 1],
+				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+					 ycoord[game->player.rypos + 1] + game->player.move_phase,
+				BMPWIDTH_bomberman_player,
+				BMPHEIGHT_bomberman_player);
+		}
+		else if (game->player.look == LOOK_RIGHT)
+		{
+			rb->lcd_bitmap_transparent_part(bomberman_player_move,
+				curphase * BMPWIDTH_bomberman_player,
+				game->player.look * BMPHEIGHT_bomberman_player,
+				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
+					xcoord[game->player.rxpos + 1] + game->player.move_phase,
+				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+					 ycoord[game->player.rypos + 1],
+				BMPWIDTH_bomberman_player,
+				BMPHEIGHT_bomberman_player);
+		}
+		else /* LOOK_LEFT */
+		{
+			rb->lcd_bitmap_transparent_part(bomberman_player_move,
+				curphase * BMPWIDTH_bomberman_player,
+				game->player.look * BMPHEIGHT_bomberman_player,
+				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
+					xcoord[game->player.rxpos + 1] - game->player.move_phase,
+				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+					 ycoord[game->player.rypos + 1],
+				BMPWIDTH_bomberman_player,
+				BMPHEIGHT_bomberman_player);
+		}
+	}
+	else
+	{
+		rb->lcd_bitmap_transparent_part(bomberman_player_move,
+			0,
+			game->player.look * BMPHEIGHT_bomberman_player,
+			STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+			game->player.xpos * SQUARE_SIZE + XMAPOFFSET +
+				xcoord[game->player.rxpos + 1],
+			game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+				(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+				ycoord[game->player.rypos + 1],
+			BMPWIDTH_bomberman_player,
+			BMPHEIGHT_bomberman_player);
+	}
 		
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)

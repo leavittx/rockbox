@@ -34,7 +34,7 @@ PLUGIN_HEADER
 #include "game.h"
 #include "draw.h"
 
-#define SLEEP_TIME 3
+#define SLEEP_TIME 1
 
 const struct button_mapping *plugin_contexts[] = {
 	pla_main_ctx,
@@ -104,6 +104,11 @@ void InitPlayer(Player *player)
 	player->bombs_max = -1;
 	player->bombs_placed = 0;
 	player->bomb_power = BOMB_PWR_KILLER;
+	
+	player->rxpos = 0;
+	player->rypos = 0;
+	player->ismove = false;
+	player->move_phase = 0;
 }
 
 int plugin_main(void)
@@ -121,7 +126,8 @@ int plugin_main(void)
     {
 		Draw(&game);
 	
-		BombsUpdate(&game);
+		UpdatePlayer(&game.player);
+		UpdateBombs(&game);
 		
 		rb->sleep(SLEEP_TIME);
 		
