@@ -27,10 +27,6 @@
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
 
-/* This macros must always be included. Should be placed at the top by
-   convention, although the actual position doesn't matter */
-PLUGIN_HEADER
-
 #define DEFAULT_WAIT_TIME 3
 
 /* Key assignement */
