@@ -28,7 +28,8 @@
 #define MAP_H 11
 
 #define BOMBS_MAX_NUM 100
-#define BOMB_DELAY_DET (HZ * 2) /* Two seconds */
+#define BOMB_DELAY_DET (HZ * 2) /* Two seconds before bomb detanates */
+#define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 9)
 #define BOMB_DELAY_PHASE1 (HZ * 2.1)
 #define BOMB_DELAY_PHASE2 (HZ * 2.2)
 #define BOMB_DELAY_PHASE3 (HZ * 2.3)
@@ -60,9 +61,11 @@ typedef enum {
 
 typedef struct {
 	bool isalive;
+	
 	int xpos, ypos;
 	LookSide look;
 	int speed;
+	
 	int bombs_max;
 	int bombs_placed;
 	BombPower bomb_power;
@@ -71,9 +74,25 @@ typedef struct {
 	bool ismove;
 	int move_phase;
 	unsigned long move_start_time;
+	
 	bool IsAIPlayer;
 } Player;
 
+/*
+ * rxpos & rypos - position of player in single cell
+ * 
+ __________________
+ | -1  |  0  |  1  |
+ | -1  | -1  | -1  |
+ |_____|_____|_____|
+ | -1  |  0  |  1  | 
+ |  0  |  0  |  0  |   <--- one cell
+ |_____|_____|_____|
+ | -1  |  0  |  1  |
+ |  1  |  1  |  1  |
+ |_____|_____|_____|
+ */
+ 
 typedef enum {
 	BOMB_NONE,
 	BOMB_PLACED,
@@ -105,10 +124,17 @@ typedef struct {
 	bool isend;
 } Fire;
 
+typedef enum {
+	DET_PHASE1,
+	DET_PHASE2,
+	DET_PHASE3
+} BombDetonation;
+
 typedef struct {
 	SqType map[MAP_W][MAP_H];
 	Bomb bombs[BOMBS_MAX_NUM];
 	Fire firemap[MAP_W][MAP_H];
+	BombDetonation det[MAP_W][MAP_H];
 	//Bonus bonuses[BONUSES_MAX_NUM];
 } Field;
 

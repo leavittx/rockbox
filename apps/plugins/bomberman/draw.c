@@ -30,6 +30,7 @@
 #include "pluginbitmaps/bomberman_bomb.h"
 #include "pluginbitmaps/bomberman_explode.h"
 #include "pluginbitmaps/bomberman_player_move.h"
+#include "pluginbitmaps/bomberman_player_death.h"
 
 #include "game.h"
 #include "draw.h"
@@ -44,6 +45,7 @@ void Draw(Game *game)
 	
 	rb->lcd_clear_display();	
 	
+	/* Different objects on the field */
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)
 			switch (game->field.map[i][j])
@@ -65,7 +67,17 @@ void Draw(Game *game)
 						BMPHEIGHT_bomberman_block);
 					break;
 				case SQUARE_BOMB:
+					/*
 					rb->lcd_bitmap_transparent(bomberman_bomb,
+						i * SQUARE_SIZE + XMAPOFFSET,
+						j * SQUARE_SIZE + YMAPOFFSET,
+						BMPWIDTH_bomberman_bomb,
+						BMPHEIGHT_bomberman_bomb);
+					*/
+					rb->lcd_bitmap_transparent_part(bomberman_bomb,
+						game->field.det[i][j] * SQUARE_SIZE,
+						0,
+						STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_bomb, BMPHEIGHT_bomberman_bomb),
 						i * SQUARE_SIZE + XMAPOFFSET,
 						j * SQUARE_SIZE + YMAPOFFSET,
 						BMPWIDTH_bomberman_bomb,
@@ -107,6 +119,7 @@ void Draw(Game *game)
 		BMPHEIGHT_bomberman_player);
 	*/
 	
+	/* Player (with movement animation) */
 	//int xcoord[3] = { 1, 6, 12 };
 	int xcoord[3] = { -4, 0, 4 };
 	//int ycoord[3] = { 3, 9, 14 };
@@ -196,7 +209,8 @@ void Draw(Game *game)
 			BMPWIDTH_bomberman_player,
 			BMPHEIGHT_bomberman_player);
 	}
-		
+	
+	/* Explosions */
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)
 		{

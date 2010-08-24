@@ -227,6 +227,7 @@ void PlayerPlaceBomb(Game *game, Player *player)
 			game->field.bombs[i].place_time = get_tick();
 			game->field.bombs[i].owner = player;
 			game->field.map[player->xpos][player->ypos] = SQUARE_BOMB;
+			game->field.det[player->xpos][player->ypos] = DET_PHASE1;
 			player->bombs_placed++;
 			break;
 		}
@@ -542,6 +543,13 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 void UpdateBombs(Game *game)
 {
 	int i;
+	static int detphases[20] = {
+		0, 1, 2, 1,
+		0, 1, 2, 1,
+		0, 1, 2, 1,
+		0, 1, 2, 1,
+		0, 1, 2, 1
+		};
 	
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 	{
@@ -550,6 +558,8 @@ void UpdateBombs(Game *game)
 		
 		int x = game->field.bombs[i].xpos, y = game->field.bombs[i].ypos;
 		int rad = game->bomb_rad[game->field.bombs[i].power];
+		
+		game->field.det[x][y] = detphases[(get_tick() - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM];
 		
 		if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
 		{
