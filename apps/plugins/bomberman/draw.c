@@ -80,8 +80,8 @@ void Draw(Game *game)
 						STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_bomb, BMPHEIGHT_bomberman_bomb),
 						i * SQUARE_SIZE + XMAPOFFSET,
 						j * SQUARE_SIZE + YMAPOFFSET,
-						BMPWIDTH_bomberman_bomb,
-						BMPHEIGHT_bomberman_bomb);
+						SQUARE_SIZE,
+						SQUARE_SIZE);
 					break;
 				/*case SQUARE_FIRE:
 					rb->lcd_bitmap_transparent_part(bomberman_explode,

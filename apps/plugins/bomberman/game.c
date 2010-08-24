@@ -543,13 +543,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 void UpdateBombs(Game *game)
 {
 	int i;
-	static int detphases[20] = {
-		0, 1, 2, 1,
-		0, 1, 2, 1,
-		0, 1, 2, 1,
-		0, 1, 2, 1,
-		0, 1, 2, 1
-		};
+	static int detphases[4] = {	0, 1, 2, 1 };
 	
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 	{
@@ -559,7 +553,7 @@ void UpdateBombs(Game *game)
 		int x = game->field.bombs[i].xpos, y = game->field.bombs[i].ypos;
 		int rad = game->bomb_rad[game->field.bombs[i].power];
 		
-		game->field.det[x][y] = detphases[(get_tick() - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM];
+		game->field.det[x][y] = detphases[((get_tick() - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
 		
 		if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
 		{

@@ -28,12 +28,12 @@
 #define MAP_H 11
 
 #define BOMBS_MAX_NUM 100
-#define BOMB_DELAY_DET (HZ * 2) /* Two seconds before bomb detanates */
-#define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 9)
-#define BOMB_DELAY_PHASE1 (HZ * 2.1)
-#define BOMB_DELAY_PHASE2 (HZ * 2.2)
-#define BOMB_DELAY_PHASE3 (HZ * 2.3)
-#define BOMB_DELAY_PHASE4 (HZ * 2.4)
+#define BOMB_DELAY_DET (HZ * 7) /* Two seconds before bomb detanates */
+#define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 90)
+#define BOMB_DELAY_PHASE1 (HZ * 7.1)
+#define BOMB_DELAY_PHASE2 (HZ * 7.2)
+#define BOMB_DELAY_PHASE3 (HZ * 7.3)
+#define BOMB_DELAY_PHASE4 (HZ * 7.4)
 
 #define PLAYER_MOVE_PART_TIME (HZ * 0.005)
 
