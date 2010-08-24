@@ -174,14 +174,33 @@ void FindPath( PATH *Path, int StartX, int StartY,
 
 void UpdateAI( Player* Players )
 {
-  int i;
+  int i, j;
   int size = sizeof(Players) / sizeof(Players[0]);
-  PATH Path = {0};
+  PATH Path = {0}, CurPath = {0};
+  int MinDist = UNREAL_F;
   
+
   for(i = 0; i < size; i++)
   {
-    rb->memset(&Path, 0, sizeof(PATH));
-    //FindPath( &Path,  
-  }
+		MinDist = UNREAL_F;
+		if(Players[i]->IsAIPlayer == TRUE)
+		{
+      for(j = 0; j < size; j++)
+      {
+				if(j == i)
+				  continue;
+				rb->memset(&Path, 0, sizeof(Path));
+				FindPath(&Path, Players[i]->xpos, Players[i]->ypos, 
+				  Players[j]->xpos, Players[j]->ypos);
+				if(Path.Distance < MinDist)
+				{
+				  MinDist = Path.Distance;
+				  CurPath = Path;
+				}
+			}
+		}
+	}
+    
+	  
 }
 
