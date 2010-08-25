@@ -130,8 +130,8 @@ void Draw(Game *game)
 	// player without movement
 	/*
 	rb->lcd_bitmap_transparent(bomberman_player,
-		game->player.xpos * SQUARE_SIZE + XMAPOFFSET,
-		game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+		game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET,
+		game->players[i].ypos * SQUARE_SIZE + YMAPOFFSET -
 			(BMPHEIGHT_bomberman_player - SQUARE_SIZE),
 		BMPWIDTH_bomberman_player,
 		BMPHEIGHT_bomberman_player);
@@ -144,89 +144,92 @@ void Draw(Game *game)
 	//int ycoord[3] = { 1, 6, 12 };
 	//int ycoord[3] = { 12, 6, 1 };
 	int ycoord[3] = { 9, 3, -2 };
-
-	if (game->player.ismove)
+	
+	for (i = 0; i < 2; i++)
 	{
-		int curphase;
-		
-		if (game->player.move_phase <= 3)
-			curphase = game->player.move_phase;
-		else if (game->player.move_phase == 4)
-			curphase = 2;
-		else if (game->player.move_phase == 5)
-			curphase = 0;
+		if (game->players[i].ismove)
+		{
+			int curphase;
 			
-		// todo: make common code for different direction
-		if (game->player.look == LOOK_UP)
+			if (game->players[i].move_phase <= 3)
+				curphase = game->players[i].move_phase;
+			else if (game->players[i].move_phase == 4)
+				curphase = 2;
+			else if (game->players[i].move_phase == 5)
+				curphase = 0;
+				
+			// todo: make common code for different direction
+			if (game->players[i].look == LOOK_UP)
+			{
+				rb->lcd_bitmap_transparent_part(bomberman_player_move,
+					curphase * BMPWIDTH_bomberman_player,
+					game->players[i].look * BMPHEIGHT_bomberman_player,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+					game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET + 
+						xcoord[game->players[i].rxpos + 1],
+					game->players[i].ypos * SQUARE_SIZE + YMAPOFFSET -
+						(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+						 ycoord[game->players[i].rypos + 1] - game->players[i].move_phase,
+					BMPWIDTH_bomberman_player,
+					BMPHEIGHT_bomberman_player);
+			}
+			else if (game->players[i].look == LOOK_DOWN)
+			{
+				rb->lcd_bitmap_transparent_part(bomberman_player_move,
+					curphase * BMPWIDTH_bomberman_player,
+					game->players[i].look * BMPHEIGHT_bomberman_player,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+					game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET + 
+						xcoord[game->players[i].rxpos + 1],
+					game->players[i].ypos * SQUARE_SIZE + YMAPOFFSET -
+						(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+						 ycoord[game->players[i].rypos + 1] + game->players[i].move_phase,
+					BMPWIDTH_bomberman_player,
+					BMPHEIGHT_bomberman_player);
+			}
+			else if (game->players[i].look == LOOK_RIGHT)
+			{
+				rb->lcd_bitmap_transparent_part(bomberman_player_move,
+					curphase * BMPWIDTH_bomberman_player,
+					game->players[i].look * BMPHEIGHT_bomberman_player,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+					game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET + 
+						xcoord[game->players[i].rxpos + 1] + game->players[i].move_phase,
+					game->players[i].ypos * SQUARE_SIZE + YMAPOFFSET -
+						(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+						 ycoord[game->players[i].rypos + 1],
+					BMPWIDTH_bomberman_player,
+					BMPHEIGHT_bomberman_player);
+			}
+			else /* LOOK_LEFT */
+			{
+				rb->lcd_bitmap_transparent_part(bomberman_player_move,
+					curphase * BMPWIDTH_bomberman_player,
+					game->players[i].look * BMPHEIGHT_bomberman_player,
+					STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+					game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET + 
+						xcoord[game->players[i].rxpos + 1] - game->players[i].move_phase,
+					game->players[i].ypos * SQUARE_SIZE + YMAPOFFSET -
+						(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
+						 ycoord[game->players[i].rypos + 1],
+					BMPWIDTH_bomberman_player,
+					BMPHEIGHT_bomberman_player);
+			}
+		}
+		else
 		{
 			rb->lcd_bitmap_transparent_part(bomberman_player_move,
-				curphase * BMPWIDTH_bomberman_player,
-				game->player.look * BMPHEIGHT_bomberman_player,
+				0,
+				game->players[i].look * BMPHEIGHT_bomberman_player,
 				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
-					xcoord[game->player.rxpos + 1],
-				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
+				game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET +
+					xcoord[game->players[i].rxpos + 1],
+				game->players[i].ypos * SQUARE_SIZE + YMAPOFFSET -
 					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-					 ycoord[game->player.rypos + 1] - game->player.move_phase,
+					ycoord[game->players[i].rypos + 1],
 				BMPWIDTH_bomberman_player,
 				BMPHEIGHT_bomberman_player);
 		}
-		else if (game->player.look == LOOK_DOWN)
-		{
-			rb->lcd_bitmap_transparent_part(bomberman_player_move,
-				curphase * BMPWIDTH_bomberman_player,
-				game->player.look * BMPHEIGHT_bomberman_player,
-				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
-					xcoord[game->player.rxpos + 1],
-				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
-					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-					 ycoord[game->player.rypos + 1] + game->player.move_phase,
-				BMPWIDTH_bomberman_player,
-				BMPHEIGHT_bomberman_player);
-		}
-		else if (game->player.look == LOOK_RIGHT)
-		{
-			rb->lcd_bitmap_transparent_part(bomberman_player_move,
-				curphase * BMPWIDTH_bomberman_player,
-				game->player.look * BMPHEIGHT_bomberman_player,
-				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
-					xcoord[game->player.rxpos + 1] + game->player.move_phase,
-				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
-					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-					 ycoord[game->player.rypos + 1],
-				BMPWIDTH_bomberman_player,
-				BMPHEIGHT_bomberman_player);
-		}
-		else /* LOOK_LEFT */
-		{
-			rb->lcd_bitmap_transparent_part(bomberman_player_move,
-				curphase * BMPWIDTH_bomberman_player,
-				game->player.look * BMPHEIGHT_bomberman_player,
-				STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-				game->player.xpos * SQUARE_SIZE + XMAPOFFSET + 
-					xcoord[game->player.rxpos + 1] - game->player.move_phase,
-				game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
-					(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-					 ycoord[game->player.rypos + 1],
-				BMPWIDTH_bomberman_player,
-				BMPHEIGHT_bomberman_player);
-		}
-	}
-	else
-	{
-		rb->lcd_bitmap_transparent_part(bomberman_player_move,
-			0,
-			game->player.look * BMPHEIGHT_bomberman_player,
-			STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-			game->player.xpos * SQUARE_SIZE + XMAPOFFSET +
-				xcoord[game->player.rxpos + 1],
-			game->player.ypos * SQUARE_SIZE + YMAPOFFSET -
-				(BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-				ycoord[game->player.rypos + 1],
-			BMPWIDTH_bomberman_player,
-			BMPHEIGHT_bomberman_player);
 	}
 	
 	/* Explosions */

@@ -140,16 +140,16 @@ int plugin_main(void)
     rb->srand(*rb->current_tick);
     
     InitGame(&game);
-    InitPlayer(&game.player);
-    InitAI(&game.AI[0]);
+    InitPlayer(&game.players[0]);
+    InitAI(&game.players[1]);
     
     /* Main loop */
     while (true)
     {
 		Draw(&game);
 	
-		UpdatePlayer(&game.player);
-		UpdateAI(&game, &game.AI[0]);
+		UpdatePlayer(&game.players[0]);
+		UpdateAI(&game, game.players);
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
 		
@@ -167,26 +167,26 @@ int plugin_main(void)
 				
 			case PLA_UP:
 			case PLA_UP_REPEAT:
-				PlayerMoveUp(&game, &game.player);
+				PlayerMoveUp(&game, &game.players[0]);
 				break;
 				
 			case PLA_DOWN:
 			case PLA_DOWN_REPEAT:
-				PlayerMoveDown(&game, &game.player);
+				PlayerMoveDown(&game, &game.players[0]);
 				break;
 			
 			case PLA_RIGHT:
 			case PLA_RIGHT_REPEAT:
-				PlayerMoveRight(&game, &game.player);
+				PlayerMoveRight(&game, &game.players[0]);
 				break;
 			
 			case PLA_LEFT:
 			case PLA_LEFT_REPEAT:
-				PlayerMoveLeft(&game, &game.player);
+				PlayerMoveLeft(&game, &game.players[0]);
 				break;
 			
 			case PLA_SELECT:
-				PlayerPlaceBomb(&game, &game.player);
+				PlayerPlaceBomb(&game, &game.players[0]);
 				break;
 				
 			case PLA_CANCEL:

@@ -294,11 +294,11 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 			{
 				break;
 			}
-			if (game->player.xpos == curx && game->player.ypos == cury)
+			if (game->players[0].xpos == curx && game->players[0].ypos == cury)
 			{
-				game->player.status.health = 0;
-				game->player.status.state = EXPL_PHASE1;
-				game->player.status.time_of_death = get_tick();
+				game->players[0].status.health = 0;
+				game->players[0].status.state = EXPL_PHASE1;
+				game->players[0].status.time_of_death = get_tick();
 			}
 		}
 		else
