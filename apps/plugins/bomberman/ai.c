@@ -56,7 +56,7 @@ NODE Nodes[MAP_W][MAP_H];
 bool GetNode( Field  *field, int x, int y )
 {  
 	if (field->map[x][y] == SQUARE_FREE ||
-		field->map[x][y] == SQUARE_BOMB)
+		  field->map[x][y] == SQUARE_BOMB)
 		return true;
 
 	return false;
@@ -122,11 +122,15 @@ void FindPath( PATH *Path, int StartX, int StartY,
 	  for ( dy = -1; dy <= 1; dy++ )
 	  {
 		// We can`t use diagonals in bomberman
-		//if ( (dx != 0) || (dy != 0) )
+		if ( (dx == dy) || (dy == -dx) )
+		{
+		  Nodes[cx+dx][cy+dy].IsWalkable == false; 
+		  continue;
+		}
 		if ( (dx == 0) || (dy == 0) )
 		{
 		  if ( (cx + dx) < MAP_W && (cx + dx) > -1 && 
-		       (cy + dy) < MAP_H && (cy + dy) >-1 )
+		       (cy + dy) < MAP_H && (cy + dy) > -1 )
 		  {
 			 // if its walkable and not on the closed list
 			 if ( Nodes[cx+dx][cy+dy].IsWalkable == true 
@@ -143,7 +147,7 @@ void FindPath( PATH *Path, int StartX, int StartY,
 				  Nodes[cx+dx][cy+dy].ParentY = cy;
 				  //work out G
 				  // We can`t use diagonals in bomberman
-				  /*if ( dx != 0 && dy != 0) 
+				 /* if ( dx != 0 && dy != 0) 
 				    Nodes[cx+dx][cy+dy].G = 14; // diagonals cost 14
 				  else*/ 
 				    Nodes[cx+dx][cy+dy].G = 10; // straights cost 10
@@ -217,14 +221,25 @@ void FindPath( PATH *Path, int StartX, int StartY,
 void MovePlayer(Game *G, Player *P, PATH *Path)
 {
 	//rb->splash(HZ * 0.02, "move");
-	if (P->xpos < Path->Path[0].X)
+	if (P->xpos < Path->Path[Path->Distance - 2].X)
 	  PlayerMoveRight(G, P);
-	else if (P->xpos > Path->Path[0].X)
+	else if (P->xpos > Path->Path[Path->Distance - 2].X)
 	  PlayerMoveLeft(G, P);
-	else if (P->ypos < Path->Path[0].Y)
+	else if (P->ypos < Path->Path[Path->Distance - 2].Y)
 	  PlayerMoveDown(G, P);
-	else if (P->ypos > Path->Path[0].Y) 
+	else if (P->ypos > Path->Path[Path->Distance - 2].Y) 
 	  PlayerMoveUp(G, P);  
+}
+
+void CopyPaths(PATH *Dst, PATH *Src)
+{
+	int i;
+	Dst->Distance = Src->Distance;
+	for(i = 0; i < Src->Distance; i++)
+	{
+	  Dst->Path[i].X = Src->Path[i].X;
+	  Dst->Path[i].Y = Src->Path[i].Y;
+	}
 }
 
 void UpdateAI( Game *G, Player* Players )
@@ -232,17 +247,18 @@ void UpdateAI( Game *G, Player* Players )
   int i, j;
   PATH Path, CurPath;
   int MinDist = UNREAL_F;
+  int dx, dy;
   
   //rb->splash(HZ, "Ai");
   
-  for(i = 0; i < 2; i++)
+  for(i = 0; i < MAX_PLAYERS; i++)
   {
 		MinDist = UNREAL_F;
 		rb->memset(&CurPath, 0, sizeof(PATH));
 		if(Players[i].IsAIPlayer == true)
 		{
 			//rb->splash(HZ, "Ai2");
-      for(j = 0; j < 2; j++)
+      for(j = 0; j < MAX_PLAYERS; j++)
       {
 				if(j == i)
 				  continue;
@@ -252,10 +268,22 @@ void UpdateAI( Game *G, Player* Players )
 				if( Path.Distance < MinDist )
 				{
 				  MinDist = Path.Distance;
-				  CurPath = Path;
+				  CopyPaths(&CurPath, &Path);
+				  //CurPath = Path;
 				}
 			}
+			//rb->splash(HZ, "GGG");
 			MovePlayer(G, &Players[i], &CurPath);
-		}
+			/*for(dx = -1; dx < 2; dx++)
+			  for(dy = -1; dy < 2; dy++)
+			    if(G->field.map[Players[i].xpos + dx][Players[i].ypos + dy] == SQUARE_BOX
+			       && (dx == Players[i].rxpos && dy == Players[i].rypos))
+			    {
+						//rb->splash(HZ, "GGG");
+			      PlayerPlaceBomb(G, &Players[i]);
+			      break;
+					}*/
+		} 
 	}
 }
+

@@ -27,6 +27,8 @@
 #define MAP_W 17
 #define MAP_H 11
 
+#define MAX_PLAYERS 2
+
 #define BOMBS_MAX_NUM 100
 #define BOMB_DELAY_DET (HZ * 5) /* Two seconds before bomb detanates */
 #define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 90)
@@ -173,7 +175,7 @@ typedef struct {
 
 typedef struct {
 	Field field;
-	Player players[2];
+	Player players[MAX_PLAYERS];
 	int bomb_rad[BOMB_PWR_KILLER + 1];
 } Game;
 

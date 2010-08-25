@@ -69,8 +69,10 @@ void InitGame(Game *game)
 		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
 		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
 		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
-		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
+		//{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
+		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,0,0,2},
+		//{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
+		{2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
 		{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
 		};
 	
@@ -112,15 +114,15 @@ void InitPlayer(Player *player)
 	player->IsAIPlayer = false;
 }
 
-void InitAI(Player *player)
+void InitAI(Player *player, int x, int y)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
-	player->xpos = 2;
-	player->ypos = 1;
+	player->xpos = x;
+	player->ypos = y;
 	player->look = LOOK_DOWN;
 	player->speed = 1;
-	player->bombs_max = -1;
+	player->bombs_max = 3; //-1;
 	player->bombs_placed = 0;
 	player->bomb_power = BOMB_PWR_KILLER;
 	
@@ -142,14 +144,15 @@ int plugin_main(void)
     
     InitGame(&game);
     InitPlayer(&game.players[0]);
- 		InitAI(&game.players[1]);
+ 		InitAI(&game.players[1], 15, 1);
+ 		//InitAI(&game.players[2], 1, 5);
         
     /* Main loop */
     while (true)
     {
 		Draw(&game);
 	
-		for (i = 0; i < 2; i++)
+		for (i = 0; i < MAX_PLAYERS; i++)
 			UpdatePlayer(&game.players[i]);
 		UpdateBombs(&game);
 		UpdateBoxes(&game);

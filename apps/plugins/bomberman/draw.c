@@ -145,7 +145,7 @@ void Draw(Game *game)
 	//int ycoord[3] = { 12, 6, 1 };
 	int ycoord[3] = { 9, 3, -2 };
 	
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		if (game->players[i].ismove)
 		{
