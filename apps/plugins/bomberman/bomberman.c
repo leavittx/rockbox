@@ -29,6 +29,7 @@
 
 #include "game.h"
 #include "draw.h"
+#include "ai.h"
 
 #define SLEEP_TIME 0
 
@@ -107,6 +108,28 @@ void InitPlayer(Player *player)
 	player->rypos = 0;
 	player->ismove = false;
 	player->move_phase = 0;
+	
+	player->IsAIPlayer = false;
+}
+
+void InitAI(Player *player)
+{
+	player->status.state = HUNKY;
+	player->status.health = 100;
+	player->xpos = 1;
+	player->ypos = 9;
+	player->look = LOOK_DOWN;
+	player->speed = 1;
+	player->bombs_max = -1;
+	player->bombs_placed = 0;
+	player->bomb_power = BOMB_PWR_KILLER;
+	
+	player->rxpos = 0;
+	player->rypos = 0;
+	player->ismove = false;
+	player->move_phase = 0;
+	
+	player->IsAIPlayer = true;
 }
 
 int plugin_main(void)
@@ -118,6 +141,7 @@ int plugin_main(void)
     
     InitGame(&game);
     InitPlayer(&game.player);
+    InitAI(&game.AI[0]);
     
     /* Main loop */
     while (true)
@@ -125,6 +149,7 @@ int plugin_main(void)
 		Draw(&game);
 	
 		UpdatePlayer(&game.player);
+		UpdateAI(&game, &game.AI[0]);
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
 		

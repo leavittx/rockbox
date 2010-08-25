@@ -21,7 +21,34 @@
  *
  ****************************************************************************/
 
-#include "ai.h"
+#include "plugin.h"
+
+#include "game.h"
+//#include "ai.h"
+
+#define UNREAL_F 999
+#define abs(x) ((x) >= 0 ? (x) : -(x))
+
+typedef struct
+{
+  bool IsWalkable;
+  bool IsOnOpen;
+  bool IsOnClose;
+  int G, H, F;
+  int ParentX, ParentY;
+} NODE;
+
+typedef struct
+{
+  int X, Y;
+  //int F;
+} PATHELEM;
+
+typedef struct
+{
+  PATHELEM Path[MAP_W * MAP_H];
+  int Distance;
+} PATH;
 
 /* PATHELEM Path[MAP_W][MAP_H]; */
 static NODE Nodes[MAP_W][MAP_H]; 
@@ -29,8 +56,8 @@ static NODE Nodes[MAP_W][MAP_H];
 bool GetNode( const Field const *F, int x, int y )
 {
   if(F->map[x][y] == SQUARE_FREE)
-    return TRUE;
-  return FALSE;
+    return true;
+  return false;
 }
 
 
@@ -41,8 +68,8 @@ void InitNodes( const Field const *F )
     for(y = 0; y < MAP_H; y++)
     {
 	  Nodes[x][y].IsWalkable = GetNode(F, x, y);
-	  Nodes[x][y].IsOnOpen = FALSE;
-	  Nodes[x][y].IsOnClose = FALSE;
+	  Nodes[x][y].IsOnOpen = false;
+	  Nodes[x][y].IsOnClose = false;
 	  Nodes[x][y].G = 0;
 	  Nodes[x][y].H = 0;
 	  Nodes[x][y].F = 0;
@@ -60,8 +87,8 @@ void FindPath( PATH *Path, int StartX, int StartY,
   int lowestf = UNREAL_F; // start with the lowest being the highest
   int count = 0;
   // add starting node to open list
-  Nodes[StartX][StartY].IsOnOpen = TRUE;
-  Nodes[StartX][StartY].IsOnClose = FALSE;
+  Nodes[StartX][StartY].IsOnOpen = true;
+  Nodes[StartX][StartY].IsOnClose = false;
 //////////////////////LOOP BEGINS HERE/////////////////////////
   while ( cx != EndX || cy != EndY )
   {
@@ -71,7 +98,7 @@ void FindPath( PATH *Path, int StartX, int StartY,
 	{
 	  for ( y = 0; y < MAP_H; y++)
 	  {
-	    Noded[x][y].F = Nodes[x][y].G + Nodes[x][y].H;
+	    Nodes[x][y].F = Nodes[x][y].G + Nodes[x][y].H;
 		if ( Nodes[x][y].IsOnOpen )
 		{
 		  if ( Nodes[x][y].F < lowestf )
@@ -85,8 +112,8 @@ void FindPath( PATH *Path, int StartX, int StartY,
 	  }
 	}
 	// we found it, so now put that node on the closed list
-	Nodes[cx][cy].IsOnOpen = FALSE;
-	Nodes[cx][cy].IsOnClose = TRUE;
+	Nodes[cx][cy].IsOnOpen = false;
+	Nodes[cx][cy].IsOnClose = true;
 	// for each of the 8 adjacent node
 	for ( dx = -1; dx <= 1; dx++ )
 	{
@@ -98,15 +125,15 @@ void FindPath( PATH *Path, int StartX, int StartY,
 		       (cy + dy) < MAP_H && (cy + dy) >-1 )
 		  {
 			 // if its walkable and not on the closed list
-			 if ( Nodes[cx+dx][cy+dy].IsWalkable == TRUE 
-			   && Nodes[cx+dx][cy+dy].IsOnClose == FALSE )
+			 if ( Nodes[cx+dx][cy+dy].IsWalkable == true 
+			   && Nodes[cx+dx][cy+dy].IsOnClose == false )
 			 {
 			    //if its not on open list
-				if ( Nodes[cx+dx][cy+dy].IsOnOpen == FALSE )
+				if ( Nodes[cx+dx][cy+dy].IsOnOpen == false )
 				{
 				  //add it to open list
-				  Nodes[cx+dx][cy+dy].IsOnOpen = TRUE;
-				  Nodes[cx+dx][cy+dy].IsOnClose = FALSE;
+				  Nodes[cx+dx][cy+dy].IsOnOpen = true;
+				  Nodes[cx+dx][cy+dy].IsOnClose = false;
 				  //make the current node its parent
 				  Nodes[cx+dx][cy+dy].ParentX = cx;
 				  Nodes[cx+dx][cy+dy].ParentY = cy;
@@ -118,17 +145,17 @@ void FindPath( PATH *Path, int StartX, int StartY,
 				  //work out H
 				  //MANHATTAN METHOD
 				  Nodes[cx+dx][cy+dy].H =
-							(rb->abs(endx-(cx+dx)) + 
-							 rb->abs(endy-(cy+dy)))*10;
+							(abs(EndX-(cx+dx)) + 
+							 abs(EndY-(cy+dy)))*10;
 				  Nodes[cx+dx][cy+dy].F =
-							Nodes[cx+dx][cy+dy]->G + 
-							Nodes[cx+dx][cy+dy]->H;
+							Nodes[cx+dx][cy+dy].G + 
+							Nodes[cx+dx][cy+dy].H;
 
 							
 				}
 				//otherwise it is on the open list
-				else if ( Nodes[cx+dx][cy+dy].IsOnClose == FALSE 
-						  && Nodes[cx+dx][cy+dy].IsOnOpen == TRUE )
+				else if ( Nodes[cx+dx][cy+dy].IsOnClose == false 
+						  && Nodes[cx+dx][cy+dy].IsOnOpen == true )
 				{
 				  if ( dx == 0 || dy == 0)   // if its not a diagonal
 				  {
@@ -140,8 +167,8 @@ void FindPath( PATH *Path, int StartX, int StartY,
 					   Nodes[cx+dx][cy+dy].ParentY = cy;
 					   //recalc H
 					   Nodes[cx+dx][cy+dy].H = 
-					  					 (rb->abs(endx-(cx+dx)) + 
-										  rb->abs(endy-(cy+dy))) * 10;
+					  					 (abs(EndX-(cx+dx)) + 
+										    abs(EndY-(cy+dy))) * 10;
 					   //recalc F
 					   Nodes[cx+dx][cy+dy].F = 
 										 Nodes[cx+dx][cy+dy].G 
@@ -153,6 +180,8 @@ void FindPath( PATH *Path, int StartX, int StartY,
 		}
 	}
   }
+	}
+	}
   
   //follow all the parents back to the start
   
@@ -172,35 +201,47 @@ void FindPath( PATH *Path, int StartX, int StartY,
   //return Path; //we're done, return a pointer to the final path;
 }
 
-void UpdateAI( Player* Players )
+void MovePlayer( Game *G, Player *P, PATH *Path )
+{
+	if( P->xpos < Path->Path[1].X )
+	  PlayerMoveRight(G, P);
+	else if( P->xpos > Path->Path[1].X )
+	  PlayerMoveLeft(G, P);
+	  
+	if( P->ypos < Path->Path[1].Y )
+	  PlayerMoveDown(G, P);
+	else if( P->ypos > Path->Path[1].Y ) 
+	  PlayerMoveUp(G, P);  
+}
+
+void UpdateAI( Game *G, Player* Players )
 {
   int i, j;
   int size = sizeof(Players) / sizeof(Players[0]);
-  PATH Path = {0}, CurPath = {0};
+  PATH Path, CurPath;
   int MinDist = UNREAL_F;
   
-
+  
   for(i = 0; i < size; i++)
   {
 		MinDist = UNREAL_F;
-		if(Players[i]->IsAIPlayer == TRUE)
+		rb->memset(&CurPath, 0, sizeof(PATH));
+		if(Players[i].IsAIPlayer == true)
 		{
       for(j = 0; j < size; j++)
       {
 				if(j == i)
 				  continue;
-				rb->memset(&Path, 0, sizeof(Path));
-				FindPath(&Path, Players[i]->xpos, Players[i]->ypos, 
-				  Players[j]->xpos, Players[j]->ypos);
-				if(Path.Distance < MinDist)
+				rb->memset(&Path, 0, sizeof(PATH));
+				FindPath(&Path, Players[i].xpos, Players[i].ypos, 
+				  Players[j].xpos, Players[j].ypos);
+				if( Path.Distance < MinDist )
 				{
 				  MinDist = Path.Distance;
 				  CurPath = Path;
 				}
 			}
+			MovePlayer(G, &Players[i], &CurPath);
 		}
 	}
-    
-	  
 }
-

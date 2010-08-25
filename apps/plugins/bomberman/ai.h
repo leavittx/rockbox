@@ -21,34 +21,9 @@
  *
  ****************************************************************************/
 
-
 #ifndef _AI_H_
 #define _AI_H_
 
-#include "game.h"
-
-#define UNREAL_F 10000
-
-
-typedef struct
-{
-  bool IsWalkable;
-  bool IsOnOpen;
-  bool IsOnClose;
-  int G, H, F;
-  int ParentX, ParentY;
-} NODE;
-
-typedef struct
-{
-  int X, Y;
-  //int F;
-} PATHELEM;
-
-typedef struct
-{
-  PATHELEM Path[MAP_W * MAP_H];
-  int Distance;
-} PATH;
+void UpdateAI( Game *G, Player *Players );
 
 #endif /* _AI_H_ */

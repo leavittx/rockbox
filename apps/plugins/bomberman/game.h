@@ -174,6 +174,7 @@ typedef struct {
 typedef struct {
 	Field field;
 	Player player;
+	Player AI[1];
 	int bomb_rad[BOMB_PWR_KILLER + 1];
 } Game;
 
