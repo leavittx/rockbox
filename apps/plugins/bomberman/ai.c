@@ -51,30 +51,32 @@ typedef struct
 } PATH;
 
 /* PATHELEM Path[MAP_W][MAP_H]; */
-static NODE Nodes[MAP_W][MAP_H]; 
+NODE Nodes[MAP_W][MAP_H]; 
 
-bool GetNode( const Field const *F, int x, int y )
-{
-  if(F->map[x][y] == SQUARE_FREE)
-    return true;
-  return false;
+bool GetNode( Field  *field, int x, int y )
+{  
+	if (field->map[x][y] == SQUARE_FREE ||
+		field->map[x][y] == SQUARE_BOMB)
+		return true;
+
+	return false;
 }
 
-
-void InitNodes( const Field const *F )
+void InitNodes(Field *F)
 {
   int x, y;
-  for(x = 0; x < MAP_W; x++)
-    for(y = 0; y < MAP_H; y++)
+
+  for (x = 0; x < MAP_W; x++)
+    for (y = 0; y < MAP_H; y++)
     {
-	  Nodes[x][y].IsWalkable = GetNode(F, x, y);
-	  Nodes[x][y].IsOnOpen = false;
-	  Nodes[x][y].IsOnClose = false;
-	  Nodes[x][y].G = 0;
-	  Nodes[x][y].H = 0;
-	  Nodes[x][y].F = 0;
-	  Nodes[x][y].ParentX = 0;
-	  Nodes[x][y].ParentY = 0;
+	    Nodes[x][y].IsWalkable = GetNode(F, x, y);
+	    Nodes[x][y].IsOnOpen = false;
+	    Nodes[x][y].IsOnClose = false;
+	    Nodes[x][y].G = 0;
+	    Nodes[x][y].H = 0;
+	    Nodes[x][y].F = 0;
+	    Nodes[x][y].ParentX = 0;
+	    Nodes[x][y].ParentY = 0;
 	}
 }
 
@@ -85,7 +87,6 @@ void FindPath( PATH *Path, int StartX, int StartY,
   int dx, dy; // for the 8 squares adjacent to each node
   int cx = StartX, cy = StartY;
   int lowestf = UNREAL_F; // start with the lowest being the highest
-  int count = 0;
   // add starting node to open list
   Nodes[StartX][StartY].IsOnOpen = true;
   Nodes[StartX][StartY].IsOnClose = false;
@@ -99,18 +100,19 @@ void FindPath( PATH *Path, int StartX, int StartY,
 	  for ( y = 0; y < MAP_H; y++)
 	  {
 	    Nodes[x][y].F = Nodes[x][y].G + Nodes[x][y].H;
-		if ( Nodes[x][y].IsOnOpen )
-		{
-		  if ( Nodes[x][y].F < lowestf )
+		  if ( Nodes[x][y].IsOnOpen )
 		  {
-		    cx = x;
-			cy = y;
-			lowestf = Nodes[x][y].F;
+		    if ( Nodes[x][y].F < lowestf )
+		    {
+		      cx = x;
+			    cy = y;
+			    lowestf = Nodes[x][y].F;
+		    }
 		  }
-		}
 		
 	  }
 	}
+	//rb->splash(HZ * 0.002, "One loop");
 	// we found it, so now put that node on the closed list
 	Nodes[cx][cy].IsOnOpen = false;
 	Nodes[cx][cy].IsOnClose = true;
@@ -119,7 +121,9 @@ void FindPath( PATH *Path, int StartX, int StartY,
 	{
 	  for ( dy = -1; dy <= 1; dy++ )
 	  {
-		if ( (dx != 0) || (dy != 0) )
+		// We can`t use diagonals in bomberman
+		//if ( (dx != 0) || (dy != 0) )
+		if ( (dx == 0) || (dy == 0) )
 		{
 		  if ( (cx + dx) < MAP_W && (cx + dx) > -1 && 
 		       (cy + dy) < MAP_H && (cy + dy) >-1 )
@@ -138,9 +142,10 @@ void FindPath( PATH *Path, int StartX, int StartY,
 				  Nodes[cx+dx][cy+dy].ParentX = cx;
 				  Nodes[cx+dx][cy+dy].ParentY = cy;
 				  //work out G
-				  if ( dx != 0 && dy != 0) 
+				  // We can`t use diagonals in bomberman
+				  /*if ( dx != 0 && dy != 0) 
 				    Nodes[cx+dx][cy+dy].G = 14; // diagonals cost 14
-				  else 
+				  else*/ 
 				    Nodes[cx+dx][cy+dy].G = 10; // straights cost 10
 				  //work out H
 				  //MANHATTAN METHOD
@@ -151,10 +156,10 @@ void FindPath( PATH *Path, int StartX, int StartY,
 							Nodes[cx+dx][cy+dy].G + 
 							Nodes[cx+dx][cy+dy].H;
 
-							
 				}
 				//otherwise it is on the open list
-				else if ( Nodes[cx+dx][cy+dy].IsOnClose == false 
+				// We can`t use diagonals in bomberman
+				/*else if ( Nodes[cx+dx][cy+dy].IsOnClose == false 
 						  && Nodes[cx+dx][cy+dy].IsOnOpen == true )
 				{
 				  if ( dx == 0 || dy == 0)   // if its not a diagonal
@@ -174,9 +179,12 @@ void FindPath( PATH *Path, int StartX, int StartY,
 										 Nodes[cx+dx][cy+dy].G 
 										 + Nodes[cx+dx][cy+dy].H;
 					 }
-				  } 
+				  }
+
 				}//end else
+				*/
 			}// end if walkable and not on closed list
+
 		}
 	}
   }
@@ -187,48 +195,54 @@ void FindPath( PATH *Path, int StartX, int StartY,
   
   cx = EndX;
   cy = EndY;
+  Path->Distance = 0;
   
   while ( cx != StartX || cy != StartY )
   {
-	Path->Path[count].X = Nodes[cx][cy].ParentX;
-	Path->Path[count].Y = Nodes[cx][cy].ParentY;
+	Path->Path[Path->Distance].X = Nodes[cx][cy].ParentX;
+	Path->Path[Path->Distance].Y = Nodes[cx][cy].ParentY;
 	cx = Nodes[cx][cy].ParentX;
 	cy = Nodes[cx][cy].ParentY;
 	Path->Distance++;
-	if ( count > 100 )
+	if ( Path->Distance > 100 )
+	{
+		//rb->splash(HZ, "Too long path");
 	  break;
+	}
   }
+  //rb->splash(HZ, "End");
   //return Path; //we're done, return a pointer to the final path;
 }
 
-void MovePlayer( Game *G, Player *P, PATH *Path )
+void MovePlayer(Game *G, Player *P, PATH *Path)
 {
-	if( P->xpos < Path->Path[1].X )
+	//rb->splash(HZ * 0.02, "move");
+	if (P->xpos < Path->Path[0].X)
 	  PlayerMoveRight(G, P);
-	else if( P->xpos > Path->Path[1].X )
+	else if (P->xpos > Path->Path[0].X)
 	  PlayerMoveLeft(G, P);
-	  
-	if( P->ypos < Path->Path[1].Y )
+	else if (P->ypos < Path->Path[0].Y)
 	  PlayerMoveDown(G, P);
-	else if( P->ypos > Path->Path[1].Y ) 
+	else if (P->ypos > Path->Path[0].Y) 
 	  PlayerMoveUp(G, P);  
 }
 
 void UpdateAI( Game *G, Player* Players )
 {
   int i, j;
-  int size = sizeof(Players) / sizeof(Players[0]);
   PATH Path, CurPath;
   int MinDist = UNREAL_F;
   
+  //rb->splash(HZ, "Ai");
   
-  for(i = 0; i < size; i++)
+  for(i = 0; i < 2; i++)
   {
 		MinDist = UNREAL_F;
 		rb->memset(&CurPath, 0, sizeof(PATH));
 		if(Players[i].IsAIPlayer == true)
 		{
-      for(j = 0; j < size; j++)
+			//rb->splash(HZ, "Ai2");
+      for(j = 0; j < 2; j++)
       {
 				if(j == i)
 				  continue;

@@ -94,7 +94,7 @@ void InitGame(Game *game)
 
 void InitPlayer(Player *player)
 {
-	player->status.state = HUNKY;
+	player->status.state = ALIVE;
 	player->status.health = 100;
 	player->xpos = 1;
 	player->ypos = 1;
@@ -114,10 +114,10 @@ void InitPlayer(Player *player)
 
 void InitAI(Player *player)
 {
-	player->status.state = HUNKY;
+	player->status.state = ALIVE;
 	player->status.health = 100;
-	player->xpos = 1;
-	player->ypos = 9;
+	player->xpos = 2;
+	player->ypos = 1;
 	player->look = LOOK_DOWN;
 	player->speed = 1;
 	player->bombs_max = -1;
@@ -135,23 +135,27 @@ void InitAI(Player *player)
 int plugin_main(void)
 {
     int action; /* Key action */
+    int i;
     Game game;
     
     rb->srand(*rb->current_tick);
     
     InitGame(&game);
     InitPlayer(&game.players[0]);
-    InitAI(&game.players[1]);
-    
+ 		InitAI(&game.players[1]);
+        
     /* Main loop */
     while (true)
     {
 		Draw(&game);
 	
-		UpdatePlayer(&game.players[0]);
-		UpdateAI(&game, game.players);
+		for (i = 0; i < 2; i++)
+			UpdatePlayer(&game.players[i]);
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
+
+		InitNodes(&game.field);
+		UpdateAI(&game, game.players);
 		
 		rb->sleep(SLEEP_TIME);
 		
