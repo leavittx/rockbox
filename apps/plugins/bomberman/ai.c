@@ -25,7 +25,7 @@
 
 #include "game.h"
 
-#define abs(x) ((x) >= 0 ? (x) : -(x))
+#define _abs(x) ((x) >= 0 ? (x) : -(x))
 
 #define UNREAL_F 999
 
@@ -154,8 +154,8 @@ void FindPath(PATH *Path, int StartX, int StartY,
 				  //work out H
 				  //MANHATTAN METHOD
 				  Nodes[cx+dx][cy+dy].H =
-							(abs(EndX-(cx+dx)) + 
-							 abs(EndY-(cy+dy)))*10;
+							(_abs(EndX-(cx+dx)) + 
+							 _abs(EndY-(cy+dy)))*10;
 				  Nodes[cx+dx][cy+dy].F =
 							Nodes[cx+dx][cy+dy].G + 
 							Nodes[cx+dx][cy+dy].H;
@@ -176,8 +176,8 @@ void FindPath(PATH *Path, int StartX, int StartY,
 					   Nodes[cx+dx][cy+dy].ParentY = cy;
 					   //recalc H
 					   Nodes[cx+dx][cy+dy].H = 
-					  					 (abs(EndX-(cx+dx)) + 
-										    abs(EndY-(cy+dy))) * 10;
+					  					 (_abs(EndX-(cx+dx)) + 
+										    _abs(EndY-(cy+dy))) * 10;
 					   //recalc F
 					   Nodes[cx+dx][cy+dy].F = 
 										 Nodes[cx+dx][cy+dy].G 
