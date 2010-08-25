@@ -24,10 +24,10 @@
 #include "plugin.h"
 
 #include "game.h"
-//#include "ai.h"
+
+#define abs(x) ((x) >= 0 ? (x) : -(x))
 
 #define UNREAL_F 999
-#define abs(x) ((x) >= 0 ? (x) : -(x))
 
 typedef struct
 {
@@ -53,7 +53,7 @@ typedef struct
 /* PATHELEM Path[MAP_W][MAP_H]; */
 NODE Nodes[MAP_W][MAP_H]; 
 
-bool GetNode( Field  *field, int x, int y )
+bool GetNode(Field  *field, int x, int y)
 {  
 	if (field->map[x][y] == SQUARE_FREE ||
 		  field->map[x][y] == SQUARE_BOMB)
@@ -80,36 +80,36 @@ void InitNodes(Field *F)
 	}
 }
 
-void FindPath( PATH *Path, int StartX, int StartY, 
-                int EndX, int EndY )
+void FindPath(PATH *Path, int StartX, int StartY, 
+                int EndX, int EndY)
 {
   int x = 0, y = 0; // for running through the nodes
   int dx, dy; // for the 8 squares adjacent to each node
   int cx = StartX, cy = StartY;
   int lowestf = UNREAL_F; // start with the lowest being the highest
+  
   // add starting node to open list
   Nodes[StartX][StartY].IsOnOpen = true;
   Nodes[StartX][StartY].IsOnClose = false;
 //////////////////////LOOP BEGINS HERE/////////////////////////
-  while ( cx != EndX || cy != EndY )
+  while (cx != EndX || cy != EndY)
   {
     //look for lowest F cost node on open list - this becomes the current node
 	lowestf = UNREAL_F;
-	for ( x = 0; x < MAP_W; x++ )
+	for (x = 0; x < MAP_W; x++)
 	{
-	  for ( y = 0; y < MAP_H; y++)
+	  for (y = 0; y < MAP_H; y++)
 	  {
-	    Nodes[x][y].F = Nodes[x][y].G + Nodes[x][y].H;
-		  if ( Nodes[x][y].IsOnOpen )
-		  {
-		    if ( Nodes[x][y].F < lowestf )
-		    {
-		      cx = x;
-			    cy = y;
-			    lowestf = Nodes[x][y].F;
-		    }
-		  }
-		
+		Nodes[x][y].F = Nodes[x][y].G + Nodes[x][y].H;
+		if (Nodes[x][y].IsOnOpen)
+		{
+			if (Nodes[x][y].F < lowestf)
+			{
+				cx = x;
+				cy = y;
+				lowestf = Nodes[x][y].F;
+			}
+		}
 	  }
 	}
 	//rb->splash(HZ * 0.002, "One loop");
@@ -117,27 +117,27 @@ void FindPath( PATH *Path, int StartX, int StartY,
 	Nodes[cx][cy].IsOnOpen = false;
 	Nodes[cx][cy].IsOnClose = true;
 	// for each of the 8 adjacent node
-	for ( dx = -1; dx <= 1; dx++ )
+	for (dx = -1; dx <= 1; dx++)
 	{
-	  for ( dy = -1; dy <= 1; dy++ )
+	  for (dy = -1; dy <= 1; dy++)
 	  {
 		// We can`t use diagonals in bomberman
-		if ( (dx == dy) || (dy == -dx) )
+		if ((dx == dy) || (dy == -dx))
 		{
 		  Nodes[cx+dx][cy+dy].IsWalkable == false; 
 		  continue;
 		}
-		if ( (dx == 0) || (dy == 0) )
+		if ((dx == 0) || (dy == 0))
 		{
-		  if ( (cx + dx) < MAP_W && (cx + dx) > -1 && 
-		       (cy + dy) < MAP_H && (cy + dy) > -1 )
+		  if ((cx + dx) < MAP_W && (cx + dx) > -1 && 
+		       (cy + dy) < MAP_H && (cy + dy) > -1)
 		  {
 			 // if its walkable and not on the closed list
-			 if ( Nodes[cx+dx][cy+dy].IsWalkable == true 
-			   && Nodes[cx+dx][cy+dy].IsOnClose == false )
+			 if (Nodes[cx+dx][cy+dy].IsWalkable == true 
+			   && Nodes[cx+dx][cy+dy].IsOnClose == false)
 			 {
 			    //if its not on open list
-				if ( Nodes[cx+dx][cy+dy].IsOnOpen == false )
+				if (Nodes[cx+dx][cy+dy].IsOnOpen == false)
 				{
 				  //add it to open list
 				  Nodes[cx+dx][cy+dy].IsOnOpen = true;
@@ -147,7 +147,7 @@ void FindPath( PATH *Path, int StartX, int StartY,
 				  Nodes[cx+dx][cy+dy].ParentY = cy;
 				  //work out G
 				  // We can`t use diagonals in bomberman
-				 /* if ( dx != 0 && dy != 0) 
+				 /* if (dx != 0 && dy != 0) 
 				    Nodes[cx+dx][cy+dy].G = 14; // diagonals cost 14
 				  else*/ 
 				    Nodes[cx+dx][cy+dy].G = 10; // straights cost 10
@@ -188,12 +188,11 @@ void FindPath( PATH *Path, int StartX, int StartY,
 				}//end else
 				*/
 			}// end if walkable and not on closed list
-
+		  }
 		}
+	  }
 	}
   }
-	}
-	}
   
   //follow all the parents back to the start
   
@@ -201,14 +200,14 @@ void FindPath( PATH *Path, int StartX, int StartY,
   cy = EndY;
   Path->Distance = 0;
   
-  while ( cx != StartX || cy != StartY )
+  while (cx != StartX || cy != StartY)
   {
 	Path->Path[Path->Distance].X = Nodes[cx][cy].ParentX;
 	Path->Path[Path->Distance].Y = Nodes[cx][cy].ParentY;
 	cx = Nodes[cx][cy].ParentX;
 	cy = Nodes[cx][cy].ParentY;
 	Path->Distance++;
-	if ( Path->Distance > 100 )
+	if (Path->Distance > 100)
 	{
 		//rb->splash(HZ, "Too long path");
 	  break;
@@ -234,15 +233,16 @@ void MovePlayer(Game *G, Player *P, PATH *Path)
 void CopyPaths(PATH *Dst, PATH *Src)
 {
 	int i;
+	
 	Dst->Distance = Src->Distance;
-	for(i = 0; i < Src->Distance; i++)
+	for (i = 0; i < Src->Distance; i++)
 	{
 	  Dst->Path[i].X = Src->Path[i].X;
 	  Dst->Path[i].Y = Src->Path[i].Y;
 	}
 }
 
-void UpdateAI( Game *G, Player* Players )
+void UpdateAI(Game *G, Player *Players)
 {
   int i, j;
   PATH Path, CurPath;
@@ -251,21 +251,21 @@ void UpdateAI( Game *G, Player* Players )
   
   //rb->splash(HZ, "Ai");
   
-  for(i = 0; i < MAX_PLAYERS; i++)
+  for (i = 0; i < MAX_PLAYERS; i++)
   {
 		MinDist = UNREAL_F;
 		rb->memset(&CurPath, 0, sizeof(PATH));
-		if(Players[i].IsAIPlayer == true)
+		if (Players[i].IsAIPlayer == true)
 		{
 			//rb->splash(HZ, "Ai2");
-      for(j = 0; j < MAX_PLAYERS; j++)
-      {
-				if(j == i)
+			 for (j = 0; j < MAX_PLAYERS; j++)
+			 {
+				if (j == i)
 				  continue;
 				rb->memset(&Path, 0, sizeof(PATH));
 				FindPath(&Path, Players[i].xpos, Players[i].ypos, 
 				  Players[j].xpos, Players[j].ypos);
-				if( Path.Distance < MinDist )
+				if (Path.Distance < MinDist)
 				{
 				  MinDist = Path.Distance;
 				  CopyPaths(&CurPath, &Path);
@@ -283,7 +283,7 @@ void UpdateAI( Game *G, Player* Players )
 			      PlayerPlaceBomb(G, &Players[i]);
 			      break;
 					}*/
-		} 
+		}
 	}
 }
 

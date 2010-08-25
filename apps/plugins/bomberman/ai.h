@@ -24,7 +24,7 @@
 #ifndef _AI_H_
 #define _AI_H_
 
-void InitNodes(  Field *F );
-void UpdateAI( Game *G, Player *Players );
+void InitNodes(Field *F);
+void UpdateAI(Game *G, Player *Players);
 
 #endif /* _AI_H_ */
