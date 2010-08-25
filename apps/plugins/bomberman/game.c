@@ -233,10 +233,11 @@ void PlayerPlaceBomb(Game *game, Player *player)
 		}
 }
 
-static bool IsTransparentSquare(SqType type)
+static bool IsTransparentSquare(Field *field, int x, int y)
 {
-	if (type == SQUARE_FREE ||
-		type == SQUARE_BOMB)
+	if (field->map[x][y] == SQUARE_FREE ||
+		field->map[x][y] == SQUARE_BOMB ||
+		(field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY))
 		return true;
 		
 	return false;
@@ -277,21 +278,27 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 			(dir == FIRE_LEFT  && curx >= 0) ||
 			(dir == FIRE_UP    && cury >= 0))
 		{
-			if (IsTransparentSquare(game->field.map[curx][cury]))
+			if (IsTransparentSquare(&game->field, curx, cury))
 			{
 				game->field.firemap[curx][cury].state = BOMB_NONE;
 			}
-			if (game->field.map[curx][cury] == SQUARE_BOX)
+			else if (game->field.map[curx][cury] == SQUARE_BOX)
 			{
 				game->field.firemap[curx][cury].state = BOMB_NONE;
 				//game->field.map[curx][cury] = SQUARE_FREE;
-				game->field.boxes[curx][cury].state = EXPL_PHASE1;
+				game->field.boxes[curx][cury].state = BOX_EXPL_PHASE1;
 				game->field.boxes[curx][cury].expl_time = get_tick();
 				break;
 			}
-			if (game->field.map[curx][cury] == SQUARE_BLOCK)
+			else if (game->field.map[curx][cury] == SQUARE_BLOCK)
 			{
 				break;
+			}
+			if (game->player.xpos == curx && game->player.ypos == cury)
+			{
+				game->player.status.health = 0;
+				game->player.status.state = EXPL_PHASE1;
+				game->player.status.time_of_death = get_tick();
 			}
 		}
 		else
@@ -336,7 +343,7 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
 			(dir == FIRE_LEFT  && curx >= 0) ||
 			(dir == FIRE_UP    && cury >= 0))
 		{
-			if (IsTransparentSquare(game->field.map[curx][cury]))
+			if (IsTransparentSquare(&game->field, curx, cury))
 			{
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE4;
 			}
@@ -392,7 +399,7 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
 			(dir == FIRE_LEFT  && curx >= 0) ||
 			(dir == FIRE_UP    && cury >= 0))
 		{
-			if (IsTransparentSquare(game->field.map[curx][cury]))
+			if (IsTransparentSquare(&game->field, curx, cury))
 			{
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE3;
 			}
@@ -448,7 +455,7 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
 			(dir == FIRE_LEFT  && curx >= 0) ||
 			(dir == FIRE_UP    && cury >= 0))
 		{
-			if (IsTransparentSquare(game->field.map[curx][cury]))
+			if (IsTransparentSquare(&game->field, curx, cury))
 			{
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE2;
 			}
@@ -513,7 +520,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 			(dir == FIRE_LEFT  && curx >= 0) ||
 			(dir == FIRE_UP    && cury >= 0))
 		{
-			if (IsTransparentSquare(game->field.map[curx][cury]))
+			if (IsTransparentSquare(&game->field, curx, cury))
 			{
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE1;
 				game->field.firemap[curx][cury].dir = dir;
@@ -636,7 +643,7 @@ void UpdateBoxes(Game *game)
 				//	break;
 				game->field.boxes[i][j].state = 
 					(get_tick() - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
-				if (game->field.boxes[i][j].state > EXPL_PHASE5)
+				if (game->field.boxes[i][j].state > BOX_EXPL_PHASE5)
 					game->field.map[i][j] = SQUARE_FREE;
 			}
 }

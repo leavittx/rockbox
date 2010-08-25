@@ -37,7 +37,7 @@
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1)
 
-#define PLAYER_MOVE_PART_TIME (HZ * 0.005)
+#define PLAYER_MOVE_PART_TIME (HZ * 0.001)
 
 typedef enum {
 	SQUARE_FREE,
@@ -61,8 +61,23 @@ typedef enum {
 	BOMB_PWR_KILLER
 } BombPower;
 
+typedef enum {
+	ALIVE,
+	EXPL_PHASE1,
+	EXPL_PHASE2,
+	EXPL_PHASE3,
+	EXPL_PHASE4,
+	DEAD
+} PlayerState;
+
 typedef struct {
-	bool isalive;
+	PlayerState state;
+	int health;
+	unsigned long time_of_death;
+} PlayerStatus;
+
+typedef struct {
+	PlayerStatus status;
 	
 	int xpos, ypos;
 	LookSide look;
@@ -134,11 +149,11 @@ typedef enum {
 
 typedef enum {
 	HUNKY,
-	EXPL_PHASE1,
-	EXPL_PHASE2,
-	EXPL_PHASE3,
-	EXPL_PHASE4,
-	EXPL_PHASE5
+	BOX_EXPL_PHASE1,
+	BOX_EXPL_PHASE2,
+	BOX_EXPL_PHASE3,
+	BOX_EXPL_PHASE4,
+	BOX_EXPL_PHASE5
 } BoxState;
 
 typedef struct

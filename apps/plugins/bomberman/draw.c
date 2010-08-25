@@ -31,6 +31,7 @@
 #include "pluginbitmaps/bomberman_explode.h"
 #include "pluginbitmaps/bomberman_player_move.h"
 #include "pluginbitmaps/bomberman_player_death.h"
+#include "pluginbitmaps/bomberman_cc.h"
 
 #include "game.h"
 #include "draw.h"
@@ -44,6 +45,13 @@ void Draw(Game *game)
 	int i, j;
 	
 	rb->lcd_clear_display();	
+	
+	/* Chaos constructions logo */
+	rb->lcd_bitmap_transparent(bomberman_cc,
+		0,
+		(LCD_HEIGHT - BMPHEIGHT_bomberman_cc) - 26,
+		BMPWIDTH_bomberman_cc,
+		BMPHEIGHT_bomberman_cc);
 	
 	/* Different objects on the field */
 	for (i = 0; i < MAP_W; i++)
@@ -148,6 +156,7 @@ void Draw(Game *game)
 		else if (game->player.move_phase == 5)
 			curphase = 0;
 			
+		// todo: make common code for different direction
 		if (game->player.look == LOOK_UP)
 		{
 			rb->lcd_bitmap_transparent_part(bomberman_player_move,
@@ -252,5 +261,16 @@ void Draw(Game *game)
 			}
 		}
 	
+	// Possibly add some demo effects
+	/*
+	FOR_NB_SCREENS(i)
+    {
+		struct screen *display = rb->screens[i];
+		
+		display->drawline(0, 10, LCD_WIDTH, 10);
+		
+		display->update();
+	}
+	*/
 	rb->lcd_update();
 }

@@ -30,7 +30,7 @@
 #include "game.h"
 #include "draw.h"
 
-#define SLEEP_TIME 1
+#define SLEEP_TIME 0
 
 const struct button_mapping *plugin_contexts[] = {
 	pla_main_ctx,
@@ -93,7 +93,8 @@ void InitGame(Game *game)
 
 void InitPlayer(Player *player)
 {
-	player->isalive = true;
+	player->status.state = HUNKY;
+	player->status.health = 100;
 	player->xpos = 1;
 	player->ypos = 1;
 	player->look = LOOK_DOWN;
