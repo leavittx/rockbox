@@ -87,6 +87,8 @@ void InitGame(Game *game)
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 		game->field.bombs[i].state = BOMB_NONE;
 	
+	game->nplayers = MAX_PLAYERS;
+	
 	game->bomb_rad[BOMB_PWR_SINGLE] = 1;
 	game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
 	game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
@@ -144,8 +146,8 @@ int plugin_main(void)
     
     InitGame(&game);
     InitPlayer(&game.players[0]);
- 		InitAI(&game.players[1], 15, 1);
- 		//InitAI(&game.players[2], 1, 5);
+ 	InitAI(&game.players[1], 15, 1);
+ 	//InitAI(&game.players[2], 1, 5);
         
     /* Main loop */
     while (true)
@@ -153,7 +155,28 @@ int plugin_main(void)
 		Draw(&game);
 	
 		for (i = 0; i < MAX_PLAYERS; i++)
-			UpdatePlayer(&game.players[i]);
+		{
+			int upd;
+			
+			upd = UpdatePlayer(&game.players[i]);
+			if (upd == DEAD)
+			{
+				game.nplayers--;
+				if (game.nplayers == 1)
+				{
+					for (i = 0; i < MAX_PLAYERS; i++)
+					{
+						if (game.players[i].status.state == ALIVE)
+						{
+							//if (game.players[i].IsAIPlayer)
+							//	rb->splash(HZ * 5, "You lose");
+							//else
+							//	rb->splash(HZ * 5, "You won");
+						}
+					}
+				}
+			}
+		}
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
 
