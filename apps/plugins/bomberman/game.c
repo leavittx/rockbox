@@ -153,8 +153,6 @@ void PlayerMoveLeft(Game *game, Player *player)
 
 int UpdatePlayer(Player *player)
 {
-	int i;
-	
 	if (player->status.state == ALIVE)
 	{
 		if (player->ismove)

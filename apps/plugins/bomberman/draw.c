@@ -50,7 +50,8 @@ void Draw(Game *game)
 	/* Chaos constructions logo */
 	rb->lcd_bitmap_transparent(bomberman_cc,
 		0,
-		(LCD_HEIGHT - BMPHEIGHT_bomberman_cc) - 26,
+		0,
+		/*(LCD_HEIGHT - BMPHEIGHT_bomberman_cc) - 26,*/
 		BMPWIDTH_bomberman_cc,
 		BMPHEIGHT_bomberman_cc);
 	
