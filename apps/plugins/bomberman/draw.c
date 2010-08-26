@@ -187,7 +187,7 @@ void Draw(Game *game)
 		}
 		else if (game->players[i].ismove)
 		{
-			int curphase;
+			int curphase = 0;
 			
 			if (game->players[i].move_phase <= 3)
 				curphase = game->players[i].move_phase;
