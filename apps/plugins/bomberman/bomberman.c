@@ -69,9 +69,7 @@ void InitGame(Game *game)
 		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
 		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
 		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
-		//{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,0,0,2},
-		//{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
+		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
 		{2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
 		{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
 		};
@@ -122,7 +120,7 @@ void InitAI(Player *player, int x, int y)
 	player->ypos = y;
 	player->look = LOOK_DOWN;
 	player->speed = 1;
-	player->bombs_max = 3; //-1;
+	player->bombs_max = -1;
 	player->bombs_placed = 0;
 	player->bomb_power = BOMB_PWR_KILLER;
 	
@@ -144,9 +142,10 @@ int plugin_main(void)
     
     InitGame(&game);
     InitPlayer(&game.players[0]);
- 		InitAI(&game.players[1], 15, 1);
- 		//InitAI(&game.players[2], 1, 5);
-        
+	//InitAI(&game.players[1], 3, 9);
+	InitAI(&game.players[1], 10, 9);
+	//InitAI(&game.players[1], 2, 9);
+
     /* Main loop */
     while (true)
     {
@@ -156,9 +155,8 @@ int plugin_main(void)
 			UpdatePlayer(&game.players[i]);
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
-
-		InitNodes(&game.field);
-		UpdateAI(&game, game.players);
+        InitNodes(&game.field);
+	    UpdateAI(&game, game.players);
 		
 		rb->sleep(SLEEP_TIME);
 		
