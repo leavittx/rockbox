@@ -40,6 +40,7 @@
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1)
 
 #define PLAYER_MOVE_PART_TIME (HZ * 0.001)
+#define PLAYER_DELAY_DEATH_ANIM (HZ * 0.15)
 
 typedef enum {
 	SQUARE_FREE,
@@ -176,6 +177,7 @@ typedef struct {
 typedef struct {
 	Field field;
 	Player players[MAX_PLAYERS];
+	int nplayers;
 	int bomb_rad[BOMB_PWR_KILLER + 1];
 } Game;
 
@@ -183,7 +185,7 @@ void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
 void PlayerMoveRight(Game *game, Player *player);
 void PlayerMoveLeft(Game *game, Player *player);
-void UpdatePlayer(Player *player);
+int	 UpdatePlayer(Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
