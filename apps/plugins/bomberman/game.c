@@ -37,7 +37,7 @@ inline unsigned long get_tick(void)
 
 void PlayerMoveUp(Game *game, Player *player)
 {
-	if (player->ismove)
+	if (player->ismove || player->status.state == DEAD)
 		return;
 		
 	if (player->rxpos != 0)
@@ -65,8 +65,8 @@ void PlayerMoveUp(Game *game, Player *player)
 }
 
 void PlayerMoveDown(Game *game, Player *player)
-{		
-	if (player->ismove)
+{
+	if (player->ismove || player->status.state == DEAD)
 		return;
 		
 	if (player->rxpos != 0)
@@ -95,7 +95,7 @@ void PlayerMoveDown(Game *game, Player *player)
 
 void PlayerMoveRight(Game *game, Player *player)
 {
-	if (player->ismove)
+	if (player->ismove || player->status.state == DEAD)
 		return;
 		
 	if (player->rypos != 0)
@@ -124,7 +124,7 @@ void PlayerMoveRight(Game *game, Player *player)
 
 void PlayerMoveLeft(Game *game, Player *player)
 {
-	if (player->ismove)
+	if (player->ismove || player->status.state == DEAD)
 		return;
 		
 	if (player->rypos != 0)
@@ -151,67 +151,84 @@ void PlayerMoveLeft(Game *game, Player *player)
 	}
 }
 
-void UpdatePlayer(Player *player)
+int UpdatePlayer(Player *player)
 {
-	if (player->ismove)
+	int i;
+	
+	if (player->status.state == ALIVE)
 	{
-		if ((get_tick() - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
+		if (player->ismove)
 		{
-			if (player->move_phase == 5)
+			if ((get_tick() - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
 			{
-				player->ismove = false;
-				player->move_phase = 0;
-				
-				if (player->look == LOOK_UP)
+				if (player->move_phase == 5)
 				{
-					if (player->rypos == -1)
+					player->ismove = false;
+					player->move_phase = 0;
+					
+					if (player->look == LOOK_UP)
 					{
-						player->ypos--;
-						player->rypos = 1;
+						if (player->rypos == -1)
+						{
+							player->ypos--;
+							player->rypos = 1;
+						}
+						else
+							player->rypos--;
 					}
-					else
-						player->rypos--;
-				}
-				else if (player->look == LOOK_DOWN)
-				{
-					if (player->rypos == 1)
+					else if (player->look == LOOK_DOWN)
 					{
-						player->ypos++;
-						player->rypos = -1;
+						if (player->rypos == 1)
+						{
+							player->ypos++;
+							player->rypos = -1;
+						}
+						else
+							player->rypos++;
 					}
-					else
-						player->rypos++;
-				}
-				else if (player->look == LOOK_RIGHT)
-				{
-					if (player->rxpos == 1)
+					else if (player->look == LOOK_RIGHT)
 					{
-						player->xpos++;
-						player->rxpos = -1;
+						if (player->rxpos == 1)
+						{
+							player->xpos++;
+							player->rxpos = -1;
+						}
+						else
+							player->rxpos++;
 					}
-					else
-						player->rxpos++;
-				}
-				else /* LOOK_LEFT */
-				{
-					if (player->rxpos == -1)
+					else /* LOOK_LEFT */
 					{
-						player->xpos--;
-						player->rxpos = 1;
+						if (player->rxpos == -1)
+						{
+							player->xpos--;
+							player->rxpos = 1;
+						}
+						else
+							player->rxpos--;
 					}
-					else
-						player->rxpos--;
 				}
+				else
+					player->move_phase++;
 			}
-			else
-				player->move_phase++;
 		}
 	}
+	else if (player->status.state != DEAD)
+	{
+		player->status.state = 
+			(get_tick() - player->status.time_of_death) / PLAYER_DELAY_DEATH_ANIM + 1;
+			
+		return player->status.state;
+	}
+
+	return 0;
 }
 
 void PlayerPlaceBomb(Game *game, Player *player)
 {
 	int i;
+	
+	if (player->status.state == DEAD)
+		return;
 		
 	if (player->bombs_placed >= player->bombs_max &&
 		player->bombs_max != -1) /* Infinity */
@@ -246,6 +263,18 @@ static bool IsTransparentSquare(Field *field, int x, int y)
 static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 {
 	int j;
+	int i;
+	
+	for (i = 0; i < MAX_PLAYERS; i++)
+	{
+		if (game->players[i].xpos == x && game->players[i].ypos == y &&
+			game->players[i].status.state == ALIVE)
+		{
+			game->players[i].status.health = 0;
+			game->players[i].status.state = EXPL_PHASE1;
+			game->players[i].status.time_of_death = get_tick();
+		}
+	}
 	
 	for (j = 1; j <= rad; j++)
 	{
@@ -294,11 +323,15 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 			{
 				break;
 			}
-			if (game->players[0].xpos == curx && game->players[0].ypos == cury)
+			for (i = 0; i < MAX_PLAYERS; i++)
 			{
-				game->players[0].status.health = 0;
-				game->players[0].status.state = EXPL_PHASE1;
-				game->players[0].status.time_of_death = get_tick();
+				if (game->players[i].xpos == curx && game->players[i].ypos == cury &&
+					game->players[i].status.state == ALIVE)
+				{
+					game->players[i].status.health = 0;
+					game->players[i].status.state = EXPL_PHASE1;
+					game->players[i].status.time_of_death = get_tick();
+				}
 			}
 		}
 		else
