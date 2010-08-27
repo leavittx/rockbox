@@ -86,31 +86,30 @@ void InitNodes(Field *F)
 }
 
 void FindPath(PATH *Path, int StartX, int StartY,
-                int EndX, int EndY)
+                int EndX, int EndY, int n, int m)
 {
-  int x = 0, y = 0; // for running through the nodes
-  int dx, dy; // for the 8 (4) squares adjacent to each node
-  int cx = StartX, cy = StartY;
-  int lowestf = UNREAL_F; // start with the lowest being the highest
+	int x = 0, y = 0; // for running through the nodes
+	int dx, dy; // for the 8 (4) squares adjacent to each node
+	int cx = StartX, cy = StartY;
+	int lowestf = UNREAL_F; // start with the lowest being the highest
+	int count = 0;
   
-  // debug info
-  /*
-  int desc;
-  char logStr[100] = "\n";
-  static bool opened = false;
+	// debug info
+	/*
+	int desc;
+	char logStr[100] = "\n";
   
-  if (!opened)
-  {
-    if ((desc = rb->open(PLUGIN_GAMES_DIR "/path.txt", O_WRONLY | O_CREAT, 0666)) < 0)
-    { 
+	if ((desc = rb->open(PLUGIN_GAMES_DIR "/path.txt", O_WRONLY | O_APPEND | O_CREAT, 0666)) < 0)
+	{ 
 	  rb->splash(HZ, "Cant open");
-      return;
-    }
-    else
-	  opened = true;
-  }
-  rb->write(desc, logStr, rb->strlen(logStr));
-  */
+	  return;
+	}
+	rb->write(desc, logStr, rb->strlen(logStr));
+	rb->memset(logStr, 0, 100);
+	rb->snprintf(logStr, 5, "%i %i\n", n, m);
+	rb->write(desc, logStr, rb->strlen(logStr));
+	*/
+  
   
   // add starting node to open list
   Nodes[StartX][StartY].IsOnOpen = true;
@@ -118,6 +117,20 @@ void FindPath(PATH *Path, int StartX, int StartY,
   
   while (cx != EndX || cy != EndY)
   {
+	count++;
+	
+	if (count > 100)
+	{
+		// debug
+		/*
+		rb->memset(logStr, 0, 100);
+		rb->snprintf(logStr, 8, "%s\n", "Return");
+		rb->write(desc, logStr, rb->strlen(logStr));
+		*/
+
+		return;
+    }
+
     // look for lowest F cost node on open list - this becomes the current node
 	lowestf = UNREAL_F;
 	for (x = 0; x < MAP_W; x++)
@@ -169,7 +182,7 @@ void FindPath(PATH *Path, int StartX, int StartY,
 				  // debug
 				  /*
 				  rb->memset(logStr, 0, 100);
-	              rb->snprintf(logStr, 19 , "C: %i %i P: %i %i\n", cx+dx, cy+dy, cx, cy);
+	              rb->snprintf(logStr, 21 , "%i C: %i %i P: %i %i\n", n, cx+dx, cy+dy, cx, cy);
 	              rb->write(desc, logStr, rb->strlen(logStr));
 	              */
 	              
@@ -209,7 +222,7 @@ void FindPath(PATH *Path, int StartX, int StartY,
 	// debug
 	/*
 	rb->memset(logStr, 0, 100);
-	rb->snprintf(logStr, 10 , "PP: %i %i\n", Path->Path[Path->Distance].X, 
+	rb->snprintf(logStr, 12 , "%i PP: %i %i\n", n, Path->Path[Path->Distance].X, 
 	             Path->Path[Path->Distance].Y);
 	rb->write(desc, logStr, rb->strlen(logStr));
 	*/
@@ -219,10 +232,8 @@ void FindPath(PATH *Path, int StartX, int StartY,
 		break;
   }
   
-  // debug
-  /*
-   rb->close(desc);
-   */
+	// debug
+	//rb->close(desc);
 }
 
 void MovePlayer(Game *G, Player *P, PATH *Path)
@@ -259,17 +270,18 @@ void UpdateAI(Game *G, Player *Players)
   for (i = 0; i < MAX_PLAYERS; i++)
   {
 		MinDist = UNREAL_F;
-		
-		if (Players[i].IsAIPlayer == true)
+		if (Players[i].IsAIPlayer == true
+		   && Players[i].status.state == ALIVE)
 		{
+			 
 			 for (j = 0; j < MAX_PLAYERS; j++)
 			 {
 				if (j == i)
 				  continue;
-				  
+				InitNodes(&G->field);
 				FindPath(&Path, Players[i].xpos, Players[i].ypos, 
-					Players[j].xpos, Players[j].ypos);
-					
+					Players[j].xpos, Players[j].ypos, i + 1, j + 1);
+		
 				if (Path.Distance < MinDist)
 				{
 				  MinDist = Path.Distance;
@@ -282,6 +294,7 @@ void UpdateAI(Game *G, Player *Players)
 			  
 			// debug: draw path
 			/*
+			int k;
 			FOR_NB_SCREENS(k)
             { 
 		      struct screen *display = rb->screens[k];
@@ -296,8 +309,8 @@ void UpdateAI(Game *G, Player *Players)
 			  }
 			  
 		      display->update();
-	        }
-	        */
+	        }*/
+	        
 		}
 	}
 }
