@@ -95,6 +95,8 @@ void FindPath(PATH *Path, int StartX, int StartY,
 	int count = 0;
   
 	// debug info
+	// avoid warning
+	n = m;
 	/*
 	int desc;
 	char logStr[100] = "\n";
