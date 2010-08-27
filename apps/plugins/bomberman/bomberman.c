@@ -172,8 +172,8 @@ int plugin_main(void)
 	InitPlayer(&game.players[0], 1, 5);
 	//InitAI(&game.players[1], 3, 9);
 	InitAI(&game.players[1], 10, 9);
-	InitAI(&game.players[2], 2, 1);
-	InitAI(&game.players[3], 15, 1);
+	//InitAI(&game.players[2], 2, 1);
+	//InitAI(&game.players[3], 15, 1);
 	
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
