@@ -150,10 +150,12 @@ int plugin_main(void)
     rb->srand(*rb->current_tick);
     
     InitGame(&game);
-    InitPlayer(&game.players[0], 0);
-    //InitAI(&game.players[1], 1, 3, 9);
-    InitAI(&game.players[1], 1, 10, 9);
-    //InitAI(&game.players[1], 1, 2, 9);
+
+	InitPlayer(&game.players[0], 0);
+	//InitAI(&game.players[1], 3, 9);
+	InitAI(&game.players[1], 1, 10, 9);
+	InitAI(&game.players[2], 2, 2, 9);
+	InitAI(&game.players[3], 3, 15, 1);
 
     /* Main loop */
     while (true)
@@ -185,9 +187,8 @@ int plugin_main(void)
 		}
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
-        InitNodes(&game.field);
-        UpdateAI(&game, game.players);
-		
+		UpdateAI(&game, game.players);
+
 		rb->sleep(SLEEP_TIME);
 		
 		action = pluginlib_getaction(TIMEOUT_NOBLOCK,

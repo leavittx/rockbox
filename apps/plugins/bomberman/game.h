@@ -27,7 +27,7 @@
 #define MAP_W 17
 #define MAP_H 11
 
-#define MAX_PLAYERS 2
+#define MAX_PLAYERS 4
 
 #define BOMBS_MAX_NUM 100
 #define BOMB_DELAY_DET (HZ * 5) /* Two seconds before bomb detanates */
