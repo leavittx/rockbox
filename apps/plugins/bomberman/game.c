@@ -260,6 +260,13 @@ void PlayerPlaceBomb(Game *game, Player *player)
 		return;
 	
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
+		if (game->field.bombs[i].xpos == player->xpos &&
+			game->field.bombs[i].ypos == player->ypos)
+		{
+			return;
+		}
+		
+	for (i = 0; i < BOMBS_MAX_NUM; i++)
 		if (game->field.bombs[i].state == BOMB_NONE)
 		{
 			game->field.bombs[i].state = BOMB_PLACED;

@@ -30,7 +30,7 @@
 #define MAX_PLAYERS 2
 
 #define BOMBS_MAX_NUM 100
-#define BOMB_DELAY_DET (HZ * 5) /* Two seconds before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 5) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 90)
 #define BOMB_DELAY_PHASE1 (HZ * 5.1)
 #define BOMB_DELAY_PHASE2 (HZ * 5.2)
@@ -105,7 +105,7 @@ typedef struct {
  | -1  |  0  |  1  |
  | -1  | -1  | -1  |
  |_____|_____|_____|
- | -1  |  0  |  1  | 
+ | -1  |  0  |  1  |
  |  0  |  0  |  0  |   <--- one cell
  |_____|_____|_____|
  | -1  |  0  |  1  |
