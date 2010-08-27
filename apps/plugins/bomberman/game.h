@@ -96,7 +96,9 @@ typedef struct {
 	unsigned long move_start_time;
 	
 	bool IsAIPlayer;
-} Player;
+	
+	int num;
+	} Player;
 
 /*
  * rxpos & rypos - position of player in single cell
@@ -177,6 +179,7 @@ typedef struct {
 typedef struct {
 	Field field;
 	Player players[MAX_PLAYERS];
+	int draw_order[MAX_PLAYERS];
 	int nplayers;
 	int bomb_rad[BOMB_PWR_KILLER + 1];
 } Game;
@@ -185,7 +188,7 @@ void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
 void PlayerMoveRight(Game *game, Player *player);
 void PlayerMoveLeft(Game *game, Player *player);
-int	 UpdatePlayer(Player *player);
+int UpdatePlayer(Game *game, Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);

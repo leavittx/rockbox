@@ -85,6 +85,9 @@ void InitGame(Game *game)
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 		game->field.bombs[i].state = BOMB_NONE;
 	
+	for (i = 0; i < MAX_PLAYERS; i++)
+		game->draw_order[i] = i;
+	
 	game->nplayers = MAX_PLAYERS;
 	
 	game->bomb_rad[BOMB_PWR_SINGLE] = 1;
@@ -94,7 +97,7 @@ void InitGame(Game *game)
 	game->bomb_rad[BOMB_PWR_KILLER] = MAP_W;
 }
 
-void InitPlayer(Player *player)
+void InitPlayer(Player *player, int num)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
@@ -112,9 +115,11 @@ void InitPlayer(Player *player)
 	player->move_phase = 0;
 	
 	player->IsAIPlayer = false;
+	
+	player->num = num;
 }
 
-void InitAI(Player *player, int x, int y)
+void InitAI(Player *player, int num, int x, int y)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
@@ -132,6 +137,8 @@ void InitAI(Player *player, int x, int y)
 	player->move_phase = 0;
 	
 	player->IsAIPlayer = true;
+	
+	player->num = num;
 }
 
 int plugin_main(void)
@@ -143,10 +150,10 @@ int plugin_main(void)
     rb->srand(*rb->current_tick);
     
     InitGame(&game);
-    InitPlayer(&game.players[0]);
-    //InitAI(&game.players[1], 3, 9);
-    InitAI(&game.players[1], 10, 9);
-    //InitAI(&game.players[1], 2, 9);
+    InitPlayer(&game.players[0], 0);
+    //InitAI(&game.players[1], 1, 3, 9);
+    InitAI(&game.players[1], 1, 10, 9);
+    //InitAI(&game.players[1], 1, 2, 9);
 
     /* Main loop */
     while (true)
@@ -157,7 +164,7 @@ int plugin_main(void)
 		{
 			int upd;
 			
-			upd = UpdatePlayer(&game.players[i]);
+			upd = UpdatePlayer(&game, &game.players[i]);
 			if (upd == DEAD)
 			{
 				game.nplayers--;
