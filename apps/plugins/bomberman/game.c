@@ -26,9 +26,9 @@
 #include "game.h"
 
 #define swap(a, b) { \
-		register int tmp = *(a); \
-		*(a) = *(b); \
-		*(b) = tmp; \
+		register Player *tmp = a; \
+		a = b; \
+		b = tmp; \
 }
 
 inline unsigned long get_tick(void)
@@ -152,54 +152,25 @@ void PlayerMoveLeft(Game *game, Player *player)
 	}
 }
 
-static void RecalcDrawOrder(Game *game, Player *moving_player)
+static void RecalcDrawOrder(Game *game)
 {
-	int i, j, k, max;
-	
-	for (i = 0; i < MAX_PLAYERS; i++)
-		game->draw_order[i] = i;
+	int i, j, max;
 	
 	max = MAX_PLAYERS - 1;	
 	for (j = max; j > 0; j--)
 		for (i = 0; i < max; i++)
 		{
-			if (game->players[i].ypos > game->players[i + 1].ypos)
+			if (game->draw_order[i]->ypos > game->draw_order[i + 1]->ypos)
 			{
-				swap(&game->draw_order[i], &game->draw_order[i + 1]);
+				swap(game->draw_order[i], game->draw_order[i + 1]);
+				//rb->splash(HZ, "swap0");
 			}
-			else if (game->players[i].ypos == game->players[i + 1].ypos)
+			else if (game->draw_order[i]->ypos == game->draw_order[i + 1]->ypos)
 			{
-				if (game->players[i].rypos > game->players[i + 1].rypos)
+				if (game->draw_order[i]->rypos > game->draw_order[i + 1]->rypos)
 				{
-					if (moving_player->look == LOOK_DOWN)
-					for (k = 0; k < MAX_PLAYERS; k++)
-					{
-						if (game->players[k].num != moving_player->num)
-							if (game->players[k].rypos != moving_player->rypos)
-							{
-								swap(&game->draw_order[i], &game->draw_order[i + 1]);
-								//rb->splash(HZ, "swap");
-							}
-					}
-					else
-						swap(&game->draw_order[i], &game->draw_order[i + 1]);
-				}
-				else if (game->players[i].rypos == game->players[i + 1].rypos)
-				{
-					if (((moving_player->num == i && game->draw_order[i] < game->draw_order[i + 1])
-						|| (moving_player->num == i + 1  && game->draw_order[i] > game->draw_order[i + 1]))
-						&& moving_player->look == LOOK_UP)
-					{
-						swap(&game->draw_order[i], &game->draw_order[i + 1]);
-						//rb->splash(HZ, "swap");
-					}
-					else if (((moving_player->num == i && game->draw_order[i] > game->draw_order[i + 1])
-						|| (moving_player->num == i + 1  && game->draw_order[i] < game->draw_order[i + 1]))
-						&& moving_player->look == LOOK_DOWN)
-					{
-						swap(&game->draw_order[i], &game->draw_order[i + 1]);
-						//rb->splash(HZ, "swap");
-					}
+					swap(game->draw_order[i], game->draw_order[i + 1]);
+					//rb->splash(HZ, "swap1");
 				}
 			}
 		}
@@ -259,7 +230,7 @@ int UpdatePlayer(Game *game, Player *player)
 							player->rxpos--;
 					}
 					
-					RecalcDrawOrder(game, player);
+					RecalcDrawOrder(game);
 				}
 				else
 					player->move_phase++;

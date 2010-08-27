@@ -26,6 +26,7 @@
 #ifdef HAVE_LCD_BITMAP
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
+#include "lib/playback_control.h"
 
 #include "game.h"
 #include "draw.h"
@@ -85,9 +86,6 @@ void InitGame(Game *game)
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
 		game->field.bombs[i].state = BOMB_NONE;
 	
-	for (i = 0; i < MAX_PLAYERS; i++)
-		game->draw_order[i] = i;
-	
 	game->nplayers = MAX_PLAYERS;
 	
 	game->bomb_rad[BOMB_PWR_SINGLE] = 1;
@@ -97,12 +95,12 @@ void InitGame(Game *game)
 	game->bomb_rad[BOMB_PWR_KILLER] = MAP_W;
 }
 
-void InitPlayer(Player *player, int num)
+void InitPlayer(Player *player, int x, int y)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
-	player->xpos = 1;
-	player->ypos = 1;
+	player->xpos = x;
+	player->ypos = y;
 	player->look = LOOK_DOWN;
 	player->speed = 1;
 	player->bombs_max = -1;
@@ -115,11 +113,9 @@ void InitPlayer(Player *player, int num)
 	player->move_phase = 0;
 	
 	player->IsAIPlayer = false;
-	
-	player->num = num;
 }
 
-void InitAI(Player *player, int num, int x, int y)
+void InitAI(Player *player, int x, int y)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
@@ -137,8 +133,30 @@ void InitAI(Player *player, int num, int x, int y)
 	player->move_phase = 0;
 	
 	player->IsAIPlayer = true;
+}
+
+void ToggleAudioPlayback(void)
+{
+	int audio_status = rb->audio_status();
 	
-	player->num = num;
+    if (!audio_status && rb->global_status->resume_index != -1)
+    {
+        if (rb->playlist_resume() != -1)
+        {
+            rb->playlist_start(rb->global_status->resume_index,
+                rb->global_status->resume_offset);
+        }
+    }
+    else if (audio_status & AUDIO_STATUS_PAUSE)
+        rb->audio_resume();
+    else
+        rb->audio_pause();
+}
+
+void PlayAudioPlaylist(int start_index)
+{
+	if (rb->playlist_resume() != -1)
+		rb->playlist_start(start_index, 0);
 }
 
 int plugin_main(void)
@@ -151,11 +169,22 @@ int plugin_main(void)
     
     InitGame(&game);
 
-	InitPlayer(&game.players[0], 0);
+	InitPlayer(&game.players[0], 1, 5);
 	//InitAI(&game.players[1], 3, 9);
-	InitAI(&game.players[1], 1, 10, 9);
-	InitAI(&game.players[2], 2, 2, 9);
-	InitAI(&game.players[3], 3, 15, 1);
+	InitAI(&game.players[1], 10, 9);
+	InitAI(&game.players[2], 2, 1);
+	InitAI(&game.players[3], 15, 1);
+	
+	for (i = 0; i < MAX_PLAYERS; i++)
+	{
+		game.draw_order[i] = &game.players[i];
+		//game->draw_order[i].order = i;
+	}
+	
+	PlayAudioPlaylist(0);
+	//ToggleAudioPlayback();
+	//rb->audio_next();
+	//rb->audio_prev();
 
     /* Main loop */
     while (true)
@@ -185,6 +214,7 @@ int plugin_main(void)
 				}
 			}
 		}
+		
 		UpdateBombs(&game);
 		UpdateBoxes(&game);
 		UpdateAI(&game, game.players);
@@ -198,6 +228,7 @@ int plugin_main(void)
 		switch (action)
 		{
 			case PLA_EXIT:
+				ToggleAudioPlayback();
 				cleanup(NULL);
 				return PLUGIN_OK;
 				

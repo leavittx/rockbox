@@ -278,7 +278,7 @@ void UpdateAI(Game *G, Player *Players)
 			 
 			 for (j = 0; j < MAX_PLAYERS; j++)
 			 {
-				if (j == i)
+				if (j == i || Players[j].status.state > ALIVE)
 				  continue;
 				InitNodes(&G->field);
 				FindPath(&Path, Players[i].xpos, Players[i].ypos, 
