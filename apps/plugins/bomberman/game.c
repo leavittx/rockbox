@@ -260,7 +260,8 @@ void PlayerPlaceBomb(Game *game, Player *player)
 		return;
 	
 	for (i = 0; i < BOMBS_MAX_NUM; i++)
-		if (game->field.bombs[i].xpos == player->xpos &&
+		if (game->field.bombs[i].state > BOMB_NONE &&
+			game->field.bombs[i].xpos == player->xpos &&
 			game->field.bombs[i].ypos == player->ypos)
 		{
 			return;
@@ -285,7 +286,7 @@ void PlayerPlaceBomb(Game *game, Player *player)
 static bool IsTransparentSquare(Field *field, int x, int y)
 {
 	if (field->map[x][y] == SQUARE_FREE ||
-		field->map[x][y] == SQUARE_BOMB ||
+		/*field->map[x][y] == SQUARE_BOMB ||*/
 		(field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY))
 		return true;
 		
@@ -297,6 +298,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 	int j;
 	int i;
 	
+	/* Kill player in the center of explosion */
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		if (game->players[i].xpos == x && game->players[i].ypos == y &&
@@ -351,7 +353,8 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 				game->field.boxes[curx][cury].expl_time = get_tick();
 				break;
 			}
-			else if (game->field.map[curx][cury] == SQUARE_BLOCK)
+			else if (game->field.map[curx][cury] == SQUARE_BLOCK
+				|| game->field.map[curx][cury] == SQUARE_BOMB)
 			{
 				break;
 			}
@@ -417,7 +420,8 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE4;
 				break;
 			}
-			else if (game->field.map[curx][cury] == SQUARE_BLOCK)
+			else if (game->field.map[curx][cury] == SQUARE_BLOCK
+				|| game->field.map[curx][cury] == SQUARE_BOMB)
 			{
 				break;
 			}
@@ -473,7 +477,8 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE3;
 				break;
 			}
-			else if (game->field.map[curx][cury] == SQUARE_BLOCK)
+			else if (game->field.map[curx][cury] == SQUARE_BLOCK
+				|| game->field.map[curx][cury] == SQUARE_BOMB)
 			{
 				break;
 			}
@@ -529,7 +534,8 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE2;
 				break;
 			}
-			else if (game->field.map[curx][cury] == SQUARE_BLOCK)
+			else if (game->field.map[curx][cury] == SQUARE_BLOCK
+				|| game->field.map[curx][cury] == SQUARE_BOMB)
 			{
 				break;
 			}
@@ -544,6 +550,7 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
 static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 {
 	int j;
+	int i;
 	
 	for (j = 1; j <= rad; j++)
 	{
@@ -604,6 +611,22 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 					game->field.firemap[prevx][prevy].isend = true;
 				break;
 			}
+			// Detonate other bombs
+			else if (game->field.map[curx][cury] == SQUARE_BOMB)
+			{
+				for (i = 0; i < BOMBS_MAX_NUM; i++)
+				{
+					if (game->field.bombs[i].xpos == curx &&
+						game->field.bombs[i].ypos == cury &&
+						game->field.bombs[i].state == BOMB_PLACED)
+					{
+						game->field.bombs[i].place_time = get_tick() - BOMB_DELAY_DET;
+						if (j > 1)
+							game->field.firemap[prevx][prevy].isend = true;
+						break;
+					}
+				}
+			}
 		}
 		else
 		{
@@ -627,6 +650,7 @@ void UpdateBombs(Game *game)
 		int x = game->field.bombs[i].xpos, y = game->field.bombs[i].ypos;
 		int rad = game->bomb_rad[game->field.bombs[i].power];
 		
+		// todo: check if it neccecary to compute this
 		/* Update detonation animation */
 		game->field.det[x][y] = detphases[((get_tick() - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
 		
