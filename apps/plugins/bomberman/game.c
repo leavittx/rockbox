@@ -176,6 +176,32 @@ static void RecalcDrawOrder(Game *game)
 		}
 }
 
+void PickBonus(Game *game, Player *player)
+{
+	int x = player->xpos, y = player->ypos;
+	
+	switch (game->field.bonuses[x][y])
+	{
+		case BONUS_EXTRABOMB:
+			player->bombs_max++;
+			break;
+		case BONUS_POWER:
+			if (player->bomb_power < BOMB_PWR_KILLER)
+				player->bomb_power++;
+			break;
+		case BONUS_SPEEDUP:
+			break;
+		case BONUS_FULLPOWER:
+			break;
+		case BONUS_NONE:
+			break;
+		default:
+			break;
+	}
+	
+	game->field.bonuses[x][y] = BONUS_NONE;
+}
+
 int UpdatePlayer(Game *game, Player *player)
 {
 	if (player->status.state == ALIVE)
@@ -231,6 +257,7 @@ int UpdatePlayer(Game *game, Player *player)
 					}
 					
 					RecalcDrawOrder(game);
+					PickBonus(game, player);
 				}
 				else
 					player->move_phase++;
@@ -699,7 +726,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 			{
 				game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE1;
 				game->field.firemap[curx][cury].dir = dir;
-				if (rad == 1)
+				if (j == rad)
 					game->field.firemap[curx][cury].isend = true;
 				else
 					game->field.firemap[curx][cury].isend = false;
@@ -728,8 +755,9 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 						game->field.bombs[i].state == BOMB_PLACED)
 					{
 						game->field.bombs[i].place_time = tick - BOMB_DELAY_DET;
-						if (j > 1)
-							game->field.firemap[prevx][prevy].isend = true;
+						// todo: maybe remove it
+						//if (j > 1)
+						//	game->field.firemap[prevx][prevy].isend = true;
 						break;
 					}
 				}
@@ -742,8 +770,6 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 					game->players[i].status.state == ALIVE)
 				{
 					game->players[i].status.state = GONNA_DIE;
-					//rb->splashf(HZ*4, "tick: %u, tod: %u", tick,
-					//	game->players[i].status.time_of_death);
 				}
 			}
 		}
