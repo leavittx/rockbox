@@ -933,6 +933,7 @@ balls_background.320x240x16.bmp
 balls_chooser.24x24x16.bmp
 
 bomberman_player.16x24x16.bmp
+bomberman_cc.320x240x16.bmp
 bomberman_box.96x16x16.bmp
 bomberman_block.16x16x16.bmp
 bomberman_bomb.48x16x16.bmp
@@ -940,7 +941,8 @@ bomberman_explode.64x144x16.bmp
 bomberman_player_move.64x96x16.bmp
 bomberman_ai1_move.64x96x16.bmp
 bomberman_player_death.64x24x16.bmp
-bomberman_cc.320x240x16.bmp
+bomberman_player_win.32x24x16.bmp
+bomberman_ai1_win.32x24x16.bmp
 bomberman_bonus.16x64x16.bmp
 
 #endif /* HAVE_TOUCHSCREEN */

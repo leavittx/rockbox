@@ -31,19 +31,21 @@
 
 #define BOMBS_MAX_NUM 100
 
-#define CYCLETIME 50
+#define CYCLETIME 20
 
-#define BOMB_DELAY_DET (HZ * 5 / (CYCLETIME / 10)) /* Delay before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
-#define BOMB_DELAY_PHASE1 (HZ * 5.1 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 5.2 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 5.3 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 5.4 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1 (HZ * 4.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 4.1 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 4.15 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 4.2 / (CYCLETIME / 10))
 
-#define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1 / (CYCLETIME / 10))
+#define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.05 / (CYCLETIME / 10))
 
 #define PLAYER_MOVE_PART_TIME (HZ * 0.01 / (CYCLETIME / 10))
-#define PLAYER_DELAY_DEATH_ANIM (HZ * 0.1 / (CYCLETIME / 10))
+#define PLAYER_DELAY_DEATH_ANIM (HZ * 0.09 / (CYCLETIME / 10))
+#define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
+#define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 5 / (CYCLETIME / 10))
 
 
 typedef enum {
@@ -74,7 +76,9 @@ typedef enum {
 	EXPL_PHASE2,
 	EXPL_PHASE3,
 	EXPL_PHASE4,
-	DEAD
+	DEAD,
+	WIN_PHASE1,
+	WIN_PHASE2
 } PlayerState;
 
 typedef struct {
@@ -100,6 +104,8 @@ typedef struct {
 	unsigned long move_start_time;
 	
 	bool IsAIPlayer;
+	
+	int num;
 } Player;
 
 /*

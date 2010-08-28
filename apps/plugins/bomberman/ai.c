@@ -347,7 +347,7 @@ int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
 			      res = 0;
 			      for (i = 0; i < BOMBS_MAX_NUM; i++)
 			      {
-				if (G->field.bombs[i].state == BOMB_PLACED 
+				if (G->field.bombs[i].state >= BOMB_PLACED 
 				   && (G->field.bombs[i].xpos == x + dx
 				   || G->field.bombs[i].ypos == y + dy ))
 				  {

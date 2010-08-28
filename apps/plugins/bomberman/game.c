@@ -237,12 +237,28 @@ int UpdatePlayer(Game *game, Player *player)
 			}
 		}
 	}
-	else if (player->status.state != DEAD)
+	else if (player->status.state < DEAD)
 	{
 		player->status.state = 
 			(tick - player->status.time_of_death) / PLAYER_DELAY_DEATH_ANIM + 1;
 			
 		return player->status.state;
+	}
+	else if (player->status.state > DEAD)
+	{
+		static unsigned long won = 0;
+		
+		if (!won)
+			won = tick;
+		
+		if (tick - won > PLAYER_DELAY_WIN_ANIM_DUR)
+		{
+			//rb->splash(HZ, "aaa");
+			return -1;
+		}
+		
+		player->status.state =
+			WIN_PHASE1 + (int)((tick - won) / PLAYER_DELAY_WIN_ANIM) % 2;
 	}
 
 	return 0;
