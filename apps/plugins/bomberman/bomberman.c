@@ -93,21 +93,45 @@ void InitGame(Game *game)
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)
 		{
-			game->field.map[i][j] = DefaultMap[j][i];//SQUARE_FREE;
+			game->field.map[i][j] = DefaultMap[j][i];
 			game->field.firemap[i][j].state = BOMB_NONE;
 			game->field.boxes[i][j].state = HUNKY;
+			game->field.bonuses[i][j] = BONUS_NONE;
 		}
 			
-	for (i = 0; i < BOMBS_MAX_NUM; i++)
+	for (i = 0; i < MAX_BOMBS; i++)
 		game->field.bombs[i].state = BOMB_NONE;
 	
 	game->nplayers = MAX_PLAYERS;
 	
+	// set radius if explosion for each bomb power
 	game->bomb_rad[BOMB_PWR_SINGLE] = 1;
 	game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
 	game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
 	game->bomb_rad[BOMB_PWR_QUAD] = 6;
 	game->bomb_rad[BOMB_PWR_KILLER] = MAP_W;
+	
+	// place bonuses
+	int nboxes = 0, nbonuses;
+	for (i = 0; i < MAP_W; i++)
+		for (j = 0; j < MAP_H; j++)
+			if (game->field.map[i][j] == SQUARE_BOX)
+				nboxes++;
+	
+	// not all boxes consist a bonus
+	nbonuses = nboxes / 2;
+	while (nbonuses)
+	{
+		i = rb->rand() % MAP_W;
+		j = rb->rand() % MAP_H;
+		
+		if (game->field.map[i][j] == SQUARE_BOX && game->field.bonuses[i][j] == BONUS_NONE)
+		{
+			// pick a random bonus for this box
+			game->field.bonuses[i][j] = rb->rand() % BONUS_NONE;
+			nbonuses--;
+		}
+	}
 }
 
 void InitPlayer(Player *player, int num, int x, int y)
@@ -118,9 +142,9 @@ void InitPlayer(Player *player, int num, int x, int y)
 	player->ypos = y;
 	player->look = LOOK_DOWN;
 	player->speed = 1;
-	player->bombs_max = -1;
+	player->bombs_max = 1;
 	player->bombs_placed = 0;
-	player->bomb_power = BOMB_PWR_KILLER;
+	player->bomb_power = BOMB_PWR_SINGLE;
 	
 	player->rxpos = 0;
 	player->rypos = 0;
@@ -140,9 +164,9 @@ void InitAI(Player *player, int num, int x, int y)
 	player->ypos = y;
 	player->look = LOOK_DOWN;
 	player->speed = 1;
-	player->bombs_max = -1;
+	player->bombs_max = 1;
 	player->bombs_placed = 0;
-	player->bomb_power = BOMB_PWR_KILLER;
+	player->bomb_power = BOMB_PWR_SINGLE;
 	
 	player->rxpos = 0;
 	player->rypos = 0;
@@ -172,6 +196,15 @@ void ToggleAudioPlayback(void)
         rb->audio_pause();
 }
 
+void AudioPause(void)
+{
+	int audio_status = rb->audio_status();
+	
+    if (audio_status || rb->global_status->resume_index == -1)
+		if (!(audio_status & AUDIO_STATUS_PAUSE))
+			rb->audio_pause();
+}
+
 void PlayAudioPlaylist(int start_index)
 {
 	if (rb->playlist_resume() != -1)
@@ -183,7 +216,7 @@ int plugin_main(void)
     int action; /* Key action */
     int i;
     Game game;
-    int end;
+    int end; /* End tick */
     
     rb->srand(get_tick());
     
@@ -202,7 +235,8 @@ int plugin_main(void)
 		//game->draw_order[i].order = i;
 	}
 	
-	PlayAudioPlaylist(0);
+	//PlayAudioPlaylist(0);
+	
 	//ToggleAudioPlayback();
 	//rb->audio_next();
 	//rb->audio_prev();
@@ -239,7 +273,7 @@ int plugin_main(void)
 			}
 			else if (upd == -1)
 			{
-				ToggleAudioPlayback();
+				AudioPause();
 				cleanup(NULL);
 				return PLUGIN_OK;
 			}
@@ -256,7 +290,7 @@ int plugin_main(void)
 		switch (action)
 		{
 			case PLA_EXIT:
-				ToggleAudioPlayback();
+				AudioPause();
 				cleanup(NULL);
 				return PLUGIN_OK;
 				

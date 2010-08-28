@@ -28,17 +28,16 @@
 #define MAP_H 11
 
 #define MAX_PLAYERS 4
-
-#define BOMBS_MAX_NUM 100
+#define MAX_BOMBS 100
 
 #define CYCLETIME 30
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
-#define BOMB_DELAY_PHASE1 (HZ * 4.04 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 4.08 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 4.12 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 4.16 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1 (HZ * 4.24 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 4.48 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 4.62 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 4.86 / (CYCLETIME / 10))
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.05 / (CYCLETIME / 10))
 
@@ -72,6 +71,7 @@ typedef enum {
 
 typedef enum {
 	ALIVE = 0,
+	GONNA_DIE,
 	EXPL_PHASE1,
 	EXPL_PHASE2,
 	EXPL_PHASE3,
@@ -175,14 +175,29 @@ typedef struct
 	unsigned long expl_time;
 } BoxDetonation;
 
+typedef enum
+{
+	BONUS_EXTRABOMB, // extra bomb
+	BONUS_POWER, // increase bomb explosion radius
+	BONUS_SPEEDUP, // increase player speed
+	BONUS_FULLPOWER, // destroy all destroyable objects in radius
+	BONUS_NONE // no bonus
+} BonusType;
+
 typedef struct {
 	SqType map[MAP_W][MAP_H];
-	Bomb bombs[BOMBS_MAX_NUM];
+	Bomb bombs[MAX_BOMBS];
 	Fire firemap[MAP_W][MAP_H];
 	BombDetonation det[MAP_W][MAP_H];
 	BoxDetonation boxes[MAP_W][MAP_H];
-	//Bonus bonuses[BONUSES_MAX_NUM];
+	BonusType bonuses[MAP_W][MAP_H];
 } Field;
+
+typedef enum {
+	GAME_GAME = 0,
+	GAME_GAMEOVER,
+	GAME_GREETZ
+} GameStatus;
 
 typedef struct {
 	Field field;
@@ -190,6 +205,7 @@ typedef struct {
 	Player *draw_order[MAX_PLAYERS];
 	int nplayers;
 	int bomb_rad[5];
+	GameStatus status;
 } Game;
 
 void PlayerMoveUp(Game *game, Player *player);

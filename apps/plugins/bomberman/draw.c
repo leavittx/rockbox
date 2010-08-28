@@ -25,6 +25,7 @@
 
 /* Bitmaps */
 #include "pluginbitmaps/bomberman_player.h"
+#include "pluginbitmaps/bomberman_cc.h"
 #include "pluginbitmaps/bomberman_box.h"
 #include "pluginbitmaps/bomberman_block.h"
 #include "pluginbitmaps/bomberman_bomb.h"
@@ -35,13 +36,13 @@
 #include "pluginbitmaps/bomberman_ai3_move.h"
 #include "pluginbitmaps/bomberman_ai4_move.h"
 #include "pluginbitmaps/bomberman_player_death.h"
-#include "pluginbitmaps/bomberman_cc.h"
-#include "pluginbitmaps/bomberman_bonus.h"
 #include "pluginbitmaps/bomberman_player_win.h"
 #include "pluginbitmaps/bomberman_ai1_win.h"
 #include "pluginbitmaps/bomberman_ai2_win.h"
 #include "pluginbitmaps/bomberman_ai3_win.h"
 #include "pluginbitmaps/bomberman_ai4_win.h"
+#include "pluginbitmaps/bomberman_bonus.h"
+#include "pluginbitmaps/bomberman_gameover.h"
 
 #include "game.h"
 #include "draw.h"
@@ -69,6 +70,17 @@ void Draw(Game *game)
 			switch (game->field.map[i][j])
 			{
 				case SQUARE_FREE:
+					if (game->field.bonuses[i][j] != BONUS_NONE)
+					{
+						rb->lcd_bitmap_transparent_part(bomberman_bonus,
+							0,
+							game->field.bonuses[i][j] * SQUARE_SIZE,
+							STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_bonus, BMPHEIGHT_bomberman_bonus),
+							i * SQUARE_SIZE + XMAPOFFSET,
+							j * SQUARE_SIZE + YMAPOFFSET,
+							SQUARE_SIZE,
+							SQUARE_SIZE);
+					}
 					break;
 				case SQUARE_BOX:
 					/*
@@ -123,7 +135,7 @@ void Draw(Game *game)
 					break;*/
 			}
 	/*
-	for (i = 0; i < BOMBS_MAX_NUM; i++)
+	for (i = 0; i < MAX_BOMBS; i++)
 	{
 		else
 		if (game->field.bombs[i].state == BOMB_PLACED)
@@ -157,12 +169,12 @@ void Draw(Game *game)
 	
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
-		if (game->draw_order[i]->status.state > ALIVE)
+		if (game->draw_order[i]->status.state > GONNA_DIE)
 		{
 			if (game->draw_order[i]->status.state < DEAD)
 			{
 				rb->lcd_bitmap_transparent_part(bomberman_player_death,
-					(game->draw_order[i]->status.state - 1) * BMPWIDTH_bomberman_player,
+					(game->draw_order[i]->status.state - 2) * BMPWIDTH_bomberman_player,
 					0,
 					STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_death, BMPHEIGHT_bomberman_player_death),
 					game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET + 
@@ -355,15 +367,6 @@ void Draw(Game *game)
 				}
 			}
 		}
-		
-	// todo: bonuses
-	/*
-	rb->lcd_bitmap_transparent(bomberman_bonus,
-		XMAPOFFSET + SQUARE_SIZE,
-		YMAPOFFSET + SQUARE_SIZE,
-		BMPWIDTH_bomberman_bonus,
-		BMPHEIGHT_bomberman_bonus);
-	*/
 	
 	// Possibly add some demo effects
 	/*
