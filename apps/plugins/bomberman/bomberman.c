@@ -32,7 +32,7 @@
 #include "draw.h"
 #include "ai.h"
 
-#define SLEEP_TIME 0
+#define CYCLETIME 50
 
 const struct button_mapping *plugin_contexts[] = {
 	pla_main_ctx,
@@ -164,6 +164,7 @@ int plugin_main(void)
     int action; /* Key action */
     int i;
     Game game;
+    int end;
     
     rb->srand(*rb->current_tick);
     
@@ -189,6 +190,8 @@ int plugin_main(void)
     /* Main loop */
     while (true)
     {
+		end = get_tick() + (CYCLETIME * HZ) / 1000;
+		
 		Draw(&game);
 	
 		for (i = 0; i < MAX_PLAYERS; i++)
@@ -219,8 +222,6 @@ int plugin_main(void)
 		UpdateBoxes(&game);
 		UpdateAI(&game, game.players);
 
-		rb->sleep(SLEEP_TIME);
-		
 		action = pluginlib_getaction(TIMEOUT_NOBLOCK,
 									 plugin_contexts,
 									 NB_ACTION_CONTEXTS);
@@ -259,6 +260,11 @@ int plugin_main(void)
 			case PLA_CANCEL:
 				break;
 		}
+		
+		if (TIME_BEFORE(get_tick(), end))
+			rb->sleep(end - get_tick());
+		else
+			rb->yield();
 	}
 }
 

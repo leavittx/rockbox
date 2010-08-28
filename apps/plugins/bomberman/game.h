@@ -39,7 +39,7 @@
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1)
 
-#define PLAYER_MOVE_PART_TIME (HZ * 0.001)
+#define PLAYER_MOVE_PART_TIME (HZ * 0.01)
 #define PLAYER_DELAY_DEATH_ANIM (HZ * 0.1)
 
 typedef enum {
@@ -190,5 +190,6 @@ int UpdatePlayer(Game *game, Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
+inline unsigned long get_tick(void);
 
 #endif /* _GAME_H */
