@@ -31,11 +31,17 @@
 #include "pluginbitmaps/bomberman_explode.h"
 #include "pluginbitmaps/bomberman_player_move.h"
 #include "pluginbitmaps/bomberman_ai1_move.h"
+#include "pluginbitmaps/bomberman_ai2_move.h"
+#include "pluginbitmaps/bomberman_ai3_move.h"
+#include "pluginbitmaps/bomberman_ai4_move.h"
 #include "pluginbitmaps/bomberman_player_death.h"
 #include "pluginbitmaps/bomberman_cc.h"
 #include "pluginbitmaps/bomberman_bonus.h"
 #include "pluginbitmaps/bomberman_player_win.h"
 #include "pluginbitmaps/bomberman_ai1_win.h"
+#include "pluginbitmaps/bomberman_ai2_win.h"
+#include "pluginbitmaps/bomberman_ai3_win.h"
+#include "pluginbitmaps/bomberman_ai4_win.h"
 
 #include "game.h"
 #include "draw.h"
@@ -179,6 +185,15 @@ void Draw(Game *game)
 					case 1:
 						win_bitmap = bomberman_ai1_win;
 						break;
+					case 2:
+						win_bitmap = bomberman_ai2_win;
+						break;
+					case 3:
+						win_bitmap = bomberman_ai3_win;
+						break;
+					case 4:
+						win_bitmap = bomberman_ai4_win;
+						break;
 					default:
 						win_bitmap = bomberman_ai1_win;
 						break;
@@ -208,6 +223,15 @@ void Draw(Game *game)
 					break;
 				case 1:
 					move_bitmap = bomberman_ai1_move;
+					break;
+				case 2:
+					move_bitmap = bomberman_ai2_move;
+					break;
+				case 3:
+					move_bitmap = bomberman_ai3_move;
+					break;
+				case 4:
+					move_bitmap = bomberman_ai4_move;
 					break;
 				default:
 					move_bitmap = bomberman_ai1_move;
