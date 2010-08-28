@@ -64,7 +64,6 @@ typedef struct
   int Bombs;
 } AiVars;
 
-
 NODE Nodes[MAP_W][MAP_H]; 
 AiVars AI[MAX_PLAYERS];
 
@@ -209,7 +208,7 @@ int FindPath(Game *G, PATH *Path, int StartX, int StartY,
 							Nodes[cx+dx][cy+dy].H;
 				}
 			} // end if walkable and not on closed list
-	      }
+		    }
 		}
 	  }
 	}
@@ -278,43 +277,52 @@ void CopyPaths(PATH *Dst, PATH *Src)
 
 void LogPath(PATH *P)
 {
-  int file;
-  int i;
-  char logStr[100] = "\n";
-  if((file = rb->open(PLUGIN_GAMES_DIR "/safe_path.txt", O_WRONLY | O_CREAT | O_APPEND, 0666)) < 0)
-    return;
-  rb->write(file, logStr, 100);
-  for(i = 0; i < P->Distance; i++)
-  {
-    rb->memset(logStr, 0, 100);
-    rb->snprintf(logStr, 7, "%i %i\n", P->Path[i].X, P->Path[i].Y);
+    int file;
+    int i;
+    char logStr[100] = "\n";
+
+    if ((file = rb->open(PLUGIN_GAMES_DIR "/safe_path.txt", 
+	O_WRONLY | O_CREAT | O_APPEND, 0666)) < 0)
+    {
+	return;
+    }
+    
     rb->write(file, logStr, 100);
-  }
-  rb->close(file);
-  
+    
+    for (i = 0; i < P->Distance; i++)
+    {
+	rb->memset(logStr, 0, 100);
+	rb->snprintf(logStr, 7, "%i %i\n", P->Path[i].X, P->Path[i].Y);
+	rb->write(file, logStr, 100);
+    }
+
+    rb->close(file);
 }
 
 int CheckIfThereAnyBomb(int *Num, Game *G, Player *P)
 {
-    int i, j, k, resw = 0, resh = 0;
-    for(i = 0; i < BOMBS_MAX_NUM; i++)
-      if(G->field.bombs[i].state == BOMB_PLACED 
+    int i, j, resw = 0, resh = 0;
+    
+    for (i = 0; i < BOMBS_MAX_NUM; i++)
+      if (G->field.bombs[i].state == BOMB_PLACED 
 	 && (G->field.bombs[i].xpos == P->xpos
 	 || G->field.bombs[i].ypos == P->ypos ))
 	{
-	  for(j = P->xpos; j >= 0; j-- )
-	    if(G->field.map[j][P->ypos] == SQUARE_BLOCK)
+	  for (j = P->xpos; j >= 0; j-- )
+	    if (G->field.map[j][P->ypos] == SQUARE_BLOCK)
 	      resw = 1;
-	  for(j = P->ypos; j >= 0; j-- )
-	    if(G->field.map[P->xpos][j] == SQUARE_BLOCK)
+	  for (j = P->ypos; j >= 0; j-- )
+	    if (G->field.map[P->xpos][j] == SQUARE_BLOCK)
 	      resh = 1;
-	  if((resw && G->field.bombs[i].xpos == P->xpos)
+	  if ((resw && G->field.bombs[i].xpos == P->xpos)
 	    || (resh && G->field.bombs[i].ypos == P->ypos));
 	  else
 	    (*Num)++;
 	}
-    if(*Num > 0)
+	
+    if (*Num > 0)
       return 1;
+      
     return 0;
 }
 
@@ -325,48 +333,44 @@ int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
   int MinDist = UNREAL_F;
   PATHELEM TempSafePlace;
   
-  
-  /*for(i = 0; i < BOMBS_MAX_NUM; i++)
+  /*for (i = 0; i < BOMBS_MAX_NUM; i++)
   {*/
      // int rad = G->bomb_rad[G->field.bombs[i].power];
-      for(dx = -4; dx <= 4; dx++)
-	for(dy = -4; dy <= 4; dy++)
-	  //if(dx == dy || dx == -dy)
+      for (dx = -4; dx <= 4; dx++)
+	for (dy = -4; dy <= 4; dy++)
+	  //if (dx == dy || dx == -dy)
 	    if ((x + dx) < MAP_W && (x + dx) > -1 && 
 			   (y + dy) < MAP_H && (y + dy) > -1)
 		      {
-			    if(G->field.map[x+dx][y+dy] == SQUARE_FREE)
+			    if (G->field.map[x+dx][y+dy] == SQUARE_FREE)
 			    {
 			      res = 0;
-			      for(i = 0; i < BOMBS_MAX_NUM; i++)
+			      for (i = 0; i < BOMBS_MAX_NUM; i++)
 			      {
-				if(G->field.bombs[i].state == BOMB_PLACED 
+				if (G->field.bombs[i].state == BOMB_PLACED 
 				   && (G->field.bombs[i].xpos == x + dx
 				   || G->field.bombs[i].ypos == y + dy ))
 				  {
 				      res = 1;
-				     
 				      break;
 				  }
 			      }
-			      if(res == 0)
+			      if (res == 0)
 			      {
-				if(FindPath(G, Path ,x, y, x + dx, y + dy, 2, 1))
+				if (FindPath(G, Path ,x, y, x + dx, y + dy, 2, 1))
 				{
-				  if(Path->Distance < MinDist)
+				  if (Path->Distance < MinDist)
 				  {
 				    MinDist = Path->Distance;
 				    TempSafePlace.X = x + dx;
 				    TempSafePlace.Y = y + dy;
 				  }
-				  
 				}
 			      }
-			    
 			    }
 		      }
   
-  if(MinDist < UNREAL_F)
+  if (MinDist < UNREAL_F)
   {
     P->SafetyPlace.X = TempSafePlace.X;
     P->SafetyPlace.Y = TempSafePlace.Y;
@@ -375,9 +379,6 @@ int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
   
   return 0;
 }
-
-
-
 
 void UpdateAI(Game *G, Player *Players)
 {
@@ -394,11 +395,11 @@ void UpdateAI(Game *G, Player *Players)
        && Players[i].status.state == ALIVE)
     {
 
-	     /* FindSafetyPlace(G, &Players[i], &Path, Players[i].xpos,
-			Players[i].ypos);*/
-	      if(CheckIfThereAnyBomb(&AI[i].Bombs, G, &Players[i]))
+	      FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
+			Players[i].ypos);
+	      if (CheckIfThereAnyBomb(&AI[i].Bombs, G, &Players[i]))
 	        Danger = 1;
-	     if(!Danger && Players[i].bombs_placed == 0) 
+	     if (!Danger && Players[i].bombs_placed == 0) 
 	     {
 		     AI[i].Danger = false;
 		     for (j = 0; j < MAX_PLAYERS; j++)
@@ -417,42 +418,39 @@ void UpdateAI(Game *G, Player *Players)
 			    }
 		    }
 	      }
-	    if(Danger)
+	    if (Danger)
 	    {
-	      if(FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
+	      if (FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
 			Players[i].ypos))
 		  AI[i].Danger = true;
 	    }
-	    if(Players[i].bombs_placed > 0 || AI[i].Danger == true)
+	    if (Players[i].bombs_placed > 0 || AI[i].Danger == true)
 	    {
 	        //Players[i].Danger = true;
-	        if(FindPath(G, &Path, Players[i].xpos,
+	        if (FindPath(G, &Path, Players[i].xpos,
 		      Players[i].ypos, AI[i].SafetyPlace.X, 
 		      AI[i].SafetyPlace.Y, 2, 1))
 	     {
 		  CheckIfThereAnyBomb(&Bombs2, G, &Players[i]);
-		  if(Bombs2 > AI[i].Bombs)
+		  if (Bombs2 > AI[i].Bombs)
 		    FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
 			Players[i].ypos);
 		  CopyPaths(&CurPath, &Path);
 		  MovePlayer(G, &Players[i], &CurPath);
 			
 	      }
-
 	    }
-	    else if(Players[AI[i].ClosestPlayer].status.state == ALIVE 
+	    else if (Players[AI[i].ClosestPlayer].status.state == ALIVE 
 	         && (Players[i].xpos == Players[AI[i].ClosestPlayer].xpos
 	         || Players[i].ypos == Players[AI[i].ClosestPlayer].ypos ))
 	       {
-		   
-		    if(FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
+		    if (FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
 			Players[i].ypos))
 			{
 			     PlayerPlaceBomb(G, &Players[i]);
 			     FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,
 			     Players[i].ypos);
 			}
-		       
 	       }
 	    else 
 	    {
