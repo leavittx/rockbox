@@ -27,20 +27,24 @@
 #define MAP_W 17
 #define MAP_H 11
 
-#define MAX_PLAYERS 3
+#define MAX_PLAYERS 2
 
 #define BOMBS_MAX_NUM 100
-#define BOMB_DELAY_DET (HZ * 5) /* Two seconds before bomb detanates */
-#define BOMB_DELAY_DET_ANIM (BOMB_DELAY_DET / 90)
-#define BOMB_DELAY_PHASE1 (HZ * 5.1)
-#define BOMB_DELAY_PHASE2 (HZ * 5.2)
-#define BOMB_DELAY_PHASE3 (HZ * 5.3)
-#define BOMB_DELAY_PHASE4 (HZ * 5.4)
 
-#define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1)
+#define CYCLETIME 50
 
-#define PLAYER_MOVE_PART_TIME (HZ * 0.001)
-#define PLAYER_DELAY_DEATH_ANIM (HZ * 0.15)
+#define BOMB_DELAY_DET (HZ * 5 / (CYCLETIME / 10)) /* Delay before bomb detanates */
+#define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
+#define BOMB_DELAY_PHASE1 (HZ * 5.1 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 5.2 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 5.3 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 5.4 / (CYCLETIME / 10))
+
+#define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.1 / (CYCLETIME / 10))
+
+#define PLAYER_MOVE_PART_TIME (HZ * 0.01 / (CYCLETIME / 10))
+#define PLAYER_DELAY_DEATH_ANIM (HZ * 0.1 / (CYCLETIME / 10))
+
 
 typedef enum {
 	SQUARE_FREE = 0,
@@ -96,7 +100,6 @@ typedef struct {
 	unsigned long move_start_time;
 	
 	bool IsAIPlayer;
-	
 } Player;
 
 /*
@@ -106,7 +109,7 @@ typedef struct {
  | -1  |  0  |  1  |
  | -1  | -1  | -1  |
  |_____|_____|_____|
- | -1  |  0  |  1  | 
+ | -1  |  0  |  1  |
  |  0  |  0  |  0  |   <--- one cell
  |_____|_____|_____|
  | -1  |  0  |  1  |
@@ -115,7 +118,7 @@ typedef struct {
  */
  
 typedef enum {
-	BOMB_NONE,
+	BOMB_NONE = 0,
 	BOMB_PLACED,
 	BOMB_EXPL_PHASE1,
 	BOMB_EXPL_PHASE2,
@@ -132,7 +135,7 @@ typedef struct {
 } Bomb;
 
 typedef enum {
-	FIRE_RIGNT,
+	FIRE_RIGNT = 0,
 	FIRE_DOWN,
 	FIRE_LEFT,
 	FIRE_UP,
@@ -146,13 +149,13 @@ typedef struct {
 } Fire;
 
 typedef enum {
-	DET_PHASE1,
+	DET_PHASE1 = 0,
 	DET_PHASE2,
 	DET_PHASE3
 } BombDetonation;
 
 typedef enum {
-	HUNKY,
+	HUNKY = 0,
 	BOX_EXPL_PHASE1,
 	BOX_EXPL_PHASE2,
 	BOX_EXPL_PHASE3,
@@ -178,19 +181,21 @@ typedef struct {
 typedef struct {
 	Field field;
 	Player players[MAX_PLAYERS];
+	Player *draw_order[MAX_PLAYERS];
 	int nplayers;
-	int bomb_rad[BOMB_PWR_KILLER + 1];
+	int bomb_rad[5];
 } Game;
-
-
 
 void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
 void PlayerMoveRight(Game *game, Player *player);
 void PlayerMoveLeft(Game *game, Player *player);
-int	 UpdatePlayer(Player *player);
+int UpdatePlayer(Game *game, Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
+inline unsigned long get_tick(void);
+
+extern unsigned long tick;
 
 #endif /* _GAME_H */
