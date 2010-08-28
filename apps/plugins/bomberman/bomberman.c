@@ -32,7 +32,7 @@
 #include "draw.h"
 #include "ai.h"
 
-#define CYCLETIME 50
+unsigned long tick = 0;
 
 const struct button_mapping *plugin_contexts[] = {
 	pla_main_ctx,
@@ -166,7 +166,7 @@ int plugin_main(void)
     Game game;
     int end;
     
-    rb->srand(*rb->current_tick);
+    rb->srand(get_tick());
     
     InitGame(&game);
 
@@ -265,6 +265,7 @@ int plugin_main(void)
 			rb->sleep(end - get_tick());
 		else
 			rb->yield();
+		tick++;
 	}
 }
 

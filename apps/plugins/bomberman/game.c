@@ -61,7 +61,7 @@ void PlayerMoveUp(Game *game, Player *player)
 	{
 		player->ismove = true;
 		player->move_phase = 1;
-		player->move_start_time = get_tick();
+		player->move_start_time = tick;
 	}
 }
 
@@ -90,7 +90,7 @@ void PlayerMoveDown(Game *game, Player *player)
 	{
 		player->ismove = true;
 		player->move_phase = 1;
-		player->move_start_time = get_tick();
+		player->move_start_time = tick;
 	}
 }
 
@@ -119,7 +119,7 @@ void PlayerMoveRight(Game *game, Player *player)
 	{
 		player->ismove = true;
 		player->move_phase = 1;
-		player->move_start_time = get_tick();
+		player->move_start_time = tick;
 	}
 }
 
@@ -148,7 +148,7 @@ void PlayerMoveLeft(Game *game, Player *player)
 	{
 		player->ismove = true;
 		player->move_phase = 1;
-		player->move_start_time = get_tick();
+		player->move_start_time = tick;
 	}
 }
 
@@ -182,7 +182,7 @@ int UpdatePlayer(Game *game, Player *player)
 	{
 		if (player->ismove)
 		{
-			if ((get_tick() - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
+			if ((tick - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
 			{
 				if (player->move_phase == 5)
 				{
@@ -240,7 +240,7 @@ int UpdatePlayer(Game *game, Player *player)
 	else if (player->status.state != DEAD)
 	{
 		player->status.state = 
-			(get_tick() - player->status.time_of_death) / PLAYER_DELAY_DEATH_ANIM + 1;
+			(tick - player->status.time_of_death) / PLAYER_DELAY_DEATH_ANIM + 1;
 			
 		return player->status.state;
 	}
@@ -274,7 +274,7 @@ void PlayerPlaceBomb(Game *game, Player *player)
 			game->field.bombs[i].xpos = player->xpos;
 			game->field.bombs[i].ypos = player->ypos;
 			game->field.bombs[i].power = player->bomb_power;
-			game->field.bombs[i].place_time = get_tick();
+			game->field.bombs[i].place_time = tick;
 			game->field.bombs[i].owner = player;
 			game->field.map[player->xpos][player->ypos] = SQUARE_BOMB;
 			game->field.det[player->xpos][player->ypos] = DET_PHASE1;
@@ -306,7 +306,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 		{
 			game->players[i].status.health = 0;
 			game->players[i].status.state = EXPL_PHASE1;
-			game->players[i].status.time_of_death = get_tick();
+			game->players[i].status.time_of_death = tick;
 		}
 	}
 	
@@ -350,7 +350,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 				game->field.firemap[curx][cury].state = BOMB_NONE;
 				//game->field.map[curx][cury] = SQUARE_FREE;
 				game->field.boxes[curx][cury].state = BOX_EXPL_PHASE1;
-				game->field.boxes[curx][cury].expl_time = get_tick();
+				game->field.boxes[curx][cury].expl_time = tick;
 				break;
 			}
 			else if (game->field.map[curx][cury] == SQUARE_BLOCK
@@ -365,7 +365,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 				{
 					game->players[i].status.health = 0;
 					game->players[i].status.state = EXPL_PHASE1;
-					game->players[i].status.time_of_death = get_tick();
+					game->players[i].status.time_of_death = tick;
 				}
 			}
 		}
@@ -620,7 +620,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 						game->field.bombs[i].ypos == cury &&
 						game->field.bombs[i].state == BOMB_PLACED)
 					{
-						game->field.bombs[i].place_time = get_tick() - BOMB_DELAY_DET;
+						game->field.bombs[i].place_time = tick - BOMB_DELAY_DET;
 						if (j > 1)
 							game->field.firemap[prevx][prevy].isend = true;
 						break;
@@ -652,9 +652,9 @@ void UpdateBombs(Game *game)
 		
 		// todo: check if it neccecary to compute this
 		/* Update detonation animation */
-		game->field.det[x][y] = detphases[((get_tick() - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
+		game->field.det[x][y] = detphases[((tick - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
 		
-		if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
+		if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
 		{
 			game->field.bombs[i].state = BOMB_NONE;
 			
@@ -668,7 +668,7 @@ void UpdateBombs(Game *game)
 			game->field.bombs[i].owner->bombs_placed--;
 			game->field.map[x][y] = SQUARE_FREE;
 		}
-		else if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE3)
+		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE3)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
 			game->field.bombs[i].state = BOMB_EXPL_PHASE4;
@@ -680,7 +680,7 @@ void UpdateBombs(Game *game)
 			FirePhase4(game, x, y, rad, FIRE_LEFT);
 			FirePhase4(game, x, y, rad, FIRE_UP);
 		}
-		else if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
+		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
 			game->field.bombs[i].state = BOMB_EXPL_PHASE3;
@@ -692,7 +692,7 @@ void UpdateBombs(Game *game)
 			FirePhase3(game, x, y, rad, FIRE_LEFT);
 			FirePhase3(game, x, y, rad, FIRE_UP);
 		}
-		else if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
+		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
 			game->field.bombs[i].state = BOMB_EXPL_PHASE2;
@@ -704,7 +704,7 @@ void UpdateBombs(Game *game)
 			FirePhase2(game, x, y, rad, FIRE_LEFT);
 			FirePhase2(game, x, y, rad, FIRE_UP);
 		}
-		else if (get_tick() - game->field.bombs[i].place_time >= BOMB_DELAY_DET)
+		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_DET)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
 			game->field.bombs[i].state = BOMB_EXPL_PHASE1;
@@ -731,7 +731,7 @@ void UpdateBoxes(Game *game)
 				//game->field.boxes[i][j].state++;
 				//	break;
 				game->field.boxes[i][j].state = 
-					(get_tick() - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
+					(tick - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
 				if (game->field.boxes[i][j].state > BOX_EXPL_PHASE5)
 					game->field.map[i][j] = SQUARE_FREE;
 			}
