@@ -140,14 +140,16 @@ int plugin_main(void)
     int i;
     Game game;
     
+    //rb->splashf(HZ, "HZ = %i", HZ);
+    
     rb->srand(*rb->current_tick);
     
     InitGame(&game);
     InitPlayer(&game.players[0]);
 	//InitAI(&game.players[1], 3, 9);
-	InitAI(&game.players[1], 10, 9);
-	InitAI(&game.players[2], 2, 9);
-	InitAI(&game.players[3], 15, 1);
+	InitAI(&game.players[1], 3, 9);
+	InitAI(&game.players[2], 15, 1);
+	/*InitAI(&game.players[3], 15, 1);*/
 	
     /* Main loop */
     while (true)

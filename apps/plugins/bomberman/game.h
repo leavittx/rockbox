@@ -27,7 +27,7 @@
 #define MAP_W 17
 #define MAP_H 11
 
-#define MAX_PLAYERS 4
+#define MAX_PLAYERS 3
 
 #define BOMBS_MAX_NUM 100
 #define BOMB_DELAY_DET (HZ * 5) /* Two seconds before bomb detanates */
@@ -43,21 +43,21 @@
 #define PLAYER_DELAY_DEATH_ANIM (HZ * 0.15)
 
 typedef enum {
-	SQUARE_FREE,
+	SQUARE_FREE = 0,
 	SQUARE_BOX,
 	SQUARE_BLOCK,
 	SQUARE_BOMB
 } SqType;
 
 typedef enum {
-	LOOK_UP,
+	LOOK_UP = 0,
 	LOOK_DOWN,
 	LOOK_RIGHT,
 	LOOK_LEFT
 } LookSide;
 
 typedef enum {
-	BOMB_PWR_SINGLE,
+	BOMB_PWR_SINGLE = 0,
 	BOMB_PWR_DOUBLE,
 	BOMB_PWR_TRIPLE,
 	BOMB_PWR_QUAD,
@@ -65,7 +65,7 @@ typedef enum {
 } BombPower;
 
 typedef enum {
-	ALIVE,
+	ALIVE = 0,
 	EXPL_PHASE1,
 	EXPL_PHASE2,
 	EXPL_PHASE3,
@@ -96,6 +96,7 @@ typedef struct {
 	unsigned long move_start_time;
 	
 	bool IsAIPlayer;
+	
 } Player;
 
 /*
@@ -180,6 +181,8 @@ typedef struct {
 	int nplayers;
 	int bomb_rad[BOMB_PWR_KILLER + 1];
 } Game;
+
+
 
 void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
