@@ -31,7 +31,7 @@
 
 #define BOMBS_MAX_NUM 100
 
-#define CYCLETIME 20
+#define CYCLETIME 40
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)

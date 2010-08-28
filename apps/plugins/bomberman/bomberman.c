@@ -61,7 +61,6 @@ void cleanup(void *parameter)
 void InitGame(Game *game)
 {
 	int i, j;
-	/*
 	int DefaultMap[MAP_H][MAP_W] = {
 		{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
 		{2,0,0,1,1,1,0,1,0,1,0,1,0,1,0,0,2},
@@ -70,26 +69,12 @@ void InitGame(Game *game)
 		{2,0,2,1,2,1,2,0,2,1,2,0,2,1,2,0,2},
 		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
 		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
+		{2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,1,2},
 		{2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-		{2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
+		{2,0,0,1,1,0,0,0,0,0,0,0,0,1,0,0,2},
 		{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
 		};
-	*/
-	int DefaultMap[MAP_H][MAP_W] = {
-		{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-		{2,0,0,1,1,1,0,1,0,1,0,1,0,1,0,0,2},
-		{2,0,2,1,1,1,1,1,1,1,1,1,1,1,2,0,2},
-		{2,0,1,0,0,0,0,0,0,1,0,1,0,1,1,0,2},
-		{2,0,1,1,2,1,2,0,0,1,2,0,2,1,1,0,2},
-		{2,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,2},
-		{2,0,1,0,0,0,0,0,2,1,2,0,2,0,1,0,2},
-		{2,0,0,0,1,1,1,0,0,0,0,0,0,1,1,0,2},
-		{2,0,2,1,1,1,1,1,1,1,1,1,1,1,2,0,2},
-		{2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-		{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-		};
-		
+	
 	for (i = 0; i < MAP_W; i++)
 		for (j = 0; j < MAP_H; j++)
 		{
@@ -110,7 +95,7 @@ void InitGame(Game *game)
 	game->bomb_rad[BOMB_PWR_KILLER] = MAP_W;
 }
 
-void InitPlayer(Player *player, int num, int x, int y)
+void InitPlayer(Player *player, int x, int y)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
@@ -128,11 +113,9 @@ void InitPlayer(Player *player, int num, int x, int y)
 	player->move_phase = 0;
 	
 	player->IsAIPlayer = false;
-	
-	player->num = num;
 }
 
-void InitAI(Player *player, int num, int x, int y)
+void InitAI(Player *player, int x, int y)
 {
 	player->status.state = ALIVE;
 	player->status.health = 100;
@@ -150,8 +133,6 @@ void InitAI(Player *player, int num, int x, int y)
 	player->move_phase = 0;
 	
 	player->IsAIPlayer = true;
-	
-	player->num = num;
 }
 
 void ToggleAudioPlayback(void)
@@ -189,12 +170,15 @@ int plugin_main(void)
     
     InitGame(&game);
 
-	InitPlayer(&game.players[0], 0, 1, 5);
+	InitPlayer(&game.players[0], 1, 5);
 	//InitAI(&game.players[1], 3, 9);
-	//InitAI(&game.players[1], 10, 9);
-	InitAI(&game.players[1], 1, 3, 3);
-	//InitAI(&game.players[2], 2, 1);
-	//InitAI(&game.players[3], 15, 1);
+	InitAI(&game.players[1], 15, 9);
+	/*InitAI(&game.players[2], 15, 1);
+	InitAI(&game.players[3], 15, 9);*/
+	/*InitAI(&game.players[4], 1, 6);
+	InitAI(&game.players[5], 1, 7);
+	InitAI(&game.players[6], 3, 9);
+	InitAI(&game.players[7], 4, 9);*/
 	
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
@@ -202,7 +186,7 @@ int plugin_main(void)
 		//game->draw_order[i].order = i;
 	}
 	
-	PlayAudioPlaylist(0);
+	//PlayAudioPlaylist(0);
 	//ToggleAudioPlayback();
 	//rb->audio_next();
 	//rb->audio_prev();
@@ -228,7 +212,6 @@ int plugin_main(void)
 					{
 						if (game.players[i].status.state == ALIVE)
 						{
-							game.players[i].status.state = WIN_PHASE1;
 							//if (game.players[i].IsAIPlayer)
 							//	rb->splash(HZ * 5, "You lose");
 							//else
@@ -236,12 +219,6 @@ int plugin_main(void)
 						}
 					}
 				}
-			}
-			else if (upd == -1)
-			{
-				ToggleAudioPlayback();
-				cleanup(NULL);
-				return PLUGIN_OK;
 			}
 		}
 		
