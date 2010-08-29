@@ -190,6 +190,8 @@ void PickBonus(Game *game, Player *player)
 				player->bomb_power++;
 			break;
 		case BONUS_SPEEDUP:
+			if (player->speed > 1)
+				player->speed--;
 			break;
 		case BONUS_FULLPOWER:
 			break;
@@ -210,7 +212,8 @@ int UpdatePlayer(Game *game, Player *player)
 		{
 			if ((tick - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
 			{
-				if (player->move_phase == 5)
+				// actually it's 5, just speedup player
+				if (player->move_phase == 2)
 				{
 					player->ismove = false;
 					player->move_phase = 0;
