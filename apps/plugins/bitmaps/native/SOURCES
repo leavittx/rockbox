@@ -951,6 +951,8 @@ bomberman_ai3_win.32x24x16.bmp
 bomberman_ai4_win.32x24x16.bmp
 bomberman_bonus.16x64x16.bmp
 bomberman_gameover.320x240x16.bmp
+bomberman_youwon.320x240x16.bmp
+bomberman_black.320x240x16.bmp
 
 #endif /* HAVE_TOUCHSCREEN */
 

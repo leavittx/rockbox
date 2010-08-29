@@ -317,7 +317,7 @@ int CheckIfThereAnyWall(Game *G, Player *P)
 int CheckIfThereAnyBomb(int *Num, Game *G, Player *P)
 {
     int i = 0;
-    for (i = 0; i < BOMBS_MAX_NUM; i++)
+    for (i = 0; i < MAX_BOMBS; i++)
       if (G->field.bombs[i].state == BOMB_PLACED 
 	 && (G->field.bombs[i].xpos == P->xpos
 	 || G->field.bombs[i].ypos == P->ypos ))
@@ -357,7 +357,7 @@ int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
 			    if (G->field.map[x+dx][y+dy] == SQUARE_FREE)
 			    {
 			      res = 0;
-			      for (i = 0; i < BOMBS_MAX_NUM; i++)
+			      for (i = 0; i < MAX_BOMBS; i++)
 			      {
 				if (G->field.bombs[i].state >= BOMB_PLACED 
 				   && (G->field.bombs[i].xpos == x + dx

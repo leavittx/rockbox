@@ -284,7 +284,11 @@ int UpdatePlayer(Game *game, Player *player)
 		
 		if (tick - won > PLAYER_DELAY_WIN_ANIM_DUR)
 		{
-			return -1;
+			if (player->IsAIPlayer)
+				return -GAME_GAMEOVER;
+			else
+				return
+					-GAME_WON;
 		}
 		
 		player->status.state =
@@ -404,6 +408,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
 			{
 				break;
 			}
+			
 			// todo: figure out if we need detonate other bombs on this phase or not
 			for (i = 0; i < MAX_PLAYERS; i++)
 			{
@@ -751,6 +756,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 			// Detonate other bombs
 			else if (game->field.map[curx][cury] == SQUARE_BOMB)
 			{
+				//rb->splash(HZ,"Found bomb");
 				for (i = 0; i < MAX_BOMBS; i++)
 				{
 					if (game->field.bombs[i].xpos == curx &&
@@ -758,6 +764,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
 						game->field.bombs[i].state == BOMB_PLACED)
 					{
 						game->field.bombs[i].place_time = tick - BOMB_DELAY_DET;
+						//rb->splash(HZ,"det");
 						// todo: maybe remove it
 						//if (j > 1)
 						//	game->field.firemap[prevx][prevy].isend = true;
@@ -804,6 +811,8 @@ void UpdateBombs(Game *game)
 		
 		if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
 		{
+			game->field.map[x][y] = SQUARE_FREE;
+			
 			game->field.bombs[i].state = BOMB_NONE;
 			
 			game->field.firemap[x][y].state = BOMB_NONE;
@@ -818,6 +827,8 @@ void UpdateBombs(Game *game)
 		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE3)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
+			game->field.map[x][y] = SQUARE_FREE;
+			
 			game->field.bombs[i].state = BOMB_EXPL_PHASE4;
 			
 			game->field.firemap[x][y].state = BOMB_EXPL_PHASE4;
@@ -830,6 +841,8 @@ void UpdateBombs(Game *game)
 		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
+			game->field.map[x][y] = SQUARE_FREE;
+			
 			game->field.bombs[i].state = BOMB_EXPL_PHASE3;
 			
 			game->field.firemap[x][y].state = BOMB_EXPL_PHASE3;
@@ -842,6 +855,8 @@ void UpdateBombs(Game *game)
 		else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
+			game->field.map[x][y] = SQUARE_FREE;
+			
 			game->field.bombs[i].state = BOMB_EXPL_PHASE2;
 			
 			game->field.firemap[x][y].state = BOMB_EXPL_PHASE2;
@@ -855,6 +870,7 @@ void UpdateBombs(Game *game)
 		{
 			//game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
 			game->field.map[x][y] = SQUARE_FREE;
+			//rb->splashf(HZ, "Free(%lu %lu)", x, y);
 			
 			game->field.bombs[i].state = BOMB_EXPL_PHASE1;
 			
@@ -884,4 +900,12 @@ void UpdateBoxes(Game *game)
 				if (game->field.boxes[i][j].state > BOX_EXPL_PHASE5)
 					game->field.map[i][j] = SQUARE_FREE;
 			}
+}
+
+void UpdateAftergame(Game *game)
+{
+	game->aftergame_y = LCD_HEIGHT * (1.0 * tick / AFTERGAME_DUR) - LCD_HEIGHT; 
+	//rb->splashf(HZ, "tick: %lu, after_Y = %lu", tick, game->aftergame_y); 
+	if (game->aftergame_y >= LCD_HEIGHT)
+		game->state = GAME_GREETZ;
 }

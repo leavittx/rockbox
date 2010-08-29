@@ -47,6 +47,9 @@
 #define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
 #define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 5 / (CYCLETIME / 10))
 
+#define AFTERGAME_DUR (HZ * 5 / (CYCLETIME / 10))
+#define AFTERGAME_PHASES 10
+
 typedef enum {
 	SQUARE_FREE = 0,
 	SQUARE_BOX,
@@ -196,6 +199,7 @@ typedef struct {
 typedef enum {
 	GAME_GAME = 0,
 	GAME_GAMEOVER,
+	GAME_WON,
 	GAME_GREETZ
 } GameState;
 
@@ -206,6 +210,7 @@ typedef struct {
 	int nplayers;
 	int bomb_rad[5];
 	GameState state;
+	int aftergame_y;
 } Game;
 
 void PlayerMoveUp(Game *game, Player *player);
@@ -216,6 +221,7 @@ int UpdatePlayer(Game *game, Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
+void UpdateAftergame(Game *game);
 inline unsigned long get_tick(void);
 
 extern unsigned long tick;

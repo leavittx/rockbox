@@ -43,6 +43,8 @@
 #include "pluginbitmaps/bomberman_ai4_win.h"
 #include "pluginbitmaps/bomberman_bonus.h"
 #include "pluginbitmaps/bomberman_gameover.h"
+#include "pluginbitmaps/bomberman_youwon.h"
+#include "pluginbitmaps/bomberman_black.h"
 
 #include "game.h"
 #include "draw.h"
@@ -51,10 +53,15 @@
 #define XMAPOFFSET 25
 #define YMAPOFFSET 30
 
+static const char* const credits[] = {
+"Chaos Bomber\nby BMT\ncode\nLev\nNick\ngfx\nPeka\nmusic\nZalza\n\nhttp://zalzahq.destinyroadband.com/\nfor Chaos Constructions 2010\nbye!\n"
+};
+
 void Draw(Game *game)
 {
 	int i, j;
 	
+	if (game->state == GAME_GAME)
 	rb->lcd_clear_display();	
 	
 	if (game->state == GAME_GAME)
@@ -372,11 +379,29 @@ void Draw(Game *game)
 	}
 	else if (game->state == GAME_GAMEOVER)
 	{
-		rb->lcd_bitmap_transparent(bomberman_gameover,
+		rb->lcd_bitmap(bomberman_gameover,
 			0,
-			0,
+			game->aftergame_y,
 			BMPWIDTH_bomberman_gameover,
 			BMPHEIGHT_bomberman_gameover);
+		rb->lcd_bitmap(bomberman_black,
+			0,
+			-(LCD_HEIGHT - game->aftergame_y),
+			BMPWIDTH_bomberman_black,
+			BMPHEIGHT_bomberman_black);
+	}
+	else if (game->state == GAME_WON)
+	{
+		rb->lcd_bitmap(bomberman_youwon,
+			0,
+			game->aftergame_y,
+			BMPWIDTH_bomberman_youwon,
+			BMPHEIGHT_bomberman_youwon);
+		rb->lcd_bitmap(bomberman_black,
+			0,
+			-(LCD_HEIGHT - game->aftergame_y),
+			BMPWIDTH_bomberman_black,
+			BMPHEIGHT_bomberman_black);
 	}
 	
 	// Possibly add some demo effects
