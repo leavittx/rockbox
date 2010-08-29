@@ -57,6 +57,8 @@ void Draw(Game *game)
 	
 	rb->lcd_clear_display();	
 	
+	if (game->state == GAME_GAME)
+	{
 	/* Background */
 	rb->lcd_bitmap(bomberman_cc,
 		0,
@@ -367,6 +369,15 @@ void Draw(Game *game)
 				}
 			}
 		}
+	}
+	else if (game->state == GAME_GAMEOVER)
+	{
+		rb->lcd_bitmap_transparent(bomberman_gameover,
+			0,
+			0,
+			BMPWIDTH_bomberman_gameover,
+			BMPHEIGHT_bomberman_gameover);
+	}
 	
 	// Possibly add some demo effects
 	/*

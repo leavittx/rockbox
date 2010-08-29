@@ -32,8 +32,6 @@
 #include "draw.h"
 #include "ai.h"
 
-unsigned long tick = 0;
-
 const struct button_mapping *plugin_contexts[] = {
 	pla_main_ctx,
 #if defined(HAVE_REMOTE_LCD)
@@ -57,6 +55,9 @@ void cleanup(void *parameter)
 /* 
  * Main code 
  */
+ 
+Game game;
+unsigned long tick = 0;
 
 void InitGame(Game *game)
 {
@@ -140,11 +141,14 @@ void InitGame(Game *game)
 		
 		if (game->field.map[i][j] == SQUARE_BOX && game->field.bonuses[i][j] == BONUS_NONE)
 		{
-			// pick a random bonus for this box
-			game->field.bonuses[i][j] = rb->rand() % BONUS_NONE;
+			// choose a random bonus for this box
+			// - 2 -- not all bonuses implemented yet
+			game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE - 2);
 			nbonuses--;
 		}
 	}
+	
+	game->state = GAME_GAME;
 }
 
 void InitPlayer(Player *player, int num, int x, int y)
@@ -176,7 +180,7 @@ void InitAI(Player *player, int num, int x, int y)
 	player->xpos = x;
 	player->ypos = y;
 	player->look = LOOK_DOWN;
-	player->speed = 1;
+	player->speed = 3;
 	player->bombs_max = 1;
 	player->bombs_placed = 0;
 	player->bomb_power = BOMB_PWR_SINGLE;
@@ -228,8 +232,9 @@ int plugin_main(void)
 {
     int action; /* Key action */
     int i;
-    Game game;
     int end; /* End tick */
+    
+    //rb->splashf(HZ, "%f",  PLAYER_MOVE_PART_TIME);
     
     rb->srand(get_tick());
     
@@ -241,7 +246,6 @@ int plugin_main(void)
 	InitAI(&game.players[1], 1, 1, 9);
 	InitAI(&game.players[2], 2, 15, 9);
 	InitAI(&game.players[3], 3, 15, 1);
-	//InitAI(&game.players[4], 4, 1, 2);
 	
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
@@ -266,6 +270,8 @@ int plugin_main(void)
 		{
 			int upd;
 			
+			//if (!(tick % game.players[i].speed))
+			//{
 			upd = UpdatePlayer(&game, &game.players[i]);
 			if (upd == DEAD)
 			{
@@ -287,10 +293,15 @@ int plugin_main(void)
 			}
 			else if (upd == -1)
 			{
+				/*
 				AudioPause();
 				cleanup(NULL);
 				return PLUGIN_OK;
+				*/
+				game.state = GAME_GAMEOVER;
+				tick = 0;
 			}
+			//}
 		}
 		
 		UpdateBombs(&game);
@@ -340,6 +351,7 @@ int plugin_main(void)
 			rb->sleep(end - get_tick());
 		else
 			rb->yield();
+		
 		tick++;
 	}
 }

@@ -28,9 +28,10 @@
 #define MAP_H 11
 
 #define MAX_PLAYERS 4
+
 #define MAX_BOMBS 100
 
-#define CYCLETIME 30
+#define CYCLETIME 40	
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
@@ -196,7 +197,7 @@ typedef enum {
 	GAME_GAME = 0,
 	GAME_GAMEOVER,
 	GAME_GREETZ
-} GameStatus;
+} GameState;
 
 typedef struct {
 	Field field;
@@ -204,7 +205,7 @@ typedef struct {
 	Player *draw_order[MAX_PLAYERS];
 	int nplayers;
 	int bomb_rad[5];
-	GameStatus status;
+	GameState state;
 } Game;
 
 void PlayerMoveUp(Game *game, Player *player);
