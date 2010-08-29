@@ -27,7 +27,7 @@
 #define MAP_W 17
 #define MAP_H 11
 
-#define MAX_PLAYERS 3
+#define MAX_PLAYERS 4
 #define MAX_BOMBS 100
 
 #define CYCLETIME 30
