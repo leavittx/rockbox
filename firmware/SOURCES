@@ -3,6 +3,7 @@ events.c
 backlight.c
 buffer.c
 general.c
+load_code.c
 powermgmt.c
 system.c
 usb.c
@@ -1702,10 +1703,13 @@ target/coldfire/mpio/fmradio_i2c-mpio.c
 
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+target/hosted/android/fs-android.c
 target/hosted/android/lcd-android.c
+target/hosted/android/lc-android.c
 target/hosted/android/button-android.c
 target/hosted/android/kernel-android.c
 target/hosted/android/pcm-android.c
+target/hosted/android/powermgmt-android.c
 target/hosted/android/system-android.c
 #ifdef APPLICATION
 target/hosted/android/app/button-application.c

@@ -9,7 +9,7 @@
 #
 
 # global CC options for all platforms
-CCOPTS="-W -Wall -Wundef -O -nostdlib -ffreestanding -Wstrict-prototypes -pipe"
+CCOPTS="-W -Wall -Wundef -O -nostdlib -ffreestanding -Wstrict-prototypes -pipe -std=gnu99"
 
 # global LD options for all platforms
 GLOBAL_LDOPTS=""
@@ -94,6 +94,16 @@ app_get_platform() {
     elif [ "$app_platform" = "android" ]; then
         if [ -n "$PREFIX" ]; then
             echo "WARNING: PREFIX not supported on Android. You can however use --rbdir"
+        fi
+        if [ -z "$ANDROID_SDK_PATH" ]; then
+            echo "ERROR: You need the Android SDK installed and have the ANDROID_SDK_PATH"
+            echo "environment variable point to the root directory of the Android SDK."
+            exit
+        fi
+        if [ -z "$ANDROID_NDK_PATH" ]; then
+            echo "ERROR: You need the Android NDK installed and have the ANDROID_NDK_PATH"
+            echo "environment variable point to the root directory of the Android NDK."
+            exit
         fi
         rbdir="/data/data/org.rockbox/app_rockbox/rockbox"
         bindir="/data/data/org.rockbox/lib"
@@ -454,7 +464,7 @@ androidcc () {
     gccchoice="4.4.0"
     prefixtools $ANDROID_NDK_PATH/build/prebuilt/linux-x86/arm-eabi-$gccchoice/bin/arm-eabi-
     GCCOPTS=`echo $CCOPTS | sed -e s/-ffreestanding// -e s/-nostdlib// -e s/-Wundef//`
-    GCCOPTS="$GCCOPTS -std=gnu99 -ffunction-sections -fno-short-enums -march=armv5te -mtune=xscale -msoft-float -fomit-frame-pointer"
+    GCCOPTS="$GCCOPTS -ffunction-sections -fno-short-enums -march=armv5te -mtune=xscale -msoft-float -fomit-frame-pointer"
     GLOBAL_LDOPTS="$GLOBAL_LDOPTS -nostdlib -lc -Wl,--no-undefined -Wl,--gc-sections -Wl,-z,noexecstack -L$ANDROID_NDK_PATH/build/platforms/android-4/arch-arm/usr/lib/ -Wl,-rpath-link=$ANDROID_NKD_PATH/build/platforms/android-4/arch-arm/usr/lib"
     LDOPTS="$LDOPTS -shared -nostdlib -lm -ldl -llog"
     extradefines="$extradefines -DANDROID"
@@ -1467,6 +1477,7 @@ fi
     target_id=15
     modelname="ipodvideo"
     target="-DIPOD_VIDEO"
+    memory=64 # always. This is reduced at runtime if needed
     arm7tdmicc
     tool="$rootdir/tools/scramble -add=ipvd"
     bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"

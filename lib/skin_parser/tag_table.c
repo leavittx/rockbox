@@ -172,7 +172,7 @@ static const struct tag_info legal_tags[] =
     { SKIN_TOKEN_IMAGE_PRELOAD_DISPLAY, "xd", "S|[IT]I", 0 },
     { SKIN_TOKEN_IMAGE_DISPLAY,         "x", "SFII", 0|NOBREAK },
     
-    { SKIN_TOKEN_LOAD_FONT,             "Fl" , "IF", 0|NOBREAK },
+    { SKIN_TOKEN_LOAD_FONT,             "Fl" , "IF|I", 0|NOBREAK },
     { SKIN_TOKEN_ALBUMART_LOAD,         "Cl" , "IIII|ss", 0|NOBREAK },
     { SKIN_TOKEN_ALBUMART_DISPLAY,      "Cd" , "", SKIN_REFRESH_STATIC },
     { SKIN_TOKEN_ALBUMART_FOUND,        "C" , "", SKIN_REFRESH_STATIC },
@@ -199,7 +199,7 @@ static const struct tag_info legal_tags[] =
     
     { SKIN_TOKEN_LASTTOUCH,             "Tl" , "|D", SKIN_REFRESH_DYNAMIC },
     { SKIN_TOKEN_CURRENT_SCREEN,        "cs", "", SKIN_REFRESH_DYNAMIC },
-    { SKIN_TOKEN_TOUCHREGION,           "T"  , "IIiiS", 0|NOBREAK },
+    { SKIN_TOKEN_TOUCHREGION,           "T"  , "IIiiS|S", 0|NOBREAK },
     
     { SKIN_TOKEN_HAVE_RECORDING,        "Rp"   , "", SKIN_REFRESH_STATIC },
     { SKIN_TOKEN_IS_RECORDING,          "Rr"   , "", SKIN_REFRESH_DYNAMIC },

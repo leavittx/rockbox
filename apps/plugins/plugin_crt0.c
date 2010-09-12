@@ -32,12 +32,14 @@ PLUGIN_HEADER
 #define EXIT_MAGIC 0x0CDEBABE
 
 extern enum plugin_status plugin_start(const void*);
+extern unsigned char plugin_bss_start[];
+extern unsigned char plugin_end_addr[];
 
 static jmp_buf __exit_env;
 /* only 1 atexit handler for now, chain in the exit handler if you need more */
 static void (*atexit_handler)(void);
 
-int atexit(void (*fn)(void))
+int rb_atexit(void (*fn)(void))
 {
     if (atexit_handler)
         return -1;
@@ -60,6 +62,35 @@ enum plugin_status plugin__start(const void *param)
 {
     int exit_ret;
     enum plugin_status ret;
+
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
+
+/* IRAM must be copied before clearing the BSS ! */
+#ifdef PLUGIN_USE_IRAM
+    extern char iramcopy[], iramstart[], iramend[], iedata[], iend[];
+    size_t iram_size = iramend - iramstart;
+    size_t ibss_size = iend - iedata;
+    if (iram_size > 0 || ibss_size > 0)
+    {
+        /* We need to stop audio playback in order to use codec IRAM */
+        rb->audio_stop();
+        rb->memcpy(iramstart, iramcopy, iram_size);
+        rb->memset(iedata, 0, ibss_size);
+#ifdef HAVE_CPUCACHE_INVALIDATE
+        /* make the icache (if it exists) up to date with the new code */
+        rb->cpucache_invalidate();
+#endif /* HAVE_CPUCACHE_INVALIDATE */
+
+        /* barrier to prevent reordering iram copy and BSS clearing,
+         * because the BSS segment alias the IRAM copy.
+         */
+        asm volatile ("" ::: "memory");
+    }
+#endif /* PLUGIN_USE_IRAM */
+
+    /* zero out the bss section */
+    rb->memset(plugin_bss_start, 0, plugin_end_addr - plugin_bss_start);
+#endif
 
     /* we come back here if exit() was called or the plugin returned normally */
     exit_ret = setjmp(__exit_env);

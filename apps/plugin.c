@@ -42,6 +42,7 @@
 #include "errno.h"
 #include "diacritic.h"
 #include "filefuncs.h"
+#include "load_code.h"
 
 #if CONFIG_CHARGING
 #include "power.h"
@@ -58,7 +59,7 @@
 #include "usbstack/usb_hid.h"
 #endif
 
-#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
+#if (CONFIG_PLATFORM & PLATFORM_SDL)
 #define PREFIX(_x_) sim_ ## _x_
 #else
 #define PREFIX
@@ -75,21 +76,19 @@ static unsigned int open_files;
 
 #if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 static unsigned char pluginbuf[PLUGIN_BUFFER_SIZE];
-void *sim_plugin_load(char *plugin, void **pd);
-void sim_plugin_close(void *pd);
 void sim_lcd_ex_init(unsigned long (*getpixel)(int, int));
 void sim_lcd_ex_update_rect(int x, int y, int width, int height);
 #else
-#define sim_plugin_close(x)
 extern unsigned char pluginbuf[];
 #include "bitswap.h"
 #endif
 
 /* for actual plugins only, not for codecs */
-static bool plugin_loaded = false;
 static int  plugin_size = 0;
 static bool (*pfn_tsr_exit)(bool reenter) = NULL; /* TSR exit callback */
 static char current_plugin[MAX_PATH];
+/* NULL if no plugin is loaded, otherwise the handle that lc_open() returned */
+static void *current_plugin_handle;
 
 char *plugin_get_current_filename(void);
 
@@ -110,7 +109,9 @@ static const struct plugin_api rockbox_api = {
     lcd_clear_display,
     lcd_getstringsize,
     lcd_putsxy,
+    lcd_putsxyf,
     lcd_puts,
+    lcd_putsf,
     lcd_puts_scroll,
     lcd_stop_scroll,
 #ifdef HAVE_LCD_CHARCELLS
@@ -348,7 +349,7 @@ static const struct plugin_api rockbox_api = {
 #if defined(CPU_ARM) && CONFIG_PLATFORM & PLATFORM_NATIVE
     __div0,
 #endif
-    PREFIX(sleep),
+    sleep,
     yield,
     &current_tick,
     default_event_handler,
@@ -383,8 +384,10 @@ static const struct plugin_api rockbox_api = {
     trigger_cpu_boost,
     cancel_cpu_boost,
 #endif
-#if NUM_CORES > 1
+#ifdef HAVE_CPUCACHE_FLUSH
     cpucache_flush,
+#endif
+#ifdef HAVE_CPUCACHE_INVALIDATE
     cpucache_invalidate,
 #endif
     timer_register,
@@ -526,7 +529,7 @@ static const struct plugin_api rockbox_api = {
     playlist_insert_track,
     playlist_insert_directory,
     playlist_shuffle,
-    PREFIX(audio_play),
+    audio_play,
     audio_stop,
     audio_pause,
     audio_resume,
@@ -621,9 +624,6 @@ static const struct plugin_api rockbox_api = {
     plugin_get_audio_buffer,
     plugin_tsr,
     plugin_get_current_filename,
-#ifdef PLUGIN_USE_IRAM
-    plugin_iram_init,
-#endif
 #if defined(DEBUG) || defined(SIMULATOR)
     debugf,
 #endif
@@ -722,104 +722,76 @@ static const struct plugin_api rockbox_api = {
 
     /* new stuff at the end, sort into place next time
        the API gets incompatible */
+    dir_get_info,
+
+    lc_open,
+    lc_open_from_mem,
+    lc_get_header,
+    lc_close,
 };
 
 int plugin_load(const char* plugin, const void* parameter)
 {
     int rc, i;
-    struct plugin_header *hdr;
-#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
-    void *pd;
-#else /* PLATFOR_NATIVE */
-    int fd;
-    ssize_t readsize;
-#if NUM_CORES > 1
-    unsigned my_core;
-#endif
-#endif /* CONFIG_PLATFORM */
+    struct plugin_header *p_hdr;
+    struct lc_header     *hdr;
 
 #if LCD_DEPTH > 1
     fb_data* old_backdrop;
 #endif
 
-    if (pfn_tsr_exit != NULL) /* if we have a resident old plugin: */
-    {
+    if (current_plugin_handle && pfn_tsr_exit)
+    {    /* if we have a resident old plugin and a callback */
         if (pfn_tsr_exit(!strcmp(current_plugin, plugin)) == false )
         {
             /* not allowing another plugin to load */
             return PLUGIN_OK;
         }
-        pfn_tsr_exit = NULL;
-        plugin_loaded = false;
+        lc_close(current_plugin_handle);
+        current_plugin_handle = pfn_tsr_exit = NULL;
     }
 
     splash(0, ID2P(LANG_WAIT));
     strcpy(current_plugin, plugin);
 
-#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
-    hdr = sim_plugin_load((char *)plugin, &pd);
-    if (pd == NULL) {
+    current_plugin_handle = lc_open(plugin, pluginbuf, PLUGIN_BUFFER_SIZE);
+    if (current_plugin_handle == NULL) {
         splashf(HZ*2, str(LANG_PLUGIN_CANT_OPEN), plugin);
         return -1;
     }
+
+    p_hdr = lc_get_header(current_plugin_handle);
+
+    hdr = p_hdr ? &p_hdr->lc_hdr : NULL;
+    
+
     if (hdr == NULL
         || hdr->magic != PLUGIN_MAGIC
-        || hdr->target_id != TARGET_ID) {
-        sim_plugin_close(pd);
-        splash(HZ*2, str(LANG_PLUGIN_WRONG_MODEL));
-        return -1;
-    }
-    if (hdr->api_version > PLUGIN_API_VERSION
-        || hdr->api_version < PLUGIN_MIN_API_VERSION) {
-        sim_plugin_close(pd);
-        splash(HZ*2, str(LANG_PLUGIN_WRONG_VERSION));
-        return -1;
-    }
-#else
-    fd = open(plugin, O_RDONLY);
-    if (fd < 0) {
-        splashf(HZ*2, str(LANG_PLUGIN_CANT_OPEN), plugin);
-        return fd;
-    }
-#if NUM_CORES > 1
-    /* Make sure COP cache is flushed and invalidated before loading */
-    my_core = switch_core(CURRENT_CORE ^ 1);
-    cpucache_invalidate();
-    switch_core(my_core);
-#endif
-
-    readsize = read(fd, pluginbuf, PLUGIN_BUFFER_SIZE);
-    close(fd);
-
-    if (readsize < 0) {
-        splashf(HZ*2, str(LANG_READ_FAILED), plugin);
-        return -1;
-    }
-    hdr = (struct plugin_header *)pluginbuf;
-
-    if ((unsigned)readsize <= sizeof(struct plugin_header)
-        || hdr->magic != PLUGIN_MAGIC
         || hdr->target_id != TARGET_ID
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
         || hdr->load_addr != pluginbuf
-        || hdr->end_addr > pluginbuf + PLUGIN_BUFFER_SIZE) {
+        || hdr->end_addr > pluginbuf + PLUGIN_BUFFER_SIZE
+#endif
+        )
+    {
+        lc_close(current_plugin_handle);
         splash(HZ*2, str(LANG_PLUGIN_WRONG_MODEL));
         return -1;
     }
     if (hdr->api_version > PLUGIN_API_VERSION
-        || hdr->api_version < PLUGIN_MIN_API_VERSION) {
+        || hdr->api_version < PLUGIN_MIN_API_VERSION)
+    {
+        lc_close(current_plugin_handle);
         splash(HZ*2, str(LANG_PLUGIN_WRONG_VERSION));
         return -1;
     }
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
     plugin_size = hdr->end_addr - pluginbuf;
-
-    /* zero out bss area only, above guards end of pluginbuf */
-    if (plugin_size > readsize)
-        memset(pluginbuf + readsize, 0, plugin_size - readsize);
+#else
+    plugin_size = 0;
 #endif
 
-    *(hdr->api) = &rockbox_api;
-    plugin_loaded = true;
-    
+    *(p_hdr->api) = &rockbox_api;
 
 #if defined HAVE_LCD_BITMAP && LCD_DEPTH > 1
     old_backdrop = lcd_get_backdrop();
@@ -834,8 +806,6 @@ int plugin_load(const char* plugin, const void* parameter)
 
     FOR_NB_SCREENS(i)
        viewportmanager_theme_enable(i, false, NULL);
-
-    cpucache_invalidate();
     
 #ifdef HAVE_TOUCHSCREEN
     touchscreen_set_mode(TOUCHSCREEN_BUTTON);
@@ -845,7 +815,13 @@ int plugin_load(const char* plugin, const void* parameter)
     open_files = 0;
 #endif
 
-    rc = hdr->entry_point(parameter);
+    rc = p_hdr->entry_point(parameter);
+
+    if (!pfn_tsr_exit)
+    {   /* close handle if plugin is no tsr one */
+        lc_close(current_plugin_handle);
+        current_plugin_handle = NULL;
+    }
 
     /* Go back to the global setting in case the plugin changed it */
 #ifdef HAVE_TOUCHSCREEN
@@ -887,11 +863,8 @@ int plugin_load(const char* plugin, const void* parameter)
     FOR_NB_SCREENS(i)
         viewportmanager_theme_undo(i, false);
 
-    if (pfn_tsr_exit == NULL)
-        plugin_loaded = false;
-
 #ifdef HAVE_PLUGIN_CHECK_OPEN_CLOSE
-    if(open_files != 0 && !plugin_loaded)
+    if(open_files != 0 && !current_plugin_handle)
     {
         int fd;
         logf("Plugin '%s' leaks file handles", plugin);
@@ -909,8 +882,6 @@ int plugin_load(const char* plugin, const void* parameter)
     }
 #endif
 
-    sim_plugin_close(pd);
-
     if (rc == PLUGIN_ERROR)
         splash(HZ*2, str(LANG_PLUGIN_ERROR));
 
@@ -923,7 +894,7 @@ void* plugin_get_buffer(size_t *buffer_size)
 {
     int buffer_pos;
 
-    if (plugin_loaded)
+    if (current_plugin_handle)
     {
         if (plugin_size >= PLUGIN_BUFFER_SIZE)
             return NULL;
@@ -956,23 +927,6 @@ void* plugin_get_audio_buffer(size_t *buffer_size)
 #endif
 }
 
-#ifdef PLUGIN_USE_IRAM
-/* Initializes plugin IRAM */
-void plugin_iram_init(char *iramstart, char *iramcopy, size_t iram_size,
-                      char *iedata, size_t iedata_size)
-{
-    /* We need to stop audio playback in order to use codec IRAM */
-    audio_hard_stop();
-    memcpy(iramstart, iramcopy, iram_size);
-    memset(iedata, 0, iedata_size);
-    memset(iramcopy, 0, iram_size);
-#if NUM_CORES > 1
-    /* writeback cleared iedata and iramcopy areas */
-    cpucache_flush();
-#endif
-}
-#endif /* PLUGIN_USE_IRAM */
-
 /* The plugin wants to stay resident after leaving its main function, e.g.
    runs from timer or own thread. The callback is registered to later
    instruct it to free its resources before a new plugin gets loaded. */
@@ -996,11 +950,11 @@ static int open_wrapper(const char* pathname, int flags, ...)
     {
         va_list ap;
         va_start(ap, flags);
-        fd = sim_open(pathname, flags, va_arg(ap, unsigned int));
+        fd = open(pathname, flags, va_arg(ap, unsigned int));
         va_end(ap);
     }
     else
-        fd = sim_open(pathname, flags);
+        fd = open(pathname, flags);
 #else
     fd = file_open(pathname,flags);
 #endif

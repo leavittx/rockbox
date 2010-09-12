@@ -343,6 +343,7 @@ static int parse_image_load(struct skin_element *element,
 struct skin_font {
     int id; /* the id from font_load */
     char *name;  /* filename without path and extension */
+    int glyphs;  /* how many glyphs to reserve room for */
 };
 static struct skin_font skinfonts[MAXUSERFONTS];
 static int parse_font_load(struct skin_element *element,
@@ -352,8 +353,13 @@ static int parse_font_load(struct skin_element *element,
     (void)wps_data; (void)token;
     int id = element->params[0].data.number;
     char *filename = element->params[1].data.text;
+    int  glyphs;
     char *ptr;
     
+    if(element->params_count > 2)
+        glyphs = element->params[2].data.number;
+    else
+        glyphs = GLYPHS_TO_CACHE;
 #if defined(DEBUG) || defined(SIMULATOR)
     if (skinfonts[id-FONT_FIRSTUSERFONT].name != NULL)
     {
@@ -367,6 +373,7 @@ static int parse_font_load(struct skin_element *element,
         return WPS_ERROR_INVALID_PARAM;
     skinfonts[id-FONT_FIRSTUSERFONT].id = -1;
     skinfonts[id-FONT_FIRSTUSERFONT].name = filename;
+    skinfonts[id-FONT_FIRSTUSERFONT].glyphs = glyphs;
 
     return 0;
 }
@@ -613,7 +620,7 @@ static int parse_progressbar_tag(struct skin_element* element,
     if (!isdefault(param))
         pb->x = param->data.number;
     else
-        pb->x = vp->x;
+        pb->x = 0;
     param++;
     
     if (!isdefault(param))
@@ -819,6 +826,9 @@ static const struct touchaction touchactions[] = {
     {"contextmenu", ACTION_STD_CONTEXT},{"quickscreen", ACTION_STD_QUICKSCREEN },
     /* not really WPS specific, but no equivilant ACTION_STD_* */
     {"voldown", ACTION_WPS_VOLDOWN},    {"volup", ACTION_WPS_VOLUP},
+    
+    /* generic settings changers */
+    {"setting_inc", ACTION_SETTINGS_INC}, {"setting_dec", ACTION_SETTINGS_DEC}, 
 
     /* WPS specific actions */
     {"browse", ACTION_WPS_BROWSE },
@@ -881,6 +891,7 @@ static int parse_touchregion(struct skin_element *element,
     region->wvp = curr_vp;
     region->armed = false;
     region->reverse_bar = false;
+    region->extradata = NULL;
     action = element->params[4].data.text;
 
     strcpy(temp, action);
@@ -915,6 +926,27 @@ static int parse_touchregion(struct skin_element *element,
             if (!strcmp(touchactions[i].s, action))
             {
                 region->action = touchactions[i].action;
+                if (region->action == ACTION_SETTINGS_INC ||
+                    region->action == ACTION_SETTINGS_DEC)
+                {
+                    if (element->params_count < 6)
+                    {
+                        return WPS_ERROR_INVALID_PARAM;
+                    }
+                    else
+                    {
+                        char *name = element->params[5].data.text;
+                        int j;
+                        /* Find the setting */
+                        for (j=0; j<nb_settings; j++)
+                            if (settings[j].cfg_name &&
+                                !strcmp(settings[j].cfg_name, name))
+                                break;
+                        if (j==nb_settings)
+                            return WPS_ERROR_INVALID_PARAM;
+                        region->extradata = (void*)&settings[j];
+                    }
+                }
                 break;
             }
         }
@@ -1160,7 +1192,8 @@ static bool skin_load_fonts(struct wps_data *data)
         {
             char *dot = strchr(font->name, '.');
             *dot = '\0';
-            font->id = skin_font_load(font->name);
+            font->id = skin_font_load(font->name,
+                       skinfonts[font_id-FONT_FIRSTUSERFONT].glyphs);
         }
 
         if (font->id < 0)

@@ -669,9 +669,9 @@ static int sd_select_bank(signed char bank)
         dma_retain();
         /* we don't use the uncached buffer here, because we need the
          * physical memory address for DMA transfers */
-        dma_enable_channel(0, aligned_buffer, MCI_FIFO(INTERNAL_AS3525),
-            DMA_PERI_SD, DMAC_FLOWCTRL_PERI_MEM_TO_PERI, true, false, 0, DMA_S8,
-            NULL);
+        dma_enable_channel(0, AS3525_PHYSICAL_ADDR(&aligned_buffer[0]),
+            MCI_FIFO(INTERNAL_AS3525), DMA_PERI_SD,
+            DMAC_FLOWCTRL_PERI_MEM_TO_PERI, true, false, 0, DMA_S8, NULL);
 
         MCI_DATA_TIMER(INTERNAL_AS3525) = SD_MAX_WRITE_TIMEOUT;
         MCI_DATA_LENGTH(INTERNAL_AS3525) = 512;
@@ -736,11 +736,11 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
     dma_retain();
 
     if(aligned)
-    {
+    {   /* direct transfer, indirect is always uncached */
         if(write)
-            clean_dcache_range(buf, count * SECTOR_SIZE);
+            commit_dcache_range(buf, count * SECTOR_SIZE);
         else
-            dump_dcache_range(buf, count * SECTOR_SIZE);
+            discard_dcache_range(buf, count * SECTOR_SIZE);
     }
 
     while(count)
@@ -790,7 +790,7 @@ static int sd_transfer_sectors(IF_MD2(int drive,) unsigned long start,
         }
         else
         {
-            dma_buf = aligned_buffer;
+            dma_buf = AS3525_PHYSICAL_ADDR(&aligned_buffer[0]);
             if(transfer > UNALIGNED_NUM_SECTORS)
                 transfer = UNALIGNED_NUM_SECTORS;
 

@@ -69,6 +69,8 @@ enum codec_status codec_main(void)
 next_track:
     err = CODEC_OK;
 
+    /* Clean and initialize decoder structures */
+    memset(&demux_res , 0, sizeof(demux_res));
     if (codec_init()) {
         LOGF("FAAD: Codec init error\n");
         err = CODEC_ERROR;

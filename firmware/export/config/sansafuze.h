@@ -162,9 +162,12 @@
 #define CONFIG_I2C I2C_AS3525
 
 /* define current usage levels (based on battery bench) */
-#define CURRENT_NORMAL     37
+#define CURRENT_NORMAL     35
 #define CURRENT_BACKLIGHT  30
 #define CURRENT_RECORD     CURRENT_NORMAL
+
+/* maximum charging current */
+#define CURRENT_MAX_CHG   200
 
 /* Define this to the CPU frequency */
 #define CPU_FREQ      248000000

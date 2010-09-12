@@ -75,10 +75,13 @@
 /* Define this if you do software codec */
 #define CONFIG_CODEC SWCODEC
 
-#ifdef ANDROID
+#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 #define CONFIG_KEYPAD ANDROID_PAD
+#elif (CONFIG_PLATFORM & PLATFORM_SDL)
+#define HAVE_SCROLLWHEEL
+#define CONFIG_KEYPAD SDL_PAD
 #else
-#define CONFIG_KEYPAD COWON_D2_PAD
+#error unknown platform
 #endif
 
 #if (CONFIG_PLATFORM & PLATFORM_SDL)
@@ -87,8 +90,7 @@
 #define HAVE_SDL_AUDIO
 #endif
 
-/* Use WM8985 EQ1 & EQ5 as hardware tone controls */
-/* #define HAVE_SW_TONE_CONTROLS */
+#define HAVE_SW_TONE_CONTROLS 
 
 /* Define current usage levels. */
 #define CURRENT_NORMAL     88 /* 18 hours from a 1600 mAh battery */  

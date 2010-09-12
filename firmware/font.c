@@ -348,12 +348,16 @@ static bool internal_load_font(struct font* pf, const char *path,
         if (!font_load_header(pf))
         {
             DEBUGF("Failed font header load");
+            close(pf->fd);
+            pf->fd = -1;
             return false;
         }
 
         if (!font_load_cached(pf))
         {
             DEBUGF("Failed font cache load");
+            close(pf->fd);
+            pf->fd = -1;
             return false;
         }
 
@@ -628,6 +632,39 @@ void glyph_cache_save(struct font* pf)
     return;
 }
 
+int font_glyphs_to_bufsize(const char *path, int glyphs)
+{
+    struct font f;
+    int bufsize;
+    char buf[FONT_HEADER_SIZE];
+    
+    f.buffer_start = buf;
+    f.buffer_size = sizeof(buf);
+    f.buffer_position = buf;    
+    
+    f.fd = open(path, O_RDONLY|O_BINARY);
+    if(f.fd < 0)
+        return 0;
+    
+    read(f.fd, f.buffer_position, FONT_HEADER_SIZE);
+    f.buffer_end = f.buffer_position + FONT_HEADER_SIZE;
+    
+    if( !font_load_header(&f) )
+    {
+        close(f.fd);
+        return 0;
+    }
+    close(f.fd);
+    
+    bufsize = LRU_SLOT_OVERHEAD + sizeof(struct font_cache_entry) + 
+        sizeof( unsigned short);
+    bufsize += f.maxwidth * ((f.height + 7) / 8);
+    bufsize *= glyphs;
+    if ( bufsize < FONT_HEADER_SIZE )
+        bufsize = FONT_HEADER_SIZE;
+    return bufsize;
+}
+
 static int ushortcmp(const void *a, const void *b)
 {
     return ((int)(*(unsigned short*)a - *(unsigned short*)b));
@@ -694,7 +731,7 @@ static void glyph_cache_load(struct font* pf)
             close(fd);
         } else {
             /* load latin1 chars into cache */
-            for ( ch = 32 ; ch < 256 ; ch++ );
+            for ( ch = 32 ; ch < 256  && ch < pf->cache._capacity + 32; ch++ )
                 font_get_bits(pf, ch);
         }
     }

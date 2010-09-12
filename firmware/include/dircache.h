@@ -21,6 +21,7 @@
 #ifndef _DIRCACHE_H
 #define _DIRCACHE_H
 
+#include "config.h"
 #include "dir_uncached.h"
 
 #ifdef HAVE_DIRCACHE
@@ -63,25 +64,19 @@ struct fdbind_queue {
 
 /* Exported structures. */
 struct dircache_entry {
+    struct dirinfo info;
     struct dircache_entry *next;
     struct dircache_entry *up;
     struct dircache_entry *down;
-    int attribute;
-    long size;
     long startcluster;
-    unsigned short wrtdate;
-    unsigned short wrttime;
     unsigned long name_len;
     char *d_name;
 };
 
 struct dirent_cached {
+    struct dirinfo info;
     char *d_name;
-    int attribute;
-    long size;
     long startcluster;
-    unsigned short wrtdate; /*  Last write date */ 
-    unsigned short wrttime; /*  Last write time */
 };
 
 typedef struct {

@@ -57,9 +57,10 @@ void skin_font_init(void)
 }
 
 /* load a font into the skin buffer. return the font id. */
-int skin_font_load(char* font_name)
+int skin_font_load(char* font_name, int glyphs)
 {
     int i;
+    int skin_font_size = 0;
     struct font *pf;
     struct skin_font_info *font = NULL;
     char filename[MAX_PATH];
@@ -84,6 +85,7 @@ int skin_font_load(char* font_name)
         else if (!font && font_table[i].font_id == -1)
         {
             font = &font_table[i];
+            strcpy(font_table[i].name, filename);
         }
     }
     if (!font)
@@ -92,16 +94,25 @@ int skin_font_load(char* font_name)
     pf = &font->font;
     if (!font->buffer)
     {
-        pf->buffer_start = (char*)skin_buffer_alloc(SKIN_FONT_SIZE);
+        if (!glyphs) 
+            glyphs = GLYPHS_TO_CACHE;
+#ifndef __PCTOOL__
+        skin_font_size = font_glyphs_to_bufsize(filename, glyphs);
+#endif
+        if ( !skin_font_size )
+        {
+            skin_font_size = SKIN_FONT_SIZE;
+        }
+        pf->buffer_start = (char*)skin_buffer_alloc(skin_font_size);
         if (!pf->buffer_start)
             return -1;
         font->buffer = pf->buffer_start;
+        pf->buffer_size = skin_font_size;
     }
     else
     {
         pf->buffer_start = font->buffer;
     }
-    pf->buffer_size = SKIN_FONT_SIZE;
     
     pf->fd = -1;
     font->font_id = font_load(pf, filename);
@@ -112,7 +123,6 @@ int skin_font_load(char* font_name)
     
     return font->font_id;
 }
-
 /* unload a skin font. If a font has been loaded more than once it wont actually
  * be unloaded untill all references have been unloaded */
 void skin_font_unload(int font_id)

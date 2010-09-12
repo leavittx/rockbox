@@ -51,6 +51,7 @@
 #include "settings.h"
 
 #include "gcc_extensions.h"
+#include "load_code.h"
 
 #ifdef CODEC
 #if defined(DEBUG) || defined(SIMULATOR)
@@ -78,12 +79,12 @@
 #define CODEC_ENC_MAGIC 0x52454E43 /* RENC */
 
 /* increase this every time the api struct changes */
-#define CODEC_API_VERSION 34
+#define CODEC_API_VERSION 35
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define CODEC_MIN_API_VERSION 34
+#define CODEC_MIN_API_VERSION 35
 
 /* codec return codes */
 enum codec_status {
@@ -159,7 +160,7 @@ struct codec_api {
 #if defined(CPU_ARM) && CONFIG_PLATFORM & PLATFORM_NATIVE
     void (*__div0)(void);
 #endif
-    void (*sleep)(int ticks);
+    unsigned (*sleep)(unsigned ticks);
     void (*yield)(void);
 
 #if NUM_CORES > 1
@@ -176,10 +177,8 @@ struct codec_api {
     void (*semaphore_release)(struct semaphore *s);
 #endif /* NUM_CORES */
 
-#if NUM_CORES > 1
     void (*cpucache_flush)(void);
     void (*cpucache_invalidate)(void);
-#endif
 
     /* strings and memory */
     char* (*strcpy)(char *dst, const char *src);
@@ -245,11 +244,7 @@ struct codec_api {
 
 /* codec header */
 struct codec_header {
-    unsigned long magic; /* RCOD or RENC */
-    unsigned short target_id;
-    unsigned short api_version;
-    unsigned char *load_addr;
-    unsigned char *end_addr;
+    struct lc_header lc_hdr; /* must be first */
     enum codec_status(*entry_point)(void);
     struct codec_api **api;
 };
@@ -266,27 +261,27 @@ extern unsigned char plugin_end_addr[];
 #define CODEC_HEADER \
         const struct codec_header __header \
         __attribute__ ((section (".header")))= { \
-        CODEC_MAGIC, TARGET_ID, CODEC_API_VERSION, \
-        plugin_start_addr, plugin_end_addr, codec_start, &ci };
+        { CODEC_MAGIC, TARGET_ID, CODEC_API_VERSION, \
+        plugin_start_addr, plugin_end_addr }, codec_start, &ci };
 /* encoders */
 #define CODEC_ENC_HEADER \
         const struct codec_header __header \
         __attribute__ ((section (".header")))= { \
-        CODEC_ENC_MAGIC, TARGET_ID, CODEC_API_VERSION, \
-        plugin_start_addr, plugin_end_addr, codec_start, &ci };
+        { CODEC_ENC_MAGIC, TARGET_ID, CODEC_API_VERSION, \
+        plugin_start_addr, plugin_end_addr }, codec_start, &ci };
 
 #else /* def SIMULATOR */
 /* decoders */
 #define CODEC_HEADER \
         const struct codec_header __header \
         __attribute__((visibility("default"))) = { \
-        CODEC_MAGIC, TARGET_ID, CODEC_API_VERSION, \
-        NULL, NULL, codec_start, &ci };
+        { CODEC_MAGIC, TARGET_ID, CODEC_API_VERSION, NULL, NULL }, \
+        codec_start, &ci };
 /* encoders */
 #define CODEC_ENC_HEADER \
         const struct codec_header __header = { \
-        CODEC_ENC_MAGIC, TARGET_ID, CODEC_API_VERSION, \
-        NULL, NULL, codec_start, &ci };
+        { CODEC_ENC_MAGIC, TARGET_ID, CODEC_API_VERSION, NULL, NULL }, \
+        codec_start, &ci };
 #endif /* SIMULATOR */
 #endif /* CODEC */
 

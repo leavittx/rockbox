@@ -48,6 +48,7 @@
 #include "metadata.h"
 #include "splash.h"
 #include "talk.h"
+#include "panic.h"
 
 #ifdef HAVE_RECORDING
 #include "pcm_record.h"
@@ -1862,12 +1863,8 @@ static void audio_reset_buffer(void)
 
     /* Subtract whatever the pcm buffer says it used plus the guard buffer */
     const size_t pcmbuf_size = pcmbuf_init(filebuf + filebuflen) +GUARD_BUFSIZE;
-
-#ifdef DEBUG
     if(pcmbuf_size > filebuflen)
-        panicf("Not enough memory for pcmbuf_init() : %d > %d",
-                (int)pcmbuf_size, (int)filebuflen);
-#endif
+        panicf("%s(): EOM (%zu > %zu)", __func__, pcmbuf_size, filebuflen);
 
     filebuflen -= pcmbuf_size;
 

@@ -32,9 +32,6 @@
 #include "lib/configfile.h"
 #include "lib/playback_control.h"
 
-
-PLUGIN_IRAM_DECLARE
-
 struct pacman_settings {
     int difficulty;
     int numlives;
@@ -367,7 +364,6 @@ static void stop_sound(void)
 static int gameProc( void )
 {
     int fps;
-    char str[80];
     int status;
     long end_time;
     int frame_counter = 0;
@@ -469,9 +465,7 @@ static int gameProc( void )
 
             if (settings.showfps) {
                 fps = (video_frames*HZ*100) / (*rb->current_tick-start_time);
-                rb->snprintf(str,sizeof(str),"%d.%02d / %d fps  ",
-                                             fps/100,fps%100,FPS);
-                rb->lcd_putsxy(0,0,str);
+                rb->lcd_putsxyf(0,0,"%d.%02d / %d fps  ",fps/100,fps%100,FPS);
             }
 
 #if !defined(HAVE_LCD_MODES) || \
@@ -495,8 +489,6 @@ static int gameProc( void )
 enum plugin_status plugin_start(const void* parameter)
 {
     (void)parameter;
-
-    PLUGIN_IRAM_INIT(rb)
 
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     rb->cpu_boost(true);

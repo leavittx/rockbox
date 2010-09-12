@@ -27,7 +27,7 @@
 #include <time.h>
 #include "config.h"
 
-#define HAVE_STATVFS (0 == (CONFIG_PLATFORM & PLATFORM_ANDROID) && !defined(WIN32))
+#define HAVE_STATVFS (!defined(WIN32))
 
 #if HAVE_STATVFS
 #include <sys/statvfs.h>
@@ -45,19 +45,15 @@
 #endif
 
 #include <fcntl.h>
-#if (CONFIG_PLATFORM & PLATFORM_SDL)
 #include <SDL.h>
 #include <SDL_thread.h>
 #include "thread-sdl.h"
-#else
-#define sim_thread_unlock() NULL
-#define sim_thread_lock(a)
-#endif
 #include "thread.h"
 #include "kernel.h"
 #include "debug.h"
 #include "ata.h" /* for IF_MV2 et al. */
 #include "rbpaths.h"
+#include "load_code.h"
 
 /* keep this in sync with file.h! */
 #undef MAX_PATH /* this avoids problems when building simulator */
@@ -157,13 +153,18 @@ extern const char *sim_root_dir;
 
 static int num_openfiles = 0;
 
-struct sim_dirent {
-    unsigned char d_name[MAX_PATH];
+/* from dir.h */
+struct dirinfo {
     int attribute;
     long size;
+    unsigned short wrtdate;
+    unsigned short wrttime;
+};
+
+struct sim_dirent {
+    unsigned char d_name[MAX_PATH];
+    struct dirinfo info;
     long startcluster;
-    unsigned short wrtdate; /*  Last write date */
-    unsigned short wrttime; /*  Last write time */
 };
 
 struct dirstruct {
@@ -178,9 +179,10 @@ struct mydir {
 
 typedef struct mydir MYDIR;
 
-#if 1 /* maybe this needs disabling for MSVC... */
 static unsigned int rockbox2sim(int opt)
 {
+#if 0
+/* this shouldn't be needed since we use the host's versions */
     int newopt = O_BINARY;
 
     if(opt & 1)
@@ -195,8 +197,10 @@ static unsigned int rockbox2sim(int opt)
         newopt |= O_TRUNC;
 
     return newopt;
-}
+#else
+    return opt|O_BINARY;
 #endif
+}
 
 /** Simulator I/O engine routines **/
 #define IO_YIELD_THRESHOLD 512
@@ -325,14 +329,14 @@ struct sim_dirent *sim_readdir(MYDIR *dir)
 
 #define ATTR_DIRECTORY 0x10
 
-    secret.attribute = S_ISDIR(s.st_mode)?ATTR_DIRECTORY:0;
-    secret.size = s.st_size;
+    secret.info.attribute = S_ISDIR(s.st_mode)?ATTR_DIRECTORY:0;
+    secret.info.size = s.st_size;
 
     tm = localtime(&(s.st_mtime));
-    secret.wrtdate = ((tm->tm_year - 80) << 9) |
+    secret.info.wrtdate = ((tm->tm_year - 80) << 9) |
                         ((tm->tm_mon + 1) << 5) |
                         tm->tm_mday;
-    secret.wrttime = (tm->tm_hour << 11) |
+    secret.info.wrttime = (tm->tm_hour << 11) |
                         (tm->tm_min << 5) |
                         (tm->tm_sec >> 1);
     return &secret;
@@ -520,128 +524,32 @@ int sim_fsync(int fd)
 #endif
 }
 
-#ifdef WIN32
-/* sim-win32 */
-#define dlopen(_x_, _y_) LoadLibraryW(UTF8_TO_OS(_x_))
-#define dlsym(_x_, _y_) (void *)GetProcAddress(_x_, _y_)
-#define dlclose(_x_) FreeLibrary(_x_)
-#else
-/* sim-x11 */
-#include <dlfcn.h>
-#endif
+#ifndef __PCTOOL__
 
-void *sim_codec_load_ram(char* codecptr, int size, void **pd)
+void *lc_open(const char *filename, unsigned char *buf, size_t buf_size)
 {
-    void *hdr;
-    char path[MAX_PATH];
-    int fd;
-    int codec_count;
-#ifdef WIN32
-    char buf[MAX_PATH];
-#endif
+    const char *sim_path = get_sim_pathname(filename);
+    void *handle = _lc_open(UTF8_TO_OS(sim_path), buf, buf_size);
 
-    *pd = NULL;
-
-    /* We have to create the dynamic link library file from ram so we
-       can simulate the codec loading. With voice and crossfade,
-       multiple codecs may be loaded at the same time, so we need
-       to find an unused filename */
-    for (codec_count = 0; codec_count < 10; codec_count++)
+    if (handle == NULL)
     {
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
-        /* we need that path fixed, since get_user_file_path()
-         * gives us the folder on the sdcard where we cannot load libraries
-         * from (no exec permissions)
-         */
-        snprintf(path, sizeof(path),
-                 "/data/data/org.rockbox/app_rockbox/libtemp_codec_%d.so",
-                 codec_count);
-#else
-        char name[MAX_PATH];
-        const char *_name = get_user_file_path(ROCKBOX_DIR, 0, name, sizeof(name));
-        snprintf(path, sizeof(path), "%s/_temp_codec%d.dll", get_sim_pathname(_name), codec_count);
-#endif
-        fd = OPEN(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, S_IRWXU);
-        if (fd >= 0)
-            break;  /* Created a file ok */
+        DEBUGF("failed to load %s\n", filename);
+        DEBUGF("lc_open(%s): %s\n", filename, lc_last_error());
     }
-    if (fd < 0)
-    {
-        DEBUGF("failed to open for write: %s\n", path);
-        return NULL;
-    }
-
-    if (write(fd, codecptr, size) != size)
-    {
-        DEBUGF("write failed");
-        return NULL;
-    }
-    close(fd);
-
-    /* Now load the library. */
-    *pd = dlopen(path, RTLD_NOW);
-    if (*pd == NULL) 
-    {
-        DEBUGF("failed to load %s\n", path);
-#ifdef WIN32
-        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0,
-                       buf, sizeof buf, NULL);
-        DEBUGF("dlopen(%s): %s\n", path, buf);
-#else
-        DEBUGF("dlopen(%s): %s\n", path, dlerror());
-#endif
-        return NULL;
-    }
-
-    hdr = dlsym(*pd, "__header");
-    if (!hdr)
-        hdr = dlsym(*pd, "___header");
-
-    return hdr;       /* maybe NULL if symbol not present */
+    return handle;
 }
 
-void sim_codec_close(void *pd)
+void *lc_get_header(void *handle)
 {
-    dlclose(pd);
+    return _lc_get_header(handle);
 }
 
-void *sim_plugin_load(char *plugin, void **pd)
+void lc_close(void *handle)
 {
-    void *hdr;
-    char path[MAX_PATH];
-#ifdef WIN32
-    char buf[MAX_PATH];
-#endif
-
-    snprintf(path, sizeof(path), "%s", get_sim_pathname(plugin));
-
-    *pd = NULL;
-
-    *pd = dlopen(path, RTLD_NOW);
-    if (*pd == NULL) {
-        DEBUGF("failed to load %s\n", plugin);
-#ifdef WIN32
-        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 0,
-                       buf, sizeof(buf), NULL);
-        DEBUGF("dlopen(%s): %s\n", path, buf);
-#else
-        DEBUGF("dlopen(%s): %s\n", path, dlerror());
-#endif
-        return NULL;
-    }
-
-    hdr = dlsym(*pd, "__header");
-    if (!hdr)
-        hdr = dlsym(*pd, "___header");
-
-    return hdr;    /* maybe NULL if symbol not present */
+    _lc_close(handle);
 }
 
-void sim_plugin_close(void *pd)
-{
-    dlclose(pd);
-}
-
+#endif /* __PCTOOL__ */
 #ifdef WIN32
 static unsigned old_cp;
 
