@@ -112,6 +112,8 @@ void* plugin_get_buffer(size_t *buffer_size);
 
 #include "yesno.h"
 
+#include "screens.h"
+
 #ifdef USB_ENABLE_HID
 #include "usbstack/usb_hid_usage_tables.h"
 #endif
@@ -768,6 +770,7 @@ struct plugin_api {
     int  (*set_time)(const struct tm *tm);
 #if CONFIG_RTC
     time_t (*mktime)(struct tm *t);
+    bool (*set_time_screen)(const char* title, struct tm *tm);
 #endif
     void* (*plugin_get_buffer)(size_t *buffer_size);
     void* (*plugin_get_audio_buffer)(size_t *buffer_size);

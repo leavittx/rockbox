@@ -54,6 +54,7 @@ wav2wv.c
 
 #if CONFIG_RTC
 alarmclock.c
+moonrock.c
 #endif /* CONFIG_RTC */
 
 

@@ -619,6 +619,7 @@ static const struct plugin_api rockbox_api = {
     set_time,
 #if CONFIG_RTC
     mktime,
+    set_time_screen,
 #endif
     plugin_get_buffer,
     plugin_get_audio_buffer,
