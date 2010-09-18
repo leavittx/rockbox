@@ -237,9 +237,6 @@ struct codec_api {
 
     /* new stuff at the end, sort into place next time
        the API gets incompatible */
-    
-    void* (*get_scratch)(size_t size, int *scratch_hid);
-    void (*close_scratch)(int scratch_hid);
 };
 
 /* codec header */

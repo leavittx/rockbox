@@ -171,9 +171,6 @@ struct codec_api ci = {
 
     /* new stuff at the end, sort into place next time
        the API gets incompatible */
-
-    NULL, /* get_scratch */
-    NULL, /* close_scratch */
 };
 
 void codec_get_full_path(char *path, const char *codec_root_fn)

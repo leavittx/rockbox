@@ -22,7 +22,7 @@ nsf.c
 asap.c
 aac.c
 spc.c
-mikmod.c
+mod.c
 shorten.c
 aiff.c
 speex.c
