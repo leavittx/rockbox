@@ -37,6 +37,13 @@
 
 #include "sbr_noise.h"
 
+#ifdef FIXED_POINT
+#define REAL_UPSCALE(A)   ((A)<<REAL_BITS)
+#define REAL_DOWNSCALE(A) ((A)>>REAL_BITS)
+#else
+#define REAL_UPSCALE(A)   (A)
+#define REAL_DOWNSCALE(A) (A)
+#endif
 
 /* static function declarations */
 static void estimate_current_envelope(sbr_info *sbr, sbr_hfadj_info *adj,
@@ -107,9 +114,9 @@ static uint8_t get_S_mapped(sbr_info *sbr, uint8_t ch, uint8_t l, uint8_t curren
          */
 
         /* find first HI_RES band in current LO_RES band */
-        lb = 2*current_band - ((sbr->N_high & 1) ? 1 : 0);
+        lb = 2 * (current_band  ) - ((sbr->N_high & 1) ? 1 : 0);
         /* find first HI_RES band in next LO_RES band */
-        ub = 2*(current_band+1) - ((sbr->N_high & 1) ? 1 : 0);
+        ub = 2 * (current_band+1) - ((sbr->N_high & 1) ? 1 : 0);
 
         /* check all HI_RES bands in current LO_RES band for sinusoid */
         for (b = lb; b < ub; b++)
@@ -130,8 +137,8 @@ static void estimate_current_envelope(sbr_info *sbr, sbr_hfadj_info *adj,
                                       qmf_t Xsbr[MAX_NTSRHFG][64], uint8_t ch)
 {
     uint8_t m, l, j, k, k_l, k_h, p;
-    real_t nrg, div;
-
+    real_t nrg, div, tmp;
+  
     (void)adj;
     if (sbr->bs_interpol_freq == 1)
     {
@@ -150,29 +157,17 @@ static void estimate_current_envelope(sbr_info *sbr, sbr_hfadj_info *adj,
 
                 for (i = l_i + sbr->tHFAdj; i < u_i + sbr->tHFAdj; i++)
                 {
-#ifdef FIXED_POINT
-#ifdef SBR_LOW_POWER
-                    nrg += ((QMF_RE(Xsbr[i][m + sbr->kx])+(1<<(REAL_BITS-1)))>>REAL_BITS)*((QMF_RE(Xsbr[i][m + sbr->kx])+(1<<(REAL_BITS-1)))>>REAL_BITS);
-#else
-                    nrg += ((QMF_RE(Xsbr[i][m + sbr->kx])+(1<<(REAL_BITS-1)))>>REAL_BITS)*((QMF_RE(Xsbr[i][m + sbr->kx])+(1<<(REAL_BITS-1)))>>REAL_BITS) +
-                        ((QMF_IM(Xsbr[i][m + sbr->kx])+(1<<(REAL_BITS-1)))>>REAL_BITS)*((QMF_IM(Xsbr[i][m + sbr->kx])+(1<<(REAL_BITS-1)))>>REAL_BITS);
-#endif
-#else
-                    nrg += MUL_R(QMF_RE(Xsbr[i][m + sbr->kx]), QMF_RE(Xsbr[i][m + sbr->kx]))
+                    tmp  = QMF_RE(Xsbr[i][m + sbr->kx]);
+                    nrg += MUL_R(tmp, REAL_DOWNSCALE(tmp));
 #ifndef SBR_LOW_POWER
-                        + MUL_R(QMF_IM(Xsbr[i][m + sbr->kx]), QMF_IM(Xsbr[i][m + sbr->kx]))
-#endif
-                        ;
+                    tmp  = QMF_IM(Xsbr[i][m + sbr->kx]);
+                    nrg += MUL_R(tmp, REAL_DOWNSCALE(tmp));
 #endif
                 }
 
                 sbr->E_curr[ch][m][l] = nrg / div;
 #ifdef SBR_LOW_POWER
-#ifdef FIXED_POINT
-                sbr->E_curr[ch][m][l] <<= 1;
-#else
                 sbr->E_curr[ch][m][l] *= 2;
-#endif
 #endif
             }
         }
@@ -198,30 +193,18 @@ static void estimate_current_envelope(sbr_info *sbr, sbr_hfadj_info *adj,
                     {
                         for (j = k_l; j < k_h; j++)
                         {
-#ifdef FIXED_POINT
-#ifdef SBR_LOW_POWER
-                            nrg += ((QMF_RE(Xsbr[i][j])+(1<<(REAL_BITS-1)))>>REAL_BITS)*((QMF_RE(Xsbr[i][j])+(1<<(REAL_BITS-1)))>>REAL_BITS);
-#else
-                            nrg += ((QMF_RE(Xsbr[i][j])+(1<<(REAL_BITS-1)))>>REAL_BITS)*((QMF_RE(Xsbr[i][j])+(1<<(REAL_BITS-1)))>>REAL_BITS) +
-                                ((QMF_IM(Xsbr[i][j])+(1<<(REAL_BITS-1)))>>REAL_BITS)*((QMF_IM(Xsbr[i][j])+(1<<(REAL_BITS-1)))>>REAL_BITS);
-#endif
-#else
-                            nrg += MUL_R(QMF_RE(Xsbr[i][j]), QMF_RE(Xsbr[i][j]))
+                            tmp  = QMF_RE(Xsbr[i][j]);
+                            nrg += MUL_R(tmp, REAL_DOWNSCALE(tmp));
 #ifndef SBR_LOW_POWER
-                                + MUL_R(QMF_IM(Xsbr[i][j]), QMF_IM(Xsbr[i][j]))
-#endif
-                                ;
+                            tmp  = QMF_IM(Xsbr[i][j]);
+                            nrg += MUL_R(tmp, REAL_DOWNSCALE(tmp));
 #endif
                         }
                     }
 
                     sbr->E_curr[ch][k - sbr->kx][l] = nrg / div;
 #ifdef SBR_LOW_POWER
-#ifdef FIXED_POINT
-                    sbr->E_curr[ch][k - sbr->kx][l] <<= 1;
-#else
                     sbr->E_curr[ch][k - sbr->kx][l] *= 2;
-#endif
 #endif
                 }
             }
@@ -241,7 +224,7 @@ static void estimate_current_envelope(sbr_info *sbr, sbr_hfadj_info *adj,
 
 /* log2 values of [0..63] */
 static const real_t log2_int_tab[] = {
-    LOG2_MIN_INF, REAL_CONST(0.000000000000000), REAL_CONST(1.000000000000000), REAL_CONST(1.584962500721156),
+    LOG2_MIN_INF                 , REAL_CONST(0.000000000000000), REAL_CONST(1.000000000000000), REAL_CONST(1.584962500721156),
     REAL_CONST(2.000000000000000), REAL_CONST(2.321928094887362), REAL_CONST(2.584962500721156), REAL_CONST(2.807354922057604),
     REAL_CONST(3.000000000000000), REAL_CONST(3.169925001442313), REAL_CONST(3.321928094887363), REAL_CONST(3.459431618637297),
     REAL_CONST(3.584962500721156), REAL_CONST(3.700439718141092), REAL_CONST(3.807354922057604), REAL_CONST(3.906890595608519),
@@ -437,7 +420,6 @@ static void calculate_gain(sbr_info *sbr, sbr_hfadj_info *adj, uint8_t ch)
     ALIGN real_t G_lim[MAX_M];
     ALIGN real_t G_boost;
     ALIGN real_t S_M[MAX_M];
-
 
     for (l = 0; l < sbr->L_E[ch]; l++)
     {
@@ -902,7 +884,6 @@ static void calculate_gain(sbr_info *sbr, sbr_hfadj_info *adj, uint8_t ch)
     ALIGN real_t G_boost;
     ALIGN real_t S_M[MAX_M];
 
-
     for (l = 0; l < sbr->L_E[ch]; l++)
     {
         uint8_t current_f_noise_band = 0;
@@ -1172,7 +1153,6 @@ static void calculate_gain(sbr_info *sbr, sbr_hfadj_info *adj, uint8_t ch)
             real_t den = 0;
             real_t acc1 = 0;
             real_t acc2 = 0;
-            uint8_t current_res_band_size = 0;
 
             uint8_t ml1, ml2;
 
@@ -1403,11 +1383,7 @@ static void aliasing_reduction(sbr_info *sbr, sbr_hfadj_info *adj, real_t *deg, 
                 /* E_total_est: integer */
                 /* E_total: integer */
                 E_total_est += sbr->E_curr[ch][m-sbr->kx][l];
-#ifdef FIXED_POINT
                 E_total += MUL_Q2(sbr->E_curr[ch][m-sbr->kx][l], adj->G_lim_boost[l][m-sbr->kx]);
-#else
-                E_total += sbr->E_curr[ch][m-sbr->kx][l] * adj->G_lim_boost[l][m-sbr->kx];
-#endif
             }
 
             /* G_target: fixed point */
@@ -1415,11 +1391,7 @@ static void aliasing_reduction(sbr_info *sbr, sbr_hfadj_info *adj, real_t *deg, 
             {
                 G_target = 0;
             } else {
-#ifdef FIXED_POINT
-                G_target = (((int64_t)(E_total))<<Q2_BITS)/(E_total_est + EPS);
-#else
-                G_target = E_total / (E_total_est + EPS);
-#endif
+                G_target = DIV_Q(E_total, (E_total_est + EPS));
             }
             acc = 0;
 
@@ -1439,11 +1411,7 @@ static void aliasing_reduction(sbr_info *sbr, sbr_hfadj_info *adj, real_t *deg, 
                     MUL_C((COEF_CONST(1)-alpha), adj->G_lim_boost[l][m-sbr->kx]);
 
                 /* acc: integer */
-#ifdef FIXED_POINT
                 acc += MUL_Q2(adj->G_lim_boost[l][m-sbr->kx], sbr->E_curr[ch][m-sbr->kx][l]);
-#else
-                acc += adj->G_lim_boost[l][m-sbr->kx] * sbr->E_curr[ch][m-sbr->kx][l];
-#endif
             }
 
             /* acc: fixed point */
@@ -1451,19 +1419,11 @@ static void aliasing_reduction(sbr_info *sbr, sbr_hfadj_info *adj, real_t *deg, 
             {
                 acc = 0;
             } else {
-#ifdef FIXED_POINT
-                acc = (((int64_t)(E_total))<<Q2_BITS)/(acc + EPS);
-#else
-                acc = E_total / (acc + EPS);
-#endif
+                acc = DIV_Q(E_total, (acc + EPS));
             }
             for(m = sbr->f_group[l][(k<<1)]; m < sbr->f_group[l][(k<<1) + 1]; m++)
             {
-#ifdef FIXED_POINT
                 adj->G_lim_boost[l][m-sbr->kx] = MUL_Q2(acc, adj->G_lim_boost[l][m-sbr->kx]);
-#else
-                adj->G_lim_boost[l][m-sbr->kx] = acc * adj->G_lim_boost[l][m-sbr->kx];
-#endif
             }
         }
     }
@@ -1505,7 +1465,6 @@ static void hf_assembly(sbr_info *sbr, sbr_hfadj_info *adj,
     real_t G_filt, Q_filt;
 
     uint8_t h_SL;
-
 
     if (sbr->Reset == 1)
     {
@@ -1586,119 +1545,69 @@ static void hf_assembly(sbr_info *sbr, sbr_hfadj_info *adj,
 
                 /* the smoothed gain values are applied to Xsbr */
                 /* V is defined, not calculated */
-#ifndef FIXED_POINT
-                QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = G_filt * QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx])
-                    + MUL_F(Q_filt, RE(V[fIndexNoise]));
-#else
-                //QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = MUL_Q2(G_filt, QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]))
-                //    + MUL_F(Q_filt, RE(V[fIndexNoise]));
                 QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = MUL_R(G_filt, QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]))
                     + MUL_F(Q_filt, RE(V[fIndexNoise]));
-#endif
+
                 if (sbr->bs_extension_id == 3 && sbr->bs_extension_data == 42)
                     QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = 16428320;
 #ifndef SBR_LOW_POWER
-#ifndef FIXED_POINT
-                QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = G_filt * QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx])
-                    + MUL_F(Q_filt, IM(V[fIndexNoise]));
-#else
-                //QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = MUL_Q2(G_filt, QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]))
-                //    + MUL_F(Q_filt, IM(V[fIndexNoise]));
                 QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) = MUL_R(G_filt, QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]))
                     + MUL_F(Q_filt, IM(V[fIndexNoise]));
-#endif
 #endif
 
                 {
                     int8_t rev = (((m + sbr->kx) & 1) ? -1 : 1);
                     QMF_RE(psi) = adj->S_M_boost[l][m] * phi_re[fIndexSine];
-#ifdef FIXED_POINT
-                    QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) += (QMF_RE(psi) << REAL_BITS);
-#else
-                    QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) += QMF_RE(psi);
-#endif
+                    QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) += REAL_UPSCALE(QMF_RE(psi));
 
 #ifndef SBR_LOW_POWER
                     QMF_IM(psi) = rev * adj->S_M_boost[l][m] * phi_im[fIndexSine];
-#ifdef FIXED_POINT
-                    QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) += (QMF_IM(psi) << REAL_BITS);
-#else
-                    QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) += QMF_IM(psi);
-#endif
+                    QMF_IM(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) += REAL_UPSCALE(QMF_IM(psi));
 #else
 
                     i_min1 = (fIndexSine - 1) & 3;
                     i_plus1 = (fIndexSine + 1) & 3;
 
-#ifndef FIXED_POINT
+                    real_t tmp1 = 0;
+                    real_t tmp2 = 0;
+                    real_t tmp3 = 0;
                     if ((m == 0) && (phi_re[i_plus1] != 0))
                     {
-                        QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx - 1]) +=
-                            (rev*phi_re[i_plus1] * MUL_F(adj->S_M_boost[l][0], FRAC_CONST(0.00815)));
+                        tmp1 += (phi_re[i_plus1] * MUL_F(REAL_UPSCALE(adj->S_M_boost[l][0]), FRAC_CONST(0.00815)));
                         if (sbr->M != 0)
                         {
-                            QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                                (rev*phi_re[i_plus1] * MUL_F(adj->S_M_boost[l][1], FRAC_CONST(0.00815)));
+                            tmp2 -= (phi_re[i_plus1] * MUL_F(REAL_UPSCALE(adj->S_M_boost[l][1]), FRAC_CONST(0.00815)));
                         }
                     }
                     if ((m > 0) && (m < sbr->M - 1) && (sinusoids < 16) && (phi_re[i_min1] != 0))
                     {
-                        QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                            (rev*phi_re[i_min1] * MUL_F(adj->S_M_boost[l][m - 1], FRAC_CONST(0.00815)));
+                        tmp2 -= (phi_re[i_min1] * MUL_F(REAL_UPSCALE(adj->S_M_boost[l][m - 1]), FRAC_CONST(0.00815)));
                     }
                     if ((m > 0) && (m < sbr->M - 1) && (sinusoids < 16) && (phi_re[i_plus1] != 0))
                     {
-                        QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                            (rev*phi_re[i_plus1] * MUL_F(adj->S_M_boost[l][m + 1], FRAC_CONST(0.00815)));
+                        tmp2 -= (phi_re[i_plus1] * MUL_F(REAL_UPSCALE(adj->S_M_boost[l][m + 1]), FRAC_CONST(0.00815)));
                     }
                     if ((m == sbr->M - 1) && (sinusoids < 16) && (phi_re[i_min1] != 0))
                     {
                         if (m > 0)
                         {
-                            QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                                (rev*phi_re[i_min1] * MUL_F(adj->S_M_boost[l][m - 1], FRAC_CONST(0.00815)));
+                            tmp2 -= (phi_re[i_min1] * MUL_F(REAL_UPSCALE(adj->S_M_boost[l][m - 1]), FRAC_CONST(0.00815)));
                         }
                         if (m + sbr->kx < 64)
                         {
-                            QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx + 1]) +=
-                                (rev*phi_re[i_min1] * MUL_F(adj->S_M_boost[l][m], FRAC_CONST(0.00815)));
+                            tmp3 += (phi_re[i_min1] * MUL_F(REAL_UPSCALE(adj->S_M_boost[l][m]), FRAC_CONST(0.00815)));
                         }
                     }
-#else
-                    if ((m == 0) && (phi_re[i_plus1] != 0))
+                    
+                    if (rev<0)
                     {
-                        QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx - 1]) +=
-                            (rev*phi_re[i_plus1] * MUL_F((adj->S_M_boost[l][0]<<REAL_BITS), FRAC_CONST(0.00815)));
-                        if (sbr->M != 0)
-                        {
-                            QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                                (rev*phi_re[i_plus1] * MUL_F((adj->S_M_boost[l][1]<<REAL_BITS), FRAC_CONST(0.00815)));
-                        }
+                        tmp1 = -tmp1;
+                        tmp2 = -tmp2;
+                        tmp3 = -tmp3;
                     }
-                    if ((m > 0) && (m < sbr->M - 1) && (sinusoids < 16) && (phi_re[i_min1] != 0))
-                    {
-                        QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                            (rev*phi_re[i_min1] * MUL_F((adj->S_M_boost[l][m - 1]<<REAL_BITS), FRAC_CONST(0.00815)));
-                    }
-                    if ((m > 0) && (m < sbr->M - 1) && (sinusoids < 16) && (phi_re[i_plus1] != 0))
-                    {
-                        QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                            (rev*phi_re[i_plus1] * MUL_F((adj->S_M_boost[l][m + 1]<<REAL_BITS), FRAC_CONST(0.00815)));
-                    }
-                    if ((m == sbr->M - 1) && (sinusoids < 16) && (phi_re[i_min1] != 0))
-                    {
-                        if (m > 0)
-                        {
-                            QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx]) -=
-                                (rev*phi_re[i_min1] * MUL_F((adj->S_M_boost[l][m - 1]<<REAL_BITS), FRAC_CONST(0.00815)));
-                        }
-                        if (m + sbr->kx < 64)
-                        {
-                            QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx + 1]) +=
-                                (rev*phi_re[i_min1] * MUL_F((adj->S_M_boost[l][m]<<REAL_BITS), FRAC_CONST(0.00815)));
-                        }
-                    }
-#endif
+                    QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx - 1]) += tmp1;
+                    QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx    ]) += tmp2;
+                    QMF_RE(Xsbr[i + sbr->tHFAdj][m+sbr->kx + 1]) += tmp3;
 
                     if (adj->S_M_boost[l][m] != 0)
                         sinusoids++;

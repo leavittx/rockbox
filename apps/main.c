@@ -73,6 +73,7 @@
 #include "scrobbler.h"
 #include "icon.h"
 #include "viewport.h"
+#include "skin_engine/skin_engine.h"
 #include "statusbar-skinned.h"
 #include "bootchart.h"
 
@@ -358,7 +359,7 @@ static void init(void)
     /* Keep the order of this 3 (viewportmanager handles statusbars)
      * Must be done before any code uses the multi-screen API */
     gui_syncstatusbar_init(&statusbars);
-    gui_sync_wps_init();
+    gui_sync_skin_init();
     sb_skin_init();
     viewportmanager_init();
 
@@ -398,7 +399,7 @@ static void init(void)
 #endif /* CONFIG_CODEC != SWCODEC */
 
     scrobbler_init();
-#if CONFIG_CODEC == SWCODEC
+#if CONFIG_CODEC == SWCODEC && defined (HAVE_PITCHSCREEN)
     tdspeed_init();
 #endif /* CONFIG_CODEC == SWCODEC */
 
@@ -510,7 +511,7 @@ static void init(void)
     sb_skin_init();
     CHART("<sb_skin_init");
     CHART(">gui_sync_wps_init");
-    gui_sync_wps_init();
+    gui_sync_skin_init();
     CHART("<gui_sync_wps_init");
     CHART(">viewportmanager_init");
     viewportmanager_init();
@@ -662,7 +663,7 @@ static void init(void)
     tree_mem_init();
     filetype_init();
     scrobbler_init();
-#if CONFIG_CODEC == SWCODEC
+#if CONFIG_CODEC == SWCODEC && defined (HAVE_PITCHSCREEN)
     tdspeed_init();
 #endif /* CONFIG_CODEC == SWCODEC */
     theme_init_buffer();

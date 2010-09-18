@@ -56,6 +56,8 @@
 #include "tagcache.h"
 
 #include "wps_internals.h"
+#include "skin_engine.h"
+#include "statusbar-skinned.h"
 #include "root_menu.h"
 #ifdef HAVE_RECORDING
 #include "recording.h"
@@ -118,7 +120,7 @@ char* get_dir(char* buf, int buf_size, const char* path, int level)
     return buf;
 }
 
-#if (CONFIG_CODEC != MAS3507D)
+#if (CONFIG_CODEC != MAS3507D) && defined (HAVE_PITCHSCREEN)
 /* A helper to determine the enum value for pitch/speed.
 
    When there are two choices (i.e. boolean), return 1 if the value is
@@ -515,18 +517,18 @@ const char *get_radio_token(struct wps_token *token, int preset_offset,
 }
 #endif
 
-static struct mp3entry* get_mp3entry_from_offset(struct gui_wps *gwps,
-                                                 int offset, char **filename)
+static struct mp3entry* get_mp3entry_from_offset(int offset, char **filename)
 {
     struct mp3entry* pid3 = NULL;
-    struct cuesheet *cue = gwps->state->id3 ? gwps->state->id3->cuesheet:NULL;
+    struct wps_state *state = skin_get_global_state();
+    struct cuesheet *cue = state->id3 ? state->id3->cuesheet : NULL;
     const char *fname = NULL;
     if (cue && cue->curr_track_idx + offset < cue->track_count)
-        pid3 = gwps->state->id3;
+        pid3 = state->id3;
     else if (offset == 0)
-        pid3 = gwps->state->id3;
+        pid3 = state->id3;
     else if (offset == 1)
-        pid3 = gwps->state->nid3;
+        pid3 = state->nid3;
     else
     {
         static char filename_buf[MAX_PATH + 1];
@@ -568,7 +570,7 @@ const char *get_token_value(struct gui_wps *gwps,
         return NULL;
 
     struct wps_data *data = gwps->data;
-    struct wps_state *state = gwps->state;
+    struct wps_state *state = skin_get_global_state();
     struct mp3entry *id3; /* Think very carefully about using this. 
                              maybe get_id3_token() is the better place? */
     const char *out_text = NULL;
@@ -577,7 +579,7 @@ const char *get_token_value(struct gui_wps *gwps,
     if (!data || !state)
         return NULL;
 
-    id3 = get_mp3entry_from_offset(gwps, token->next? 1: offset, &filename);
+    id3 = get_mp3entry_from_offset(token->next? 1: offset, &filename);
     if (id3)
         filename = id3->path;
         
@@ -703,15 +705,15 @@ const char *get_token_value(struct gui_wps *gwps,
             if (intval)
                 *intval = playlist_amount();
             return buf;
-        
+#ifdef HAVE_LCD_BITMAP
         case SKIN_TOKEN_LIST_TITLE_TEXT:
-            return (char*)token->value.data;
+            return sb_get_title(gwps->display->screen_type);
         case SKIN_TOKEN_LIST_TITLE_ICON:
             if (intval)
-                *intval = token->value.i;
-            snprintf(buf, buf_size, "%d", token->value.i);
+                *intval = sb_get_icon(gwps->display->screen_type);
+            snprintf(buf, buf_size, "%d",sb_get_icon(gwps->display->screen_type));
             return buf;
-
+#endif
         case SKIN_TOKEN_PLAYLIST_NAME:
             return playlist_name(NULL, buf, buf_size);
 
@@ -1139,7 +1141,7 @@ const char *get_token_value(struct gui_wps *gwps,
         }
 #endif  /* (CONFIG_CODEC == SWCODEC) */
 
-#if (CONFIG_CODEC != MAS3507D)
+#if (CONFIG_CODEC != MAS3507D) && defined (HAVE_PITCHSCREEN)
         case SKIN_TOKEN_SOUND_PITCH:
         {
             int32_t pitch = sound_get_pitch();
@@ -1154,7 +1156,7 @@ const char *get_token_value(struct gui_wps *gwps,
         }
 #endif
 
-#if CONFIG_CODEC == SWCODEC
+#if (CONFIG_CODEC == SWCODEC) && defined (HAVE_PITCHSCREEN)
     case SKIN_TOKEN_SOUND_SPEED:
     {
         int32_t pitch = sound_get_pitch();

@@ -95,11 +95,6 @@ extern struct codec_api* ci;
 /* Use if target platform has address generators with autoincrement */
 //#define PREFER_POINTERS
 
-#ifdef _WIN32_WCE
-#define FIXED_POINT
-#endif
-
-
 #define ERROR_RESILIENCE
 
 
@@ -167,9 +162,11 @@ extern struct codec_api* ci;
 #ifdef FIXED_POINT
 #define DIV_R(A, B) (((int64_t)A << REAL_BITS)/B)
 #define DIV_C(A, B) (((int64_t)A << COEF_BITS)/B)
+#define DIV_Q(A, B) (((int64_t)A << Q2_BITS  )/B)
 #else
 #define DIV_R(A, B) ((A)/(B))
 #define DIV_C(A, B) ((A)/(B))
+#define DIV_Q(A, B) ((A)/(B))
 #endif
 
 #ifndef SBR_LOW_POWER
@@ -288,9 +285,10 @@ char *strchr(), *strrchr();
 
   #include <math.h>
 
-  #define MUL_R(A,B) ((A)*(B))
-  #define MUL_C(A,B) ((A)*(B))
-  #define MUL_F(A,B) ((A)*(B))
+  #define MUL_R(A,B)  ((A)*(B))
+  #define MUL_C(A,B)  ((A)*(B))
+  #define MUL_F(A,B)  ((A)*(B))
+  #define MUL_Q2(A,B) ((A)*(B))
 
   /* Complex multiplication */
   static INLINE void ComplexMult(real_t *y1, real_t *y2,
@@ -309,9 +307,10 @@ char *strchr(), *strrchr();
 
   typedef float real_t;
 
-  #define MUL_R(A,B) ((A)*(B))
-  #define MUL_C(A,B) ((A)*(B))
-  #define MUL_F(A,B) ((A)*(B))
+  #define MUL_R(A,B)  ((A)*(B))
+  #define MUL_C(A,B)  ((A)*(B))
+  #define MUL_F(A,B)  ((A)*(B))
+  #define MUL_Q2(A,B) ((A)*(B))
 
   #define REAL_CONST(A) ((real_t)(A))
   #define COEF_CONST(A) ((real_t)(A))
@@ -326,7 +325,7 @@ char *strchr(), *strrchr();
       *y2 = MUL_F(x2, c1) - MUL_F(x1, c2);
   }
 
-
+/* rockbox: must be commented to build for non-FP
   #if defined(_WIN32) && !defined(__MINGW32__)
     #define HAS_LRINTF
     static INLINE int lrintf(float f)
@@ -353,7 +352,7 @@ char *strchr(), *strrchr();
         return i;
     }
   #endif
-
+*/
 
   #ifdef __ICL /* only Intel C compiler has fmath ??? */
 
