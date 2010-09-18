@@ -173,8 +173,6 @@ starfield.c
 vu_meter.c
 wormlet.c
 
-resistor.c
-
 /* Plugins needing the grayscale lib on low-depth LCDs */
 fire.c
 plasma.c
