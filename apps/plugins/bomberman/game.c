@@ -31,7 +31,7 @@
 		b = tmp; \
 }
 
-inline unsigned long get_tick(void)
+unsigned long get_tick(void)
 {
 	return *rb->current_tick;
 }

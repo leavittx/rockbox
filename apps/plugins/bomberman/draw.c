@@ -43,8 +43,10 @@
 #include "pluginbitmaps/bomberman_ai4_win.h"
 #include "pluginbitmaps/bomberman_bonus.h"
 #include "pluginbitmaps/bomberman_gameover.h"
+#ifdef SIMULATOR
 #include "pluginbitmaps/bomberman_youwon.h"
 #include "pluginbitmaps/bomberman_black.h"
+#endif
 
 #include "game.h"
 #include "draw.h"
@@ -384,14 +386,17 @@ void Draw(Game *game)
 			game->aftergame_y,
 			BMPWIDTH_bomberman_gameover,
 			BMPHEIGHT_bomberman_gameover);
+		#ifdef SIMULATOR
 		rb->lcd_bitmap(bomberman_black,
 			0,
 			-(LCD_HEIGHT - game->aftergame_y),
 			BMPWIDTH_bomberman_black,
 			BMPHEIGHT_bomberman_black);
+		#endif
 	}
 	else if (game->state == GAME_WON)
 	{
+		#ifdef SIMULATOR
 		rb->lcd_bitmap(bomberman_youwon,
 			0,
 			game->aftergame_y,
@@ -402,6 +407,7 @@ void Draw(Game *game)
 			-(LCD_HEIGHT - game->aftergame_y),
 			BMPWIDTH_bomberman_black,
 			BMPHEIGHT_bomberman_black);
+		#endif
 	}
 	
 	// Possibly add some demo effects

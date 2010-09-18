@@ -222,7 +222,7 @@ void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
 void UpdateAftergame(Game *game);
-inline unsigned long get_tick(void);
+unsigned long get_tick(void);
 
 extern unsigned long tick;
 
