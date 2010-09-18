@@ -517,6 +517,12 @@ rockblox_background.112x64x1.bmp
 #endif
 #endif /* LCD_DEPTH */
 
+/* Resistor Calculator */
+#if (LCD_WIDTH >= 220)
+resistor.176x220x16.bmp
+#elif (LCD_WIDTH >= 176)
+resistor.220x176x16.bmp
+#endif
 
 /* Rockpaint */
 #ifdef HAVE_LCD_COLOR
