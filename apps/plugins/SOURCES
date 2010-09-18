@@ -154,6 +154,7 @@ spacerocks.c
 blackjack.c
 bounce.c
 bubbles.c
+
 calculator.c
 chip8.c
 chopper.c
@@ -174,6 +175,7 @@ vu_meter.c
 wormlet.c
 
 resistor.c
+amaze.c
 
 /* Plugins needing the grayscale lib on low-depth LCDs */
 fire.c
