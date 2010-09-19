@@ -176,6 +176,7 @@ wormlet.c
 
 resistor.c
 amaze.c
+periodic.c
 
 /* Plugins needing the grayscale lib on low-depth LCDs */
 fire.c
