@@ -886,7 +886,6 @@ pitch_notes.128x64x1.bmp
 #endif
 #endif /* Complex condition for pitch detector */
 
-/* Battleship */
 #if defined(COWON_D2) || defined(IPOD_VIDEO) || defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5)
 battleship_map.240x240x16.bmp
 battleship_placeships.80x80x16.bmp
@@ -905,6 +904,29 @@ battleship_shipone_transparent.22x22x16.bmp
 battleship_shiponedead.22x22x16.bmp
 battleship_noships.10x10x16.bmp
 battleship_gameover.80x60x16.bmp
+
+bomberman_player.16x24x16.bmp
+bomberman_cc.320x240x16.bmp
+bomberman_box.96x16x16.bmp
+bomberman_block.16x16x16.bmp
+bomberman_bomb.48x16x16.bmp
+bomberman_explode.64x144x16.bmp
+bomberman_player_move.64x96x16.bmp
+bomberman_ai1_move.64x96x16.bmp
+bomberman_ai2_move.64x96x16.bmp
+bomberman_ai3_move.64x96x16.bmp
+bomberman_ai4_move.64x96x16.bmp
+bomberman_player_death.64x24x16.bmp
+bomberman_player_win.32x24x16.bmp
+bomberman_ai1_win.32x24x16.bmp
+bomberman_ai2_win.32x24x16.bmp
+bomberman_ai3_win.32x24x16.bmp
+bomberman_ai4_win.32x24x16.bmp
+bomberman_bonus.16x64x16.bmp
+bomberman_gameover.320x240x16.bmp
+bomberman_youwon.320x240x16.bmp
+bomberman_black.320x240x16.bmp
+
 #elif defined(IPOD_NANO)
 battleship_huy.80x80x16.bmp
 battleship_map.132x132x16.bmp
@@ -931,29 +953,6 @@ balls_board.234x234x16.bmp
 balls_balls.26x182x16.bmp
 balls_background.320x240x16.bmp
 balls_chooser.24x24x16.bmp
-
-bomberman_player.16x24x16.bmp
-bomberman_cc.320x240x16.bmp
-bomberman_box.96x16x16.bmp
-bomberman_block.16x16x16.bmp
-bomberman_bomb.48x16x16.bmp
-bomberman_explode.64x144x16.bmp
-bomberman_player_move.64x96x16.bmp
-bomberman_ai1_move.64x96x16.bmp
-bomberman_ai2_move.64x96x16.bmp
-bomberman_ai3_move.64x96x16.bmp
-bomberman_ai4_move.64x96x16.bmp
-bomberman_player_death.64x24x16.bmp
-bomberman_player_win.32x24x16.bmp
-bomberman_ai1_win.32x24x16.bmp
-bomberman_ai2_win.32x24x16.bmp
-bomberman_ai3_win.32x24x16.bmp
-bomberman_ai4_win.32x24x16.bmp
-bomberman_bonus.16x64x16.bmp
-bomberman_gameover.320x240x16.bmp
-bomberman_youwon.320x240x16.bmp
-bomberman_black.320x240x16.bmp
-
 #endif /* HAVE_TOUCHSCREEN */
 
 #endif /* HAVE_LCD_BITMAP */

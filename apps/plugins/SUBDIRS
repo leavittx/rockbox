@@ -92,9 +92,9 @@ lua
 #if defined(COWON_D2) || defined(IPOD_NANO) || defined(IPOD_VIDEO) \
     || defined(OLYMPUS_MROBE_500)
 c-ray
+bomberman
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
 balls
-bomberman
 #endif
