@@ -901,11 +901,3 @@ void UpdateBoxes(Game *game)
 					game->field.map[i][j] = SQUARE_FREE;
 			}
 }
-
-void UpdateAftergame(Game *game)
-{
-	game->aftergame_y = LCD_HEIGHT * (1.0 * tick / AFTERGAME_DUR) - LCD_HEIGHT; 
-	//rb->splashf(HZ, "tick: %lu, after_Y = %lu", tick, game->aftergame_y); 
-	if (game->aftergame_y >= LCD_HEIGHT)
-		game->state = GAME_GREETZ;
-}

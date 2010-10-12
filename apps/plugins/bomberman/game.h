@@ -29,16 +29,16 @@
 
 #define MAX_PLAYERS 4
 
-#define MAX_BOMBS 100
+#define MAX_BOMBS 10
 
-#define CYCLETIME 40	
+#define CYCLETIME 40
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
-#define BOMB_DELAY_PHASE1 (HZ * 4.04 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 4.08 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 4.12 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 4.16 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 4.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 4.06 / (CYCLETIME / 10))
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
 
@@ -47,8 +47,7 @@
 #define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
 #define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 5 / (CYCLETIME / 10))
 
-#define AFTERGAME_DUR (HZ * 5 / (CYCLETIME / 10))
-#define AFTERGAME_PHASES 10
+#define AFTERGAME_DUR (HZ * 3 / (CYCLETIME / 10))
 
 typedef enum {
 	SQUARE_FREE = 0,
