@@ -57,6 +57,10 @@
 #include "yesno.h"
 #include "viewport.h"
 
+#if CONFIG_TUNER
+#include "radio.h"
+#endif
+
 #ifdef IPOD_ACCESSORY_PROTOCOL
 #include "iap.h"
 #endif
@@ -376,10 +380,14 @@ bool list_stop_handler(void)
 {
     bool ret = false;
 
+#if CONFIG_TUNER
+    radio_stop();
+#endif
+
     /* Stop the music if it is playing */
-    if(audio_status()) 
+    if(audio_status())
     {
-        if (!global_settings.party_mode) 
+        if (!global_settings.party_mode)
         {
             if (global_settings.fade_on_stop)
                 fade(false, false);
@@ -613,7 +621,7 @@ long default_event_handler_ex(long event, void (*callback)(void *), void *parame
 #if CONFIG_PLATFORM & PLATFORM_ANDROID
         /* stop playback if we receive a call */
         case SYS_CALL_INCOMING:
-            resume = (audio_status() & AUDIO_STATUS_PLAY) != 0;
+            resume = audio_status() == AUDIO_STATUS_PLAY;
             list_stop_handler();
             return SYS_CALL_INCOMING;
         /* resume playback if needed */
