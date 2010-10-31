@@ -1,8 +1,8 @@
-$publicrelease="3.6";
-$manualrelease="3.6";
-$voicerelease="3.6";
-$releasedate="June 3, 2010";
-$releasenotes="/wiki/ReleaseNotes36";
+$publicrelease="3.7";
+$manualrelease="3.7";
+$voicerelease="3.7";
+$releasedate="October 30, 2010";
+$releasenotes="/wiki/ReleaseNotes37";
 
 %builds = (
     'archosav300' => {
@@ -109,19 +109,11 @@ $releasenotes="/wiki/ReleaseNotes36";
     },
     'ipodnano2g' => {
         name => 'iPod Nano 2nd gen',
-        status => 2,
+        status => 3,
     },
     'ipodvideo' => {
-        name => 'iPod Video 30GB',
+        name => 'iPod Video',
         status => 3,
-    },
-    'ipodvideo64mb' => {
-        name => 'iPod Video 60/80GB',
-        status => 3,
-        icon => 'ipodvideo',
-        manual => 'ipodvideo',
-        voice => 'ipodvideo',
-        configname => 'ipodvideo',
     },
     'iriverh10' => {
         name => 'iriver H10 20GB',
@@ -232,12 +224,12 @@ $releasenotes="/wiki/ReleaseNotes36";
     },
     'sansaclipv2' => {
         name => 'SanDisk Sansa Clip v2',
-        status => 2,
+        status => 3,
         icon => 'sansaclip',
     },
     'sansaclipplus' => {
         name => 'SanDisk Sansa Clip+',
-        status => 2,
+        status => 3,
     },
     'sansae200' => {
         name => 'SanDisk Sansa e200',
@@ -254,7 +246,7 @@ $releasenotes="/wiki/ReleaseNotes36";
     },
     'sansafuzev2' => {
         name => 'SanDisk Sansa Fuze v2',
-        status => 2,
+        status => 3,
         icon => 'sansafuze',
     },
     'sansam200' => {

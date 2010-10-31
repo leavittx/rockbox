@@ -5,9 +5,9 @@
  *   Jukebox    |    |   (  <_> )  \___|    < | \_\ (  <_> > <  <
  *   Firmware   |____|_  /\____/ \___  >__|_ \|___  /\____/__/\_ \
  *                     \/            \/     \/    \/            \/
- * $Id$
+ * $Id: backlight-target.h 24112 2009-12-25 04:05:01Z lowlight $
  *
- * Copyright (C) 2002 Björn Stenberg
+ * Copyright (C) 2008 by Mark Arigo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,14 +18,21 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
-#ifndef _USB_SCREEN_H_
-#define _USB_SCREEN_H_
+#ifndef BACKLIGHT_TARGET_H
+#define BACKLIGHT_TARGET_H
 
-#ifdef USB_NONE
-#define gui_usb_screen_run(early_usb) do {} while(0)
-#else
-extern void gui_usb_screen_run(bool early_usb);
+#define _backlight_init() true
+void _backlight_on(void);
+void _backlight_off(void);
+
+#ifdef HAVE_BACKLIGHT_BRIGHTNESS
+void _backlight_set_brightness(int brightness);
+#endif
+
+#ifdef HAVE_BUTTON_LIGHT
+void _buttonlight_on(void);
+void _buttonlight_off(void);
+void _buttonlight_set_brightness(int brightness);
 #endif
 
 #endif
-
