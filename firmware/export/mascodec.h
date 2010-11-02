@@ -5,12 +5,9 @@
  *   Jukebox    |    |   (  <_> )  \___|    < | \_\ (  <_> > <  <
  *   Firmware   |____|_  /\____/ \___  >__|_ \|___  /\____/__/\_ \
  *                     \/            \/     \/    \/            \/
- * $Id$id $
+ * $Id: mas.h 24154 2010-01-03 10:27:43Z Buschel $
  *
- * Copyright (C) 2009 by Christophe Gouiran <bechris13250 -at- gmail -dot- com>
- *
- * Based on lodepng, a lightweight png decoder/encoder
- * (c) 2005-2008 Lode Vandevenne
+ * Copyright (C) 2002 by Linus Nielsen Feltzing
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,9 +18,26 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#ifndef _MASCODEC_H_
+#define _MASCODEC_H_
 
-#include "../imageviewer.h"
+int mas_default_read(unsigned short *buf);
+int mas_run(unsigned short address);
+int mas_readmem(int bank, int addr, unsigned long* dest, int len);
+int mas_writemem(int bank, int addr, const unsigned long* src, int len);
+int mas_readreg(int reg);
+int mas_writereg(int reg, unsigned int val);
+void mas_reset(void);
+int mas_direct_config_read(unsigned char reg);
+int mas_direct_config_write(unsigned char reg, unsigned int val);
+int mas_codec_writereg(int reg, unsigned int val);
+int mas_codec_readreg(int reg);
+unsigned long mas_readver(void);
 
-#define OUT_OF_MEMORY   9900
-#define FILE_TOO_LARGE  9910
+#endif
+
+#if CONFIG_TUNER & S1A0903X01
+void mas_store_pllfreq(int freq);
+int mas_get_pllfreq(void);
+#endif
 

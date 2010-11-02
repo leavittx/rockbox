@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "mas.h"
 #include "settings.h"
 #include "button.h"
 #include "status.h"
@@ -134,6 +133,14 @@
 #define FM_EXIT
 #define FM_PLAY
 #define FM_MODE
+
+#elif (CONFIG_KEYPAD == MPIO_HD200_PAD)
+#define FM_MENU
+#define FM_STOP
+#define FM_EXIT
+#define FM_PLAY
+#define FM_MODE
+#define FM_STOP
 
 #endif
 
