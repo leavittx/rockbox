@@ -903,7 +903,7 @@ int read_samples(uint32_t *buffer, int num_samples)
   return samples;
 }
 
-inline uint32_t myswap32(uint32_t val)
+static inline uint32_t myswap32(uint32_t val)
 {
   const uint8_t* v = (const uint8_t*)&val;
 
@@ -2473,6 +2473,12 @@ CONFIG_KEYPAD == MROBE500_PAD
 #define MP3ENC_NEXT BUTTON_FF
 #define MP3ENC_DONE BUTTON_PLAY
 #define MP3ENC_SELECT BUTTON_FUNC
+
+#elif CONFIG_KEYPAD == MPIO_HD300_PAD
+#define MP3ENC_PREV BUTTON_REW
+#define MP3ENC_NEXT BUTTON_FF
+#define MP3ENC_DONE BUTTON_PLAY
+#define MP3ENC_SELECT BUTTON_ENTER
 
 #else
 #error No keymap defined!

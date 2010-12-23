@@ -35,6 +35,7 @@ frotz,viewers
 goban,games
 greyscale,demos
 helloworld,demos
+imageviewer,viewers
 invadrox,games
 iriver_flash,apps
 iriverify,viewers
@@ -55,6 +56,7 @@ mem_mon,apps
 metronome,apps
 midi2wav,viewers
 midi,viewers
+mikmod,viewers
 minesweeper,games
 mosaique,demos
 mp3_encoder,apps
