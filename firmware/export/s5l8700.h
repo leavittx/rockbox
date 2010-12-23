@@ -25,7 +25,7 @@
 #define REG16_PTR_T volatile uint16_t *
 #define REG32_PTR_T volatile uint32_t *
 
-#define TIMER_FREQ  47923200L
+#define TIMER_FREQ  (1843200 * 4 * 26 / 1 / 4) /* 47923200 Hz */
 
 #define CACHEALIGN_BITS (4) /* 2^4 = 16 bytes */
 
@@ -107,10 +107,11 @@
 #define ADM_S1BASE              (*(REG32_PTR_T)(0x39000064))     /* Start Address for Sequential Block 1 Area */
 
 /* 05. CLOCK & POWER MANAGEMENT */
-#define CLKCON                  (*(REG32_PTR_T)(0x3C500000))     /* Clock control Register */
-#define PLL0PMS                 (*(REG32_PTR_T)(0x3C500004))     /* PLL PMS value Register */
-#define PLL1PMS                 (*(REG32_PTR_T)(0x3C500008))     /* PLL PMS value Register */
-#define PLL2PMS                 (*(REG32_PTR_T)(0x3C50000C))     /* PLL PMS value Register  - S5L8701 only? */
+#define CLKCON                  (*(REG32_PTR_T)(0x3C500000))     /* Clock control register */
+#define PLL0PMS                 (*(REG32_PTR_T)(0x3C500004))     /* PLL PMS value register */
+#define PLL1PMS                 (*(REG32_PTR_T)(0x3C500008))     /* PLL PMS value register */
+#define PLL2PMS                 (*(REG32_PTR_T)(0x3C50000C))     /* PLL PMS value register  - S5L8701 only? */
+#define CLKCON3                 (*(REG32_PTR_T)(0x3C500010))     /* Clock control register 3 */
 #define PLL0LCNT                (*(REG32_PTR_T)(0x3C500014))     /* PLL0 lock count register */
 #define PLL1LCNT                (*(REG32_PTR_T)(0x3C500018))     /* PLL1 lock count register */
 #define PLL2LCNT                (*(REG32_PTR_T)(0x3C50001C))     /* PLL2 lock count register - S5L8701 only? */
@@ -121,8 +122,8 @@
 #define SWRCON                  (*(REG32_PTR_T)(0x3C500030))     /* Software reset control register */
 #define RSTSR                   (*(REG32_PTR_T)(0x3C500034))     /* Reset status register */
 #define DSPCLKMD                (*(REG32_PTR_T)(0x3C500038))     /* DSP clock mode register */
-#define CLKCON2                 (*(REG32_PTR_T)(0x3C50003C))     /* clock control register 2 */
-#define PWRCONEXT               (*(REG32_PTR_T)(0x3C500040))
+#define CLKCON2                 (*(REG32_PTR_T)(0x3C50003C))     /* Clock control register 2 */
+#define PWRCONEXT               (*(REG32_PTR_T)(0x3C500040))     /* Clock power control register 2 */
 
 /* 06. INTERRUPT CONTROLLER UNIT */
 #define SRCPND                  (*(REG32_PTR_T)(0x39C00000))     /* Indicates the interrupt request status. */
@@ -570,6 +571,8 @@
 #define PDAT13                  (*(REG32_PTR_T)(0x3CF000D4))     /* The data register for port 13 */
 #define PCON14                  (*(REG32_PTR_T)(0x3CF000E0))     /* Configures the pins of port 14 */
 #define PDAT14                  (*(REG32_PTR_T)(0x3CF000E4))     /* The data register for port 14 */
+#define PCON15                  (*(REG32_PTR_T)(0x3CF000F0))     /* Configures the pins of port 15 */
+#define PUNK15                  (*(REG32_PTR_T)(0x3CF000FC))     /* Unknown thing for port 15 */
 #define PCON_ASRAM              (*(REG32_PTR_T)(0x3CF000F0))     /* Configures the pins of port nor flash */
 #define PCON_SDRAM              (*(REG32_PTR_T)(0x3CF000F4))     /* Configures the pins of port sdram */
 
@@ -608,17 +611,17 @@
 #define LCD_BASE 0x38600000
 #endif
 
-#define LCD_CON                 (*(REG16_PTR_T)(LCD_BASE+0x00))  /* Control register. */
-#define LCD_WCMD                (*(REG16_PTR_T)(LCD_BASE+0x04))  /* Write command register. */
-#define LCD_RCMD                (*(REG16_PTR_T)(LCD_BASE+0x0C))  /* Read command register. */
-#define LCD_RDATA               (*(REG16_PTR_T)(LCD_BASE+0x10))  /* Read data register. */
-#define LCD_DBUFF               (*(REG16_PTR_T)(LCD_BASE+0x14))  /* Read Data buffer */
-#define LCD_INTCON              (*(REG16_PTR_T)(LCD_BASE+0x18))  /* Interrupt control register */
-#define LCD_STATUS              (*(REG16_PTR_T)(LCD_BASE+0x1C))  /* LCD Interface status 0106 */
-#define LCD_PHTIME              (*(REG16_PTR_T)(LCD_BASE+0x20))  /* Phase time register 0060 */
-#define LCD_RST_TIME            (*(REG16_PTR_T)(LCD_BASE+0x24))  /* Reset active period 07FF */
-#define LCD_DRV_RST             (*(REG16_PTR_T)(LCD_BASE+0x28))  /* Reset drive signal */
-#define LCD_WDATA               (*(REG16_PTR_T)(LCD_BASE+0x40))  /* Write data register FIXME */
+#define LCD_CON                 (*(REG32_PTR_T)(LCD_BASE+0x00))  /* Control register. */
+#define LCD_WCMD                (*(REG32_PTR_T)(LCD_BASE+0x04))  /* Write command register. */
+#define LCD_RCMD                (*(REG32_PTR_T)(LCD_BASE+0x0C))  /* Read command register. */
+#define LCD_RDATA               (*(REG32_PTR_T)(LCD_BASE+0x10))  /* Read data register. */
+#define LCD_DBUFF               (*(REG32_PTR_T)(LCD_BASE+0x14))  /* Read Data buffer */
+#define LCD_INTCON              (*(REG32_PTR_T)(LCD_BASE+0x18))  /* Interrupt control register */
+#define LCD_STATUS              (*(REG32_PTR_T)(LCD_BASE+0x1C))  /* LCD Interface status 0106 */
+#define LCD_PHTIME              (*(REG32_PTR_T)(LCD_BASE+0x20))  /* Phase time register 0060 */
+#define LCD_RST_TIME            (*(REG32_PTR_T)(LCD_BASE+0x24))  /* Reset active period 07FF */
+#define LCD_DRV_RST             (*(REG32_PTR_T)(LCD_BASE+0x28))  /* Reset drive signal */
+#define LCD_WDATA               (*(REG32_PTR_T)(LCD_BASE+0x40))  /* Write data register (0x40...0x5C) FIXME */
 
 /* 27. CLCD CONTROLLER */
 #define LCDCON1                 (*(REG32_PTR_T)(0x39200000))     /* LCD control 1 register */
@@ -685,9 +688,9 @@
 #define REG_TWO                 (*(REG32_PTR_T)(0x3D100004))     /* Receive the other 8 bits from a fuse box */
 
 
-/* Hardware AES crypto unit - S5L8701 only */
 #if CONFIG_CPU==S5L8701
 
+/* Hardware AES crypto unit - S5L8701 only */
 #define ICONSRCPND              (*(REG32_PTR_T)(0x39C00000))
 #define ICONINTPND              (*(REG32_PTR_T)(0x39C00010))
 #define AESCONTROL              (*(REG32_PTR_T)(0x39800000))
@@ -707,5 +710,21 @@
 #define HASHCTRL                (*(REG32_PTR_T)(0x3C600000))
 #define HASHRESULT               ((REG32_PTR_T)(0x3C600020))
 #define HASHDATAIN               ((REG32_PTR_T)(0x3C600040))
+
+/* Clickwheel controller - S5L8701 only */
+#define WHEEL00      (*((uint32_t volatile*)(0x3C200000)))
+#define WHEEL04      (*((uint32_t volatile*)(0x3C200004)))
+#define WHEEL08      (*((uint32_t volatile*)(0x3C200008)))
+#define WHEEL0C      (*((uint32_t volatile*)(0x3C20000C)))
+#define WHEEL10      (*((uint32_t volatile*)(0x3C200010)))
+#define WHEELINT     (*((uint32_t volatile*)(0x3C200014)))
+#define WHEELRX      (*((uint32_t volatile*)(0x3C200018)))
+#define WHEELTX      (*((uint32_t volatile*)(0x3C20001C)))
+
+/* Synopsys OTG - S5L8701 only */
+#define OTGBASE 0x38800000
+#define PHYBASE 0x3C400000
+#define SYNOPSYSOTG_CLOCK 0
+#define SYNOPSYSOTG_AHBCFG 0x27
 
 #endif /* CONFIG_CPU==S5L8701 */

@@ -4119,7 +4119,7 @@
     rtc: "OFF = Revert"
     mrobe500: "POWER = Revert"
     iriverh100,iriverh120,iriverh300: "STOP = Revert"
-    ipod*,sansac200*: "MENU = Revert"
+    ipod*,sansac200*,mpiohd300: "MENU = Revert"
     iaudiox5,iaudiom5: "RECORD = Revert"
     iriverh10,iriverh10_5gb,sansae200*,sansafuze*: "PREV = Revert"
     gigabeatfx: "POWER = Revert"
@@ -4133,7 +4133,7 @@
     rtc: "OFF = Reverter"
     mrobe500: "POWER = Reverter"
     iriverh100,iriverh120,iriverh300: "STOP = Reverter"
-    ipod*,sansac200*: "MENU = Reverter"
+    ipod*,sansac200*,mpiohd300: "MENU = Reverter"
     iaudiox5,iaudiom5: "RECORD = Reverter"
     iriverh10,iriverh10_5gb,sansae200*,sansafuze*: "PREV = Reverter"
     gigabeatfx: "POWER = Reverter"
@@ -4401,6 +4401,7 @@
     iriverh10,iriverh10_5gb: "SELECT=Set PREV=Cancel"
     gigabeats: "SELECT=Set POWER=Cancel"
     vibe500: "OK=Set C=Cancel"
+    mpiohd300: "ENTER=Set MENU=Cancel"
   </source>
   <dest>
     *: none
@@ -4409,6 +4410,7 @@
     iriverh10,iriverh10_5gb: "SELECT=Definir PREV=Cancelar"
     gigabeats: "SELECT=Definir POWER=Cancelar"
     vibe500: "OK=Alterar C=Cancelar"
+    mpiohd300: "ENTER=Alterar MENU=Cancelar"
   </dest>
   <voice>
     *: none
@@ -7609,6 +7611,7 @@
     ipod*,iaudiox5,iaudiom5,iriverh10,iriverh10_5gb,sansae200*,sansac200*,gigabeat*,mrobe100,sansaclip*,sansafuze*: "SELECT = Set"
     gogearsa9200: "PLAY = Set"
     vibe500: "OK = Set"
+    mpiohd300: "ENTER = Set"
   </source>
   <dest>
     *: none
@@ -7618,6 +7621,7 @@
     ipod*,iaudiox5,iaudiom5,iriverh10,iriverh10_5gb,sansae200*,sansac200*,gigabeat*,mrobe100,sansaclip*,sansafuze*: "SELECT = Definir"
     gogearsa9200: "PLAY = Definir"
     vibe500: "OK = Definir"
+    mpiohd300: "ENTER = Definir"
   </dest>
   <voice>
     *: none

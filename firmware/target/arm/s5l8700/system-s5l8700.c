@@ -22,6 +22,7 @@
 #include "kernel.h"
 #include "system.h"
 #include "panic.h"
+#include "system-target.h"
 #ifdef IPOD_NANO2G
 #include "storage.h"
 #include "pmu-target.h"
@@ -60,7 +61,7 @@ default_interrupt(INT_UART0);
 default_interrupt(INT_SPDIF_OUT);
 default_interrupt(INT_SDCI);
 default_interrupt(INT_LCD);
-default_interrupt(INT_SPI);
+default_interrupt(INT_WHEEL);
 default_interrupt(INT_IIC);
 default_interrupt(RESERVED2);
 default_interrupt(INT_MSTICK);
@@ -86,7 +87,7 @@ static void (* const irqvector[])(void) =
     EXT0,EXT1,EXT2,EINT_VBUS,EINTG,INT_TIMER,INT_WDT,INT_UNK1,
     INT_UNK2,INT_UNK3,INT_DMA,INT_ALARM_RTC,INT_PRI_RTC,RESERVED1,INT_UART,INT_USB_HOST,
     INT_USB_FUNC,INT_LCDC_0,INT_LCDC_1,INT_CALM,INT_ATA,INT_UART0,INT_SPDIF_OUT,INT_ECC,
-    INT_SDCI,INT_LCD,INT_SPI,INT_IIC,RESERVED2,INT_MSTICK,INT_ADC_WAKEUP,INT_ADC
+    INT_SDCI,INT_LCD,INT_WHEEL,INT_IIC,RESERVED2,INT_MSTICK,INT_ADC_WAKEUP,INT_ADC
 };
 #else
 static void (* const irqvector[])(void) =
@@ -94,7 +95,7 @@ static void (* const irqvector[])(void) =
     EXT0,EXT1,EXT2,EINT_VBUS,EINTG,INT_TIMERA,INT_WDT,INT_TIMERB,
     INT_TIMERC,INT_TIMERD,INT_DMA,INT_ALARM_RTC,INT_PRI_RTC,RESERVED1,INT_UART,INT_USB_HOST,
     INT_USB_FUNC,INT_LCDC_0,INT_LCDC_1,INT_ECC,INT_CALM,INT_ATA,INT_UART0,INT_SPDIF_OUT,
-    INT_SDCI,INT_LCD,INT_SPI,INT_IIC,RESERVED2,INT_MSTICK,INT_ADC_WAKEUP,INT_ADC
+    INT_SDCI,INT_LCD,INT_WHEEL,INT_IIC,RESERVED2,INT_MSTICK,INT_ADC_WAKEUP,INT_ADC
 };
 #endif
 
@@ -104,7 +105,7 @@ static const char * const irqname[] =
     "EXT0","EXT1","EXT2","EINT_VBUS","EINTG","INT_TIMER","INT_WDT","INT_UNK1",
     "INT_UNK2","INT_UNK3","INT_DMA","INT_ALARM_RTC","INT_PRI_RTC","Reserved","INT_UART","INT_USB_HOST",
     "INT_USB_FUNC","INT_LCDC_0","INT_LCDC_1","INT_CALM","INT_ATA","INT_UART0","INT_SPDIF_OUT","INT_ECC",
-    "INT_SDCI","INT_LCD","INT_SPI","INT_IIC","Reserved","INT_MSTICK","INT_ADC_WAKEUP","INT_ADC"
+    "INT_SDCI","INT_LCD","INT_WHEEL","INT_IIC","Reserved","INT_MSTICK","INT_ADC_WAKEUP","INT_ADC"
 };
 #else
 static const char * const irqname[] =
@@ -112,7 +113,7 @@ static const char * const irqname[] =
     "EXT0","EXT1","EXT2","EINT_VBUS","EINTG","INT_TIMERA","INT_WDT","INT_TIMERB",
     "INT_TIMERC","INT_TIMERD","INT_DMA","INT_ALARM_RTC","INT_PRI_RTC","Reserved","INT_UART","INT_USB_HOST",
     "INT_USB_FUNC","INT_LCDC_0","INT_LCDC_1","INT_ECC","INT_CALM","INT_ATA","INT_UART0","INT_SPDIF_OUT",
-    "INT_SDCI","INT_LCD","INT_SPI","INT_IIC","Reserved","INT_MSTICK","INT_ADC_WAKEUP","INT_ADC"
+    "INT_SDCI","INT_LCD","INT_WHEEL","INT_IIC","Reserved","INT_MSTICK","INT_ADC_WAKEUP","INT_ADC"
 };
 #endif
 
@@ -182,8 +183,11 @@ void system_reboot(void)
 #endif
 }
 
+extern void post_mortem_stub(void);
+
 void system_exception_wait(void)
 {
+    post_mortem_stub();
     while(1);
 }
 
@@ -200,16 +204,17 @@ void set_cpu_frequency(long frequency)
     if (cpu_frequency == frequency)
         return;
 
-    int oldlevel = disable_irq_save();
-
-#if 1
     if (frequency == CPUFREQ_MAX)
     {
+        /* Vcore = 1.000V */
+        pmu_write(0x1e, 0xf);
+        /* Allow for voltage to stabilize */
+        udelay(100);
         /* FCLK_CPU = PLL0, HCLK = PLL0 / 2 */
         CLKCON = (CLKCON & ~0xFF00FF00) | 0x20003100;
         /* PCLK = HCLK / 2 */
         CLKCON2 |= 0x200;
-        /* Switch to ASYNCHRONOUS mode */
+        /* Switch to ASYNCHRONOUS mode => GCLK = FCLK_CPU */
         asm volatile(
             "mrc     p15, 0, r0,c1,c0    \n\t"
             "orr     r0, r0, #0xc0000000 \n\t"
@@ -219,7 +224,7 @@ void set_cpu_frequency(long frequency)
     }
     else
     {
-        /* Switch to FASTBUS mode */
+        /* Switch to FASTBUS mode => GCLK = HCLK */
         asm volatile(
             "mrc     p15, 0, r0,c1,c0    \n\t"
             "bic     r0, r0, #0xc0000000 \n\t"
@@ -230,37 +235,11 @@ void set_cpu_frequency(long frequency)
         CLKCON2 &= ~0x200;
         /* FCLK_CPU = OFF, HCLK = PLL0 / 4 */
         CLKCON = (CLKCON & ~0xFF00FF00) | 0x80003300;
+        /* Vcore = 0.900V */
+        pmu_write(0x1e, 0xb);
     }
-
-#else  /* Alternative: Also clock down the PLL. Doesn't seem to save much
-                       current, but results in high switching latency. */
-
-    if (frequency == CPUFREQ_MAX)
-    {
-        CLKCON &= ~0xFF00FF00;  /* Everything back to the OSC */
-        PLLCON &= ~1;  /* Power down PLL0 */
-        PLL0PMS = 0x021200;  /* 192 MHz */
-        PLL0LCNT = 8100;
-        PLLCON |= 1;  /* Power up PLL0 */
-        while (!(PLLLOCK & 1));  /* Wait for PLL to lock */
-        CLKCON2 |= 0x200;  /* PCLK = HCLK / 2 */
-        CLKCON |= 0x20003100;  /* FCLK_CPU = PLL0, PCLK = PLL0 / 2 */
-    }
-    else
-    {
-        CLKCON &= ~0xFF00FF00;  /* Everything back to the OSC */
-        CLKCON2 &= ~0x200;  /* PCLK = HCLK */
-        PLLCON &= ~1;  /* Power down PLL0 */
-        PLL0PMS = 0x000500;  /* 48 MHz */
-        PLL0LCNT = 8100;
-        PLLCON |= 1;  /* Power up PLL0 */
-        while (!(PLLLOCK & 1));  /* Wait for PLL to lock */
-        CLKCON |= 0x20002000;  /* FCLK_CPU = PLL0, PCLK = PLL0 */
-    }
-#endif
 
     cpu_frequency = frequency;
-    restore_irq(oldlevel);
 }
 
 #endif

@@ -23,9 +23,6 @@
 
 #if defined(CPU_COLDFIRE)
 
-/* attribute for 16-byte alignment */
-#define LINE_ATTR   __attribute__ ((aligned (16)))
-
 #ifndef _V_WIDE_MATH
 #define _V_WIDE_MATH
 
@@ -59,11 +56,10 @@ static inline ogg_int32_t MULT31_SHIFT15(ogg_int32_t x, ogg_int32_t y) {
   asm volatile ("mac.l %[x], %[y], %%acc0;"  /* multiply */
                 "mulu.l %[y], %[x];"         /* get lower half, avoid emac stall */
                 "movclr.l %%acc0, %[r];"     /* get higher half */
-                "asl.l #8, %[r];"            /* hi<<16, plus one free */
-                "asl.l #8, %[r];"
+                "swap %[r];"                 /* hi<<16, plus one free */
                 "lsr.l #8, %[x];"            /* (unsigned)lo >> 15 */
                 "lsr.l #7, %[x];"
-                "or.l %[x], %[r];"           /* logical-or results */
+                "move.w %[x], %[r];"         /* logical-or results */
                 : [r] "=&d" (r), [x] "+d" (x)
                 : [y] "d" (y)
                 : "cc");
@@ -254,17 +250,16 @@ void vect_mult_bw(ogg_int32_t *data, LOOKUP_T *window, int n)
 #endif
 
 #endif
-
+/* not used anymore */
+/*
 #ifndef _V_CLIP_MATH
 #define _V_CLIP_MATH
 
-/* this is portable C and simple; why not use this as default? */
 static inline ogg_int32_t CLIP_TO_15(register ogg_int32_t x) {
   register ogg_int32_t hi=32767, lo=-32768;
   return (x>=hi ? hi : (x<=lo ? lo : x));
 }
 
 #endif
-#else
-#define LINE_ATTR
+*/
 #endif

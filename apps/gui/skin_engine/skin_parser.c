@@ -526,18 +526,18 @@ static int parse_logical_if(struct skin_element *element,
     token->value.data = lif;
     lif->token = element->params[0].data.code->data;
     
-    if (!strcmp(op, "="))
+    if (!strncmp(op, "=", 1))
         lif->op = IF_EQUALS;
-    if (!strcmp(op, "!="))
+    else if (!strncmp(op, "!=", 2))
         lif->op = IF_NOTEQUALS;
-    if (!strcmp(op, "<"))
-        lif->op = IF_LESSTHAN;
-    if (!strcmp(op, "<="))
-        lif->op = IF_LESSTHAN_EQ;
-    if (!strcmp(op, ">"))
-        lif->op = IF_GREATERTHAN;
-    if (!strcmp(op, ">="))
+    else if (!strncmp(op, ">=", 2))
         lif->op = IF_GREATERTHAN_EQ;
+    else if (!strncmp(op, "<=", 2))
+        lif->op = IF_LESSTHAN_EQ;
+    else if (!strncmp(op, ">", 2))
+        lif->op = IF_GREATERTHAN;
+    else if (!strncmp(op, "<", 1))
+        lif->op = IF_LESSTHAN;
     
     memcpy(&lif->operand, &element->params[2], sizeof(lif->operand));
     if (element->params_count > 3)
@@ -742,6 +742,8 @@ static int parse_progressbar_tag(struct skin_element* element,
         token->type = SKIN_TOKEN_VOLUMEBAR;
     else if (token->type == SKIN_TOKEN_BATTERY_PERCENT)
         token->type = SKIN_TOKEN_BATTERY_PERCENTBAR;
+    else if (token->type == SKIN_TOKEN_TUNER_RSSI)
+        token->type = SKIN_TOKEN_TUNER_RSSI_BAR;
     pb->type = token->type;
         
     return 0;
@@ -1115,12 +1117,19 @@ static bool load_skin_bmp(struct wps_data *wps_data, struct bitmap *bitmap, char
 
     fd = open(img_path, O_RDONLY);
     if (fd < 0)
+    {
+        DEBUGF("Couldn't open %s\n", img_path);
         return false;
+    }
     size_t buf_size = read_bmp_fd(fd, bitmap, 0, 
                                     format|FORMAT_RETURN_SIZE, NULL);  
     char* imgbuf = (char*)skin_buffer_alloc(buf_size);
     if (!imgbuf)
     {
+#ifndef APPLICATION
+        DEBUGF("Not enough skin buffer: need %zd more.\n", 
+                buf_size - skin_buffer_freespace());
+#endif
         close(fd);
         return NULL;
     }
@@ -1401,6 +1410,9 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_VOLUME:
                 case SKIN_TOKEN_BATTERY_PERCENT:
                 case SKIN_TOKEN_PLAYER_PROGRESSBAR:
+#ifdef HAVE_RADIO_RSSI
+                case SKIN_TOKEN_TUNER_RSSI:
+#endif
                     function = parse_progressbar_tag;
                     break;
                 case SKIN_TOKEN_SUBLINE_TIMEOUT:
@@ -1634,8 +1646,7 @@ bool skin_data_load(enum screen_type screen, struct wps_data *wps_data,
         strlcpy(bmpdir, buf, dot - buf + 1);
     }
     else
-    {   /* fall back to backdrop dir for built-in themes */
-        /* no get_user_file_path(), assuming we ship bmps for built-in themes */
+    {
         snprintf(bmpdir, MAX_PATH, "%s", BACKDROP_DIR);
     }
     /* load the bitmaps that were found by the parsing */

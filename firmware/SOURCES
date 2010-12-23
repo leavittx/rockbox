@@ -252,6 +252,8 @@ drivers/rtc/rtc_tcc77x.c
 drivers/rtc/rtc_jz4740.c
 #elif (CONFIG_RTC == RTC_S35390A)
 drivers/rtc/rtc_s35390a.c
+#elif (CONFIG_RTC == RTC_S35380A)
+drivers/rtc/rtc_s35380a.c
 #elif (CONFIG_RTC == RTC_D2)
 drivers/rtc/rtc_d2.c
 #endif /* (CONFIG_RTC == RTC_) */
@@ -733,6 +735,7 @@ target/arm/philips/fmradio_i2c-hdd.c
 target/arm/philips/hdd6330/backlight-hdd6330.c
 target/arm/philips/hdd6330/button-hdd6330.c
 target/arm/philips/hdd6330/lcd-hdd6330.c
+target/arm/philips/hdd6330/lcd-as-hdd6330.S
 target/arm/philips/hdd6330/powermgmt-hdd6330.c
 target/arm/usb-fw-pp502x.c
 #endif /* SIMULATOR */
@@ -1496,10 +1499,12 @@ target/arm/s5l8700/udacodec-meizu.c
 #ifdef IPOD_NANO2G
 #ifndef SIMULATOR
 target/arm/ipod/button-clickwheel.c
+target/arm/s5l8700/postmortemstub.S
 target/arm/s5l8700/kernel-s5l8700.c
 target/arm/s5l8700/dma-s5l8700.c
 target/arm/s5l8700/ipodnano2g/backlight-nano2g.c
 target/arm/s5l8700/ipodnano2g/lcd-nano2g.c
+target/arm/s5l8700/ipodnano2g/lcd-asm-nano2g.S
 target/arm/s5l8700/ipodnano2g/powermgmt-nano2g.c
 target/arm/s5l8700/ipodnano2g/power-nano2g.c
 target/arm/s5l8700/ipodnano2g/ftl-nano2g.c
@@ -1507,7 +1512,6 @@ target/arm/s5l8700/ipodnano2g/nand-nano2g.c
 target/arm/s5l8700/ipodnano2g/pmu-nano2g.c
 target/arm/s5l8700/ipodnano2g/rtc-nano2g.c
 #ifndef BOOTLOADER
-drivers/audio/wm8975.c
 target/arm/usb-s3c6400x.c
 target/arm/s5l8700/debug-s5l8700.c
 target/arm/s5l8700/pcm-s5l8700.c
@@ -1682,17 +1686,17 @@ target/arm/usb-fw-pp502x.c
 #ifdef MPIO_HD200
 #ifndef SIMULATOR
 /* TODO: currently including all files */
-target/coldfire/mpio/hd200/adc-hd200.c
+target/coldfire/ata-as-coldfire.S
+target/coldfire/mpio/system-mpio.c
+target/coldfire/mpio/power-mpio.c
+target/coldfire/mpio/backlight-mpio.c
+target/coldfire/mpio/usb-mpio.c
+target/coldfire/mpio/ata-mpio.c
+target/coldfire/mpio/adc-mpio.c
 target/coldfire/mpio/hd200/button-hd200.c
 target/coldfire/mpio/hd200/lcd-hd200.c
 target/coldfire/mpio/hd200/lcd-as-hd200.S
-target/coldfire/mpio/hd200/power-hd200.c
 target/coldfire/mpio/hd200/powermgmt-hd200.c
-target/coldfire/mpio/hd200/backlight-hd200.c
-target/coldfire/mpio/hd200/system-hd200.c
-target/coldfire/mpio/hd200/usb-hd200.c
-target/coldfire/mpio/ata-mpio.c
-target/coldfire/ata-as-coldfire.S
 #ifndef BOOTLOADER
 target/coldfire/mpio/audio-mpio.c
 target/coldfire/wmcodec-coldfire.c
@@ -1701,6 +1705,27 @@ target/coldfire/mpio/fmradio_i2c-mpio.c
 #endif /* SIMULATOR */
 #endif
 
+#ifdef MPIO_HD300
+#ifndef SIMULATOR
+/* TODO: currently including all files */
+target/coldfire/ata-as-coldfire.S
+target/coldfire/mpio/system-mpio.c
+target/coldfire/mpio/power-mpio.c
+target/coldfire/mpio/backlight-mpio.c
+target/coldfire/mpio/usb-mpio.c
+target/coldfire/mpio/ata-mpio.c
+target/coldfire/mpio/adc-mpio.c
+target/coldfire/mpio/hd300/button-hd300.c
+target/coldfire/mpio/hd300/lcd-hd300.c
+target/coldfire/mpio/hd300/lcd-as-hd300.S
+target/coldfire/mpio/hd300/powermgmt-hd300.c
+#ifndef BOOTLOADER
+target/coldfire/mpio/audio-mpio.c
+target/coldfire/wmcodec-coldfire.c
+target/coldfire/mpio/fmradio_i2c-mpio.c
+#endif /* BOOTLOADER */
+#endif /* SIMULATOR */
+#endif
 
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
 target/hosted/android/fs-android.c
@@ -1714,6 +1739,7 @@ target/hosted/android/kernel-android.c
 target/hosted/android/pcm-android.c
 target/hosted/android/powermgmt-android.c
 target/hosted/android/system-android.c
+target/hosted/android/telephony-android.c
 #ifdef APPLICATION
 target/hosted/android/app/button-application.c
 #endif
