@@ -22,7 +22,6 @@
  ****************************************************************************/
 #include "plugin.h"
 
-#ifdef HAVE_LCD_BITMAP
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
 
@@ -258,5 +257,3 @@ enum plugin_status plugin_start(const void* parameter)
 
     return ret;
 }
-
-#endif /* #ifdef HAVE_LCD_BITMAP */

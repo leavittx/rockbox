@@ -22,12 +22,11 @@
  ****************************************************************************/
 #include "plugin.h"
 
-#ifdef HAVE_LCD_BITMAP
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
 
 /* For math */
-#include "lib/pdbox-lib.h"
+#include "lib/pdbox-func.h"
 
 #define SLEEP_TIME 3
 #define SQRT3BY2 0.86602540378444
@@ -653,5 +652,3 @@ enum plugin_status plugin_start(const void* parameter)
 
     return ret;
 }
-
-#endif /* #ifdef HAVE_LCD_BITMAP */

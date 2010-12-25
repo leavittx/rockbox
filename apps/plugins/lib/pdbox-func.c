@@ -20,61 +20,8 @@
  ****************************************************************************/
 
 #include "plugin.h"
-#include "pdbox-lib.h"
+#include "pdbox-func.h"
 #include "ctype.h"
-
-/* Not needed anymore in lib */
-/*
-#include "PDa/src/m_pd.h"
-#include "PDa/src/s_stuff.h"
-*/
-
-/* This implementation of strncat is taken from lua plug-in. */
-
-/* gcc is broken and has a non-SUSv2 compliant internal prototype.
- * This causes it to warn about a type mismatch here.  Ignore it. */
-char *rb_strncat(char *s, const char *t, size_t n)
-{
-    char *dest = s;
-    register char *max;
-    s += strlen(s);
-
-    if((max = s + n) == s)
-        goto strncat_fini;
-
-    while(true)
-    {
-        if(!(*s = *t))
-            break;
-        if(++s == max)
-            break;
-        ++t;
-
-#ifndef WANT_SMALL_STRING_ROUTINES
-    if(!(*s = *t))
-        break;
-    if(++s == max)
-        break;
-    ++t;
-    if(!(*s = *t))
-        break;
-    if(++s == max)
-        break;
-    ++t;
-    if(!(*s = *t))
-        break;
-    if(++s == max)
-        break;
-    ++t;
-#endif
-    }
-
-    *s = 0;
-
-strncat_fini:
-    return dest;
-}
-
 
 /* Implementation of floor, original. */
 float rb_floor(float value)
@@ -116,7 +63,7 @@ double rb_strtod(const char *str, char **endptr)
 
   // Handle optional sign
   negative = 0;
-  switch (*p) 
+  switch (*p)
   {
     case '-': negative = 1; // Fall through to increment position
     case '+': p++;
@@ -136,7 +83,7 @@ double rb_strtod(const char *str, char **endptr)
   }
 
   // Process decimal part
-  if (*p == '.') 
+  if (*p == '.')
   {
     p++;
 
@@ -165,25 +112,25 @@ double rb_strtod(const char *str, char **endptr)
   if (negative) number = -number;
 
   // Process an exponent string
-  if (*p == 'e' || *p == 'E') 
+  if (*p == 'e' || *p == 'E')
   {
     // Handle optional sign
     negative = 0;
-    switch(*++p) 
-    {   
+    switch(*++p)
+    {
       case '-': negative = 1;   // Fall through to increment pos
       case '+': p++;
     }
 
     // Process string of digits
     n = 0;
-    while (isdigit(*p)) 
-    {   
+    while (isdigit(*p))
+    {
       n = n * 10 + (*p - '0');
       p++;
     }
 
-    if (negative) 
+    if (negative)
       exponent -= n;
     else
       exponent += n;
@@ -201,9 +148,9 @@ double rb_strtod(const char *str, char **endptr)
   p10 = 10.;
   n = exponent;
   if (n < 0) n = -n;
-  while (n) 
+  while (n)
   {
-    if (n & 1) 
+    if (n & 1)
     {
       if (exponent < 0)
         number /= p10;
@@ -221,6 +168,7 @@ double rb_strtod(const char *str, char **endptr)
 
   return number;
 }
+
 
 double rb_atof(const char *str)
 {
@@ -394,51 +342,6 @@ float rb_cos(float rad)
     /* Compute cosine: sin(x + PI/2) = cos(x) */
     return rb_sin(rad + 1.57079632);
 }
-
-
-/* Emulation of fscanf(fd, "%f", (float*) xxx);
-   Basically a reimplementation of rb_strtod() above. */
-int rb_fscanf_f(int fd, float* f)
-{
-    #define FSCANF_F_BUFSIZE 64
-    char buf[FSCANF_F_BUFSIZE];
-
-    /* Read line from file. */
-    int bytes_read = rb->read_line(fd, buf, FSCANF_F_BUFSIZE-1);
-
-    /* Terminate string. */
-    if(bytes_read >= FSCANF_F_BUFSIZE)
-        buf[FSCANF_F_BUFSIZE-1] = '\0';
-    else
-        buf[bytes_read-1] = '\0';
-
-    /* Convert buffer to float. */
-    *f = rb_atof(buf);
-
-    /* If there was an error, no float was read. */
-    if(rb_errno)
-        return 0;
-
-    return 1;
-}
-
-/* Emulation of fprintf(fd, "%f\n", (float*) xxx); */
-int rb_fprintf_f(int fd, float f)
-{
-    #define FPRINTF_F_BUFSIZE 64
-    char buf[FPRINTF_F_BUFSIZE];
-    const char* next_line = "\n";
-
-    /* Convert float to string. */
-    rb_ftoan(f, buf, sizeof(buf)-1);
-
-    /* Add next line character. */
-    strcat(buf, next_line);
-
-    /* Write string into file. */
-    return write(fd, buf, strlen(buf));
-}
-
 
 /* Natural logarithm.
    Taken from glibc-2.8 */
@@ -1382,7 +1285,7 @@ union ieee754_double
 	unsigned int mantissa1:32;
 #else /* ROCKBOX_LITTLE_ENDIAN */
 	/* Together these comprise the mantissa.  */
-	unsigned int mantissa1:32;
+        unsigned int mantissa1:32;
 	unsigned int mantissa0:20;
 	unsigned int exponent:11;
 	unsigned int negative:1;
@@ -1493,23 +1396,3 @@ float rb_exp(float x)
     /* Return x, if x is a NaN or Inf; or overflow, otherwise.  */
     return TWO127*x;
 }
-
-#ifndef SIMULATOR
-/* Division with rest, original. */
-div_t div(int x, int y)
-{
-    div_t result;
-
-    result.quot = x / y;
-    result.rem = x % y;
-
-    /* Addition from glibc-2.8: */
-    if(x >= 0 && result.rem < 0)
-    {
-        result.quot += 1;
-        result.rem -= y;
-    }
-
-    return result;
-}
-#endif /* #ifndef SIMULATOR */

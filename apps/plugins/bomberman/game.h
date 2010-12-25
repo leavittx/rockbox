@@ -171,14 +171,12 @@ typedef enum {
 	BOX_EXPL_PHASE5
 } BoxState;
 
-typedef struct
-{
+typedef struct {
 	BoxState state;
 	unsigned long expl_time;
 } BoxDetonation;
 
-typedef enum
-{
+typedef enum {
 	BONUS_EXTRABOMB, // extra bomb
 	BONUS_POWER, // increase bomb explosion radius
 	BONUS_SPEEDUP, // increase player speed

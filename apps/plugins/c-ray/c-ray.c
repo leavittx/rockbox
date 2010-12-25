@@ -25,7 +25,7 @@
  * like #include "pdbox/pdbox.h"
  * So I put some functions from pdbox to lib
  * For math */
-#include "lib/pdbox-lib.h"
+#include "lib/pdbox-func.h"
 
 /* For memory allocation */
 #include "codecs/lib/tlsf/src/tlsf.h"

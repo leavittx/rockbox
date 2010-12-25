@@ -34,66 +34,66 @@
 
 void Draw(BallsGame *Game)
 {
-	int i, j;
-	
-	/* Background image */
-	rb->lcd_bitmap(balls_background,
-		0,
-		0,
-		BMPWIDTH_balls_background,
-		BMPHEIGHT_balls_background);
+    int i, j;
 
-	/* Game board */
-	rb->lcd_bitmap(balls_board,
-		BRDXOFFSET,
-		BRDYOFFSET,
-		BRDLEN,
-		BRDLEN);
+    /* Background image */
+    rb->lcd_bitmap(balls_background,
+                   0,
+                   0,
+                   BMPWIDTH_balls_background,
+                   BMPHEIGHT_balls_background);
 
-	/* Balls */
-	for (i = 0; i < NCELLS; i++)
-		for (j = 0; j < NCELLS; j++)
-			if (BUSY(i, j, Game))
-			{
-				rb->lcd_bitmap_transparent_part(balls_balls, 0,
-					CELLSIZE * (Game->Board[i][j] - 1),
-					STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
-					BRDXOFFSET + (i * CELLSIZE) + BALL_OFFSET,
-					BRDYOFFSET + (j * CELLSIZE) + BALL_OFFSET,
-					BALLSIZE,
-					BALLSIZE);
-			}
-		
-	/* Next balls */
-	for (i = 0; i < N_BALLS_ADD; i++)
-	{
-		rb->lcd_bitmap_transparent_part(balls_balls, 0,
-			CELLSIZE * (Game->Next[i] - 1),
-			STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
-			LCD_WIDTH - (LCD_WIDTH - (BRDXOFFSET + BRDLEN - BALLSIZE)) / 2,
-			(LCD_HEIGHT - N_BALLS_ADD * BALLSIZE) / 2 + BALLSIZE * i,
-			BALLSIZE,
-			BALLSIZE);
-	}
+    /* Game board */
+    rb->lcd_bitmap(balls_board,
+                   BRDXOFFSET,
+                   BRDYOFFSET,
+                   BRDLEN,
+                   BRDLEN);
 
-	/* Picked ball */
-	if (Game->ispicked)
-	{
-		rb->lcd_bitmap(balls_chooser,
-			BRDXOFFSET + (Game->xpos * CELLSIZE) + ((CELLSIZE - BMPWIDTH_balls_chooser) / 2),
-			BRDYOFFSET + (Game->ypos * CELLSIZE) + ((CELLSIZE - BMPHEIGHT_balls_chooser) / 2),
-			BMPWIDTH_balls_chooser,
-			BMPHEIGHT_balls_chooser);
-		
-		rb->lcd_bitmap_transparent_part(balls_balls, 0,
-			CELLSIZE * (Game->curtype - 1),
-			STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
-			BRDXOFFSET + (Game->xpos * CELLSIZE) + BALL_OFFSET,
-			BRDYOFFSET + (Game->ypos * CELLSIZE) + BALL_OFFSET,
-			BALLSIZE,
-			BALLSIZE);
-	}
-	
-	rb->lcd_update();
-	Game->need_redraw = false;
+    /* Balls */
+    for (i = 0; i < NCELLS; i++)
+        for (j = 0; j < NCELLS; j++)
+            if (BUSY(i, j, Game))
+            {
+                rb->lcd_bitmap_transparent_part(balls_balls, 0,
+                                                CELLSIZE * (Game->Board[i][j] - 1),
+                                                STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
+                                                BRDXOFFSET + (i * CELLSIZE) + BALL_OFFSET,
+                                                BRDYOFFSET + (j * CELLSIZE) + BALL_OFFSET,
+                                                BALLSIZE,
+                                                BALLSIZE);
+            }
+
+    /* Next balls */
+    for (i = 0; i < N_BALLS_ADD; i++)
+    {
+        rb->lcd_bitmap_transparent_part(balls_balls, 0,
+                                        CELLSIZE * (Game->Next[i] - 1),
+                                        STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
+                                        LCD_WIDTH - (LCD_WIDTH - (BRDXOFFSET + BRDLEN - BALLSIZE)) / 2,
+                                        (LCD_HEIGHT - N_BALLS_ADD * BALLSIZE) / 2 + BALLSIZE * i,
+                                        BALLSIZE,
+                                        BALLSIZE);
+    }
+
+    /* Picked ball */
+    if (Game->ispicked)
+    {
+        rb->lcd_bitmap(balls_chooser,
+                       BRDXOFFSET + (Game->xpos * CELLSIZE) + ((CELLSIZE - BMPWIDTH_balls_chooser) / 2),
+                       BRDYOFFSET + (Game->ypos * CELLSIZE) + ((CELLSIZE - BMPHEIGHT_balls_chooser) / 2),
+                       BMPWIDTH_balls_chooser,
+                       BMPHEIGHT_balls_chooser);
+
+        rb->lcd_bitmap_transparent_part(balls_balls, 0,
+                                        CELLSIZE * (Game->curtype - 1),
+                                        STRIDE(SCREEN_MAIN, BALLS_W, BALLS_H),
+                                        BRDXOFFSET + (Game->xpos * CELLSIZE) + BALL_OFFSET,
+                                        BRDYOFFSET + (Game->ypos * CELLSIZE) + BALL_OFFSET,
+                                        BALLSIZE,
+                                        BALLSIZE);
+    }
+
+    rb->lcd_update();
+    Game->need_redraw = false;
 }

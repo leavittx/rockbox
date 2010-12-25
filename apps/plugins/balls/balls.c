@@ -23,7 +23,6 @@
 
 #include "plugin.h"
 
-#ifdef HAVE_LCD_BITMAP
 #include "lib/pluginlib_actions.h"
 #include "lib/helper.h"
 
@@ -35,11 +34,11 @@
 
 void cleanup(void *parameter)
 {
-	(void)parameter;
+    (void)parameter;
 
-	backlight_use_settings();
+    backlight_use_settings();
 #ifdef HAVE_REMOTE_LCD
-	remote_backlight_use_settings();
+    remote_backlight_use_settings();
 #endif
 }
 
@@ -49,39 +48,39 @@ void cleanup(void *parameter)
 
 int plugin_main(void)
 {
-	BallsGame Game;
+    BallsGame Game;
     int action; /* Key action */
 
-	/* Set the touchscreen to pointer mode */
-	rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
-	/* We wanna new balls every time */
-	rb->srand(*rb->current_tick);
+    /* Set the touchscreen to pointer mode */
+    rb->touchscreen_set_mode(TOUCHSCREEN_POINT);
+    /* We wanna new balls every time */
+    rb->srand(*rb->current_tick);
 
-	Init(&Game);
-		
-	/* Main loop */
+    Init(&Game);
+
+    /* Main loop */
     while (true)
     {
-		/* Draw everything (if needed) */
-		if (Game.need_redraw)
-			Draw(&Game);
-		
-		rb->sleep(SLEEP_TIME);
-		
-		if (Game.State == ADDBALLS)
-			AddBalls(&Game);
-		
-		action = rb->get_action(CONTEXT_STD, TIMEOUT_NOBLOCK);
-		
-		if (action == ACTION_TOUCHSCREEN)
+        /* Draw everything (if needed) */
+        if (Game.need_redraw)
+            Draw(&Game);
+
+        rb->sleep(SLEEP_TIME);
+
+        if (Game.State == ADDBALLS)
+            AddBalls(&Game);
+
+        action = rb->get_action(CONTEXT_STD, TIMEOUT_NOBLOCK);
+
+        if (action == ACTION_TOUCHSCREEN)
             HandleTouchscreen(&Game);
         else if (action == BUTTON_POWER)
         {
-			/* TODO: figure out why %i causes strange behavior on real hardware
-			 * (prints 'i' letter instead of score) */
-			/* TODO: use haighscore lib */
-			rb->splashf(HZ*2, "Score: %u", Game.Score);
-			
+            /* TODO: figure out why %i causes strange behavior on real hardware
+             * (prints 'i' letter instead of score) */
+            /* TODO: use haighscore lib */
+            rb->splashf(HZ*2, "Score: %u", Game.Score);
+
             cleanup(NULL);
             return PLUGIN_OK;
         }
@@ -91,22 +90,20 @@ int plugin_main(void)
 /* this is the plugin entry point */
 enum plugin_status plugin_start(const void* parameter)
 {
-	int ret;
-	
-	/* avoid the compiler warning about unused parameter */
-	(void)parameter;
+    int ret;
+
+    /* avoid the compiler warning about unused parameter */
+    (void)parameter;
     
 #if LCD_DEPTH > 1
-	rb->lcd_set_backdrop(NULL);
+    rb->lcd_set_backdrop(NULL);
 #endif
-	backlight_force_on(); /* backlight control in lib/helper.c */
+    backlight_force_on(); /* backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
-	remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
+    remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
 #endif
 
-	ret = plugin_main();
+    ret = plugin_main();
 
-	return ret;
+    return ret;
 }
-
-#endif /* #ifdef HAVE_LCD_BITMAP */

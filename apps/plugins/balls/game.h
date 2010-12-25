@@ -33,35 +33,35 @@
 
 /* Cell type */
 typedef enum {
-	CELL_FREE = 0,
-	CELL_T1 = 1,
-	CELL_T2 = 2,
-	CELL_T3 = 3,
-	CELL_T4 = 4,
-	CELL_T5 = 5,
-	CELL_T6 = 6,
-	CELL_T7 = 7
+    CELL_FREE = 0,
+    CELL_T1 = 1,
+    CELL_T2 = 2,
+    CELL_T3 = 3,
+    CELL_T4 = 4,
+    CELL_T5 = 5,
+    CELL_T6 = 6,
+    CELL_T7 = 7
 } Celltype;
 
 typedef struct {
-	enum {
-		ADDBALLS,
-		TURN,
-		GAMEOVER
-	} State; /* State of game */
-	
-	Celltype Board[NCELLS][NCELLS]; /* Game board */
-	Celltype Next[N_BALLS_ADD]; /* Next balls */
-	
-	int Score; /* Player's score */
-	
-	bool ispicked;
-	short oldxpos, oldypos;
-	short xpos, ypos;
-	Celltype curtype;
-	bool iscached;
-	
-	bool need_redraw;
+    enum {
+        ADDBALLS,
+        TURN,
+        GAMEOVER
+    } State; /* State of game */
+
+    Celltype Board[NCELLS][NCELLS]; /* Game board */
+    Celltype Next[N_BALLS_ADD]; /* Next balls */
+
+    int Score; /* Player's score */
+
+    bool ispicked;
+    short oldxpos, oldypos;
+    short xpos, ypos;
+    Celltype curtype;
+    bool iscached;
+
+    bool need_redraw;
 } BallsGame;
 
 int GETBALL(void);

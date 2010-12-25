@@ -1623,7 +1623,6 @@ apps/plugins/lib/mylcd.h
 apps/plugins/lib/overlay.c
 apps/plugins/lib/overlay.h
 apps/plugins/lib/pdbox-func.c
-apps/plugins/lib/pdbox-lib.h
 apps/plugins/lib/picture.c
 apps/plugins/lib/picture.h
 apps/plugins/lib/playback_control.c
@@ -5769,3 +5768,4 @@ wps/UniCatcher/volume-g.bmp
 wps/UniCatcher/volume-s.bmp
 wps/UniCatcher/volume.bmp
 wps/zezayer/RockBoxWPSd.bmp
+apps/plugins/lib/pdbox-func.h

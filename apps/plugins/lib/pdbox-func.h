@@ -25,7 +25,6 @@
 typedef long long t_time;
 
 /* Additional functions. */
-char *rb_strncat(char *s, const char *t, size_t n);
 double rb_strtod(const char*, char**);
 double rb_atof(const char*);
 void rb_ftoan(float, char*, int);
@@ -33,8 +32,6 @@ float rb_floor(float);
 long rb_atol(const char* s);
 float rb_sin(float rad);
 float rb_cos(float rad);
-int rb_fscanf_f(int fd, float* f);
-int rb_fprintf_f(int fd, float f);
 float rb_log10(float);
 float rb_log(float);
 float rb_exp(float);
@@ -45,21 +42,5 @@ float rb_atan(float);
 float rb_atan2(float, float);
 float rb_sinh(float);
 float rb_tan(float);
-
-#ifndef SIMULATOR
-typedef struct
-{
-    int quot;
-    int rem;
-}
-div_t;
-div_t div(int x, int y);
-#endif /* #ifndef SIMULATOR */
-
-union f2i
-{
-    float f;
-    int32_t i;
-};
 
 #endif /* _PDBOX_LIB_H_ */
