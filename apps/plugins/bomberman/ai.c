@@ -392,12 +392,11 @@ int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
     return 0;
 }
 
-int IsABox(Game *G, PATHELEM *P)
+inline static int IsABox(Game *G, PATHELEM *P)
 {
-    if(G->field.map[P->X][P->Y] == SQUARE_BOX)
-        return 1;
-    return 0;
+    return (G->field.map[P->X][P->Y] == SQUARE_BOX);
 }
+
 void UpdateAI(Game *G, Player *Players)
 {
     int i, j, Danger = 0;

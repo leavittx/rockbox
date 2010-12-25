@@ -26,14 +26,9 @@
 #include "game.h"
 
 #define swap(a, b) { \
-    register Player *tmp = a; \
+    register typeof (a) tmp = a; \
     a = b; \
     b = tmp; \
-    }
-
-unsigned long get_tick(void)
-{
-    return *rb->current_tick;
 }
 
 void PlayerMoveUp(Game *game, Player *player)
@@ -306,16 +301,14 @@ void PlayerPlaceBomb(Game *game, Player *player)
         return;
 
     if (player->bombs_placed >= player->bombs_max &&
-            player->bombs_max != -1) /* Infinity */
-        return;
+        player->bombs_max != -1) /* Infinity */
+            return;
 
     for (i = 0; i < MAX_BOMBS; i++)
         if (game->field.bombs[i].state > BOMB_NONE &&
-                game->field.bombs[i].xpos == player->xpos &&
-                game->field.bombs[i].ypos == player->ypos)
-        {
-            return;
-        }
+            game->field.bombs[i].xpos == player->xpos &&
+            game->field.bombs[i].ypos == player->ypos)
+                return;
 
     for (i = 0; i < MAX_BOMBS; i++)
         if (game->field.bombs[i].state == BOMB_NONE)
@@ -333,13 +326,10 @@ void PlayerPlaceBomb(Game *game, Player *player)
         }
 }
 
-static bool IsTransparentSquare(Field *field, int x, int y)
+inline static bool IsTransparentSquare(Field *field, int x, int y)
 {
-    if (field->map[x][y] == SQUARE_FREE ||
-            (field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY))
-        return true;
-
-    return false;
+    return (field->map[x][y] == SQUARE_FREE ||
+           (field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY));
 }
 
 static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)

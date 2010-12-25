@@ -214,12 +214,13 @@ void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
 void PlayerMoveRight(Game *game, Player *player);
 void PlayerMoveLeft(Game *game, Player *player);
-int UpdatePlayer(Game *game, Player *player);
+int  UpdatePlayer(Game *game, Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
 void UpdateAftergame(Game *game);
-unsigned long get_tick(void);
+
+#define get_tick() (*rb->current_tick)
 
 extern unsigned long tick;
 
