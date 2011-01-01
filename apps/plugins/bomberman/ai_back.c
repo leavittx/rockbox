@@ -476,7 +476,7 @@ void UpdateAI(Game *G, Player *Players)
   {
     MinDist = UNREAL_F;
     
-    if (Players[i].IsAIPlayer == true
+    if (Players[i].isAI == true
        && Players[i].status.state == ALIVE)
     {
 	      FindSafetyPlace(G, &AI[i], &Path, Players[i].xpos,

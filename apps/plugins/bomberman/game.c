@@ -31,6 +31,9 @@
     b = tmp; \
 }
 
+#define ISFULLPWR(bomb) \
+    ((bomb).owner->isFullPower)
+
 void PlayerMoveUp(Game *game, Player *player)
 {
     if (player->ismove || player->status.state != ALIVE)
@@ -189,6 +192,7 @@ void PickBonus(Game *game, Player *player)
             player->speed--;
         break;
     case BONUS_FULLPOWER:
+        player->isFullPower = true;
         break;
     case BONUS_NONE:
         break;
@@ -279,7 +283,7 @@ int UpdatePlayer(Game *game, Player *player)
 
         if (tick - won > PLAYER_DELAY_WIN_ANIM_DUR)
         {
-            if (player->IsAIPlayer)
+            if (player->isAI)
                 return -GAME_GAMEOVER;
             else
                 return
@@ -332,7 +336,7 @@ inline static bool IsTransparentSquare(Field *field, int x, int y)
            (field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY));
 }
 
-static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
+static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir, bool isFullPower)
 {
     int j;
     int i;
@@ -391,7 +395,8 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
                 //game->field.map[curx][cury] = SQUARE_FREE;
                 game->field.boxes[curx][cury].state = BOX_EXPL_PHASE1;
                 game->field.boxes[curx][cury].expl_time = tick;
-                break;
+                if (isFullPower) continue;
+                else             break;
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK
                      || game->field.map[curx][cury] == SQUARE_BOMB)
@@ -411,6 +416,12 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
                     game->players[i].status.time_of_death = tick;
                 }
             }
+
+            if (game->field.bonuses[curx][cury] != BONUS_NONE) {
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
+                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                    game->field.bonuses[curx][cury] = BONUS_NONE;
+            }
         }
         else
         {
@@ -419,7 +430,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir)
     }
 }
 
-static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
+static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir, bool isFullPower)
 {
     int j;
     int i;
@@ -462,7 +473,8 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
             else if (game->field.map[curx][cury] == SQUARE_BOX)
             {
                 game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE4;
-                break;
+                if (isFullPower) continue;
+                else             break;
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK)
             {
@@ -493,6 +505,12 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
                     game->players[i].status.state = GONNA_DIE;
                 }
             }
+
+            if (game->field.bonuses[curx][cury] != BONUS_NONE) {
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
+                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                    game->field.bonuses[curx][cury] = BONUS_NONE;
+            }
         }
         else
         {
@@ -501,7 +519,7 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir)
     }
 }
 
-static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
+static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir, bool isFullPower)
 {
     int j;
     int i;
@@ -544,7 +562,8 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
             else if (game->field.map[curx][cury] == SQUARE_BOX)
             {
                 game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE3;
-                break;
+                if (isFullPower) continue;
+                else             break;
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK)
             {
@@ -575,6 +594,12 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
                     game->players[i].status.state = GONNA_DIE;
                 }
             }
+
+            if (game->field.bonuses[curx][cury] != BONUS_NONE) {
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
+                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                    game->field.bonuses[curx][cury] = BONUS_NONE;
+            }
         }
         else
         {
@@ -583,7 +608,7 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir)
     }
 }
 
-static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
+static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir, bool isFullPower)
 {
     int j;
     int i;
@@ -626,7 +651,8 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
             else if (game->field.map[curx][cury] == SQUARE_BOX)
             {
                 game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE2;
-                break;
+                if (isFullPower) continue;
+                else             break;
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK)
             {
@@ -657,6 +683,12 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
                     game->players[i].status.state = GONNA_DIE;
                 }
             }
+
+            if (game->field.bonuses[curx][cury] != BONUS_NONE) {
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
+                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                    game->field.bonuses[curx][cury] = BONUS_NONE;
+            }
         }
         else
         {
@@ -665,7 +697,7 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir)
     }
 }
 
-static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
+static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFullPower)
 {
     int j;
     int i;
@@ -716,9 +748,9 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
         }
 
         if ((dir == FIRE_RIGNT && curx < MAP_W - 1) ||
-                (dir == FIRE_DOWN  && cury < MAP_H - 1) ||
-                (dir == FIRE_LEFT  && curx >= 0) ||
-                (dir == FIRE_UP    && cury >= 0))
+            (dir == FIRE_DOWN  && cury < MAP_H - 1) ||
+            (dir == FIRE_LEFT  && curx >= 0) ||
+            (dir == FIRE_UP    && cury >= 0))
         {
             if (IsTransparentSquare(&game->field, curx, cury))
             {
@@ -734,7 +766,8 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
                 game->field.firemap[curx][cury].state = BOMB_EXPL_PHASE1;
                 game->field.firemap[curx][cury].dir = dir;
                 game->field.firemap[curx][cury].isend = true;
-                break;
+                if (isFullPower) continue;
+                else             break;
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK)
             {
@@ -772,6 +805,12 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir)
                     game->players[i].status.state = GONNA_DIE;
                 }
             }
+
+            if (game->field.bonuses[curx][cury] != BONUS_NONE) {
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
+                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                    game->field.bonuses[curx][cury] = BONUS_NONE;
+            }
         }
         else
         {
@@ -807,10 +846,10 @@ void UpdateBombs(Game *game)
 
             game->field.firemap[x][y].state = BOMB_NONE;
 
-            FirePhaseEnd(game, x, y, rad, FIRE_RIGNT);
-            FirePhaseEnd(game, x, y, rad, FIRE_DOWN);
-            FirePhaseEnd(game, x, y, rad, FIRE_LEFT);
-            FirePhaseEnd(game, x, y, rad, FIRE_UP);
+            FirePhaseEnd(game, x, y, rad, FIRE_RIGNT, ISFULLPWR(game->field.bombs[i]));
+            FirePhaseEnd(game, x, y, rad, FIRE_DOWN,  ISFULLPWR(game->field.bombs[i]));
+            FirePhaseEnd(game, x, y, rad, FIRE_LEFT,  ISFULLPWR(game->field.bombs[i]));
+            FirePhaseEnd(game, x, y, rad, FIRE_UP,    ISFULLPWR(game->field.bombs[i]));
 
             game->field.bombs[i].owner->bombs_placed--;
         }
@@ -823,10 +862,10 @@ void UpdateBombs(Game *game)
 
             game->field.firemap[x][y].state = BOMB_EXPL_PHASE4;
 
-            FirePhase4(game, x, y, rad, FIRE_RIGNT);
-            FirePhase4(game, x, y, rad, FIRE_DOWN);
-            FirePhase4(game, x, y, rad, FIRE_LEFT);
-            FirePhase4(game, x, y, rad, FIRE_UP);
+            FirePhase4(game, x, y, rad, FIRE_RIGNT, ISFULLPWR(game->field.bombs[i]));
+            FirePhase4(game, x, y, rad, FIRE_DOWN,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase4(game, x, y, rad, FIRE_LEFT,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase4(game, x, y, rad, FIRE_UP,    ISFULLPWR(game->field.bombs[i]));
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
         {
@@ -837,10 +876,10 @@ void UpdateBombs(Game *game)
 
             game->field.firemap[x][y].state = BOMB_EXPL_PHASE3;
 
-            FirePhase3(game, x, y, rad, FIRE_RIGNT);
-            FirePhase3(game, x, y, rad, FIRE_DOWN);
-            FirePhase3(game, x, y, rad, FIRE_LEFT);
-            FirePhase3(game, x, y, rad, FIRE_UP);
+            FirePhase3(game, x, y, rad, FIRE_RIGNT, ISFULLPWR(game->field.bombs[i]));
+            FirePhase3(game, x, y, rad, FIRE_DOWN,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase3(game, x, y, rad, FIRE_LEFT,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase3(game, x, y, rad, FIRE_UP,    ISFULLPWR(game->field.bombs[i]));
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
         {
@@ -851,10 +890,10 @@ void UpdateBombs(Game *game)
 
             game->field.firemap[x][y].state = BOMB_EXPL_PHASE2;
 
-            FirePhase2(game, x, y, rad, FIRE_RIGNT);
-            FirePhase2(game, x, y, rad, FIRE_DOWN);
-            FirePhase2(game, x, y, rad, FIRE_LEFT);
-            FirePhase2(game, x, y, rad, FIRE_UP);
+            FirePhase2(game, x, y, rad, FIRE_RIGNT, ISFULLPWR(game->field.bombs[i]));
+            FirePhase2(game, x, y, rad, FIRE_DOWN,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase2(game, x, y, rad, FIRE_LEFT,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase2(game, x, y, rad, FIRE_UP,    ISFULLPWR(game->field.bombs[i]));
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_DET)
         {
@@ -867,10 +906,10 @@ void UpdateBombs(Game *game)
             game->field.firemap[x][y].state = BOMB_EXPL_PHASE1;
             game->field.firemap[x][y].dir = FIRE_CENTER;
 
-            FirePhase1(game, x, y, rad, FIRE_RIGNT);
-            FirePhase1(game, x, y, rad, FIRE_DOWN);
-            FirePhase1(game, x, y, rad, FIRE_LEFT);
-            FirePhase1(game, x, y, rad, FIRE_UP);
+            FirePhase1(game, x, y, rad, FIRE_RIGNT, ISFULLPWR(game->field.bombs[i]));
+            FirePhase1(game, x, y, rad, FIRE_DOWN,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase1(game, x, y, rad, FIRE_LEFT,  ISFULLPWR(game->field.bombs[i]));
+            FirePhase1(game, x, y, rad, FIRE_UP,    ISFULLPWR(game->field.bombs[i]));
         }
     }
 }

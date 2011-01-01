@@ -29,7 +29,7 @@
 
 #define MAX_PLAYERS 4
 
-#define MAX_BOMBS 10
+#define MAX_BOMBS 8
 
 #define CYCLETIME 40
 
@@ -99,13 +99,14 @@ typedef struct {
 	int bombs_max;
 	int bombs_placed;
 	BombPower bomb_power;
+        bool isFullPower;
 	
 	int rxpos, rypos;
 	bool ismove;
 	int move_phase;
 	unsigned long move_start_time;
 	
-	bool IsAIPlayer;
+        bool isAI;
 	
 	int num;
 } Player;

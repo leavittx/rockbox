@@ -90,7 +90,7 @@ void InitGame(Game *game)
       {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
       };
      */
-    int DefaultMap[MAP_H][MAP_W] = {
+    /*int DefaultMap[MAP_H][MAP_W] = {
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
         {2,0,0,0,1,1,0,1,0,1,0,1,1,0,0,0,2},
         {2,0,2,0,1,1,1,1,1,1,1,1,1,0,2,0,2},
@@ -102,7 +102,39 @@ void InitGame(Game *game)
         {2,0,2,0,1,1,1,1,1,1,1,1,1,0,2,0,2},
         {2,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,2},
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-    };
+    };*/
+    //now listening to me with hands 'i will (no man's land) (radiohead cover)'
+
+    int DefaultMap[MAP_H][MAP_W] = {
+            {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
+            {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
+            {2,0,2,1,2,1,2,1,2,1,2,1,2,1,2,0,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,0,2,1,2,1,2,1,2,1,2,1,2,1,2,0,2},
+            {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
+            {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
+        };
+    /*int DefaultMap[MAP_H][MAP_W] = {
+            {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
+            {2,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
+            {2,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+            {2,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,2},
+            {2,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
+            {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
+        };*/
     for (i = 0; i < MAP_W; i++)
         for (j = 0; j < MAP_H; j++)
         {
@@ -142,7 +174,9 @@ void InitGame(Game *game)
         {
             // choose a random bonus for this box
             // - 2 -- not all bonuses implemented yet
-            game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE - 2);
+            game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE - 1);
+            if (game->field.bonuses[i][j] == BONUS_SPEEDUP)
+                game->field.bonuses[i][j] = BONUS_FULLPOWER;
             nbonuses--;
         }
     }
@@ -161,13 +195,14 @@ void InitPlayer(Player *player, int num, int x, int y)
     player->bombs_max = 1;
     player->bombs_placed = 0;
     player->bomb_power = BOMB_PWR_SINGLE;
+    player->isFullPower = false;
 
     player->rxpos = 0;
     player->rypos = 0;
     player->ismove = false;
     player->move_phase = 0;
 
-    player->IsAIPlayer = false;
+    player->isAI = false;
 
     player->num = num;
 }
@@ -183,13 +218,14 @@ void InitAI(Player *player, int num, int x, int y)
     player->bombs_max = 1;
     player->bombs_placed = 0;
     player->bomb_power = BOMB_PWR_SINGLE;
+    player->isFullPower = false;
 
     player->rxpos = 0;
     player->rypos = 0;
     player->ismove = false;
     player->move_phase = 0;
 
-    player->IsAIPlayer = true;
+    player->isAI = true;
 
     player->num = num;
 }
@@ -209,9 +245,12 @@ int plugin_main(void)
     InitPlayer(&game.players[0], 0, 1, 1);
     //InitAI(&game.players[1], 3, 9);
     //InitAI(&game.players[1], 10, 9);
-    InitAI(&game.players[1], 1, 1, 9);
+    /*InitAI(&game.players[1], 1, 1, 9);
     InitAI(&game.players[2], 2, 15, 9);
-    InitAI(&game.players[3], 3, 15, 1);
+    InitAI(&game.players[3], 3, 15, 1);*/
+    InitAI(&game.players[1], 1, 1, MAP_H - 3);
+    InitAI(&game.players[2], 2, MAP_W - 3, 1);
+    InitAI(&game.players[3], 3, MAP_W - 3, MAP_H - 2);
 
     for (i = 0; i < MAX_PLAYERS; i++)
     {
@@ -237,14 +276,14 @@ int plugin_main(void)
                 if (upd == DEAD)
                 {
                     game.nplayers--;
-                    if (game.nplayers == 1 || !game.players[i].IsAIPlayer)
+                    if (game.nplayers == 1 || !game.players[i].isAI)
                     {
                         for (i = 0; i < MAX_PLAYERS; i++)
                         {
                             if (game.players[i].status.state == ALIVE)
                             {
                                 game.players[i].status.state = WIN_PHASE1;
-                                //if (game.players[i].IsAIPlayer)
+                                //if (game.players[i].isAI)
                                 //	rb->splash(HZ * 5, "You lose");
                                 //else
                                 //	rb->splash(HZ * 5, "You won");
