@@ -11,7 +11,7 @@
  <data>
   <variable>ProjectExplorer.Project.EditorSettings</variable>
   <valuemap type="QVariantMap">
-   <value key="EditorConfiguration.Codec" type="QByteArray">System</value>
+   <value key="EditorConfiguration.Codec" type="QByteArray">Default</value>
   </valuemap>
  </data>
  <data>
@@ -24,13 +24,11 @@
    <value key="ProjectExplorer.Target.ActiveDeployConfiguration" type="int">0</value>
    <value key="ProjectExplorer.Target.ActiveRunConfiguration" type="int">0</value>
    <valuemap key="ProjectExplorer.Target.BuildConfiguration.0" type="QVariantMap">
-    <value key="GenericProjectManager.GenericBuildConfiguration.BuildDirectory" type="QString">/tmp/acer/home/lev/work/rockbox/my_build/d2_sim</value>
+    <value key="GenericProjectManager.GenericBuildConfiguration.BuildDirectory" type="QString">/home/lev/work/rockbox/my_build/d2_sim</value>
     <valuemap key="ProjectExplorer.BuildConfiguration.BuildStepList.0" type="QVariantMap">
      <valuemap key="ProjectExplorer.BuildStepList.Step.0" type="QVariantMap">
       <valuelist key="GenericProjectManager.GenericMakeStep.BuildTargets" type="QVariantList"/>
-      <valuelist key="GenericProjectManager.GenericMakeStep.MakeArguments" type="QVariantList">
-       <value type="QString">-j5</value>
-      </valuelist>
+      <value key="GenericProjectManager.GenericMakeStep.MakeArguments" type="QString">-j4</value>
       <value key="GenericProjectManager.GenericMakeStep.MakeCommand" type="QString"></value>
       <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Сборка</value>
       <value key="ProjectExplorer.ProjectConfiguration.DisplayName" type="QString"></value>
@@ -69,12 +67,12 @@
    </valuemap>
    <value key="ProjectExplorer.Target.DeployConfigurationCount" type="int">1</value>
    <valuemap key="ProjectExplorer.Target.RunConfiguration.0" type="QVariantMap">
-    <valuelist key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments" type="QVariantList"/>
+    <value key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments" type="QString"></value>
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.BaseEnvironmentBase" type="int">2</value>
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.Executable" type="QString">./run.sh</value>
     <value key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal" type="bool">false</value>
     <valuelist key="ProjectExplorer.CustomExecutableRunConfiguration.UserEnvironmentChanges" type="QVariantList"/>
-    <value key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory" type="QString">/tmp/acer/home/lev/work/rockbox/my_build/d2_sim/</value>
+    <value key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory" type="QString">/home/lev/work/rockbox/my_build/d2_sim/</value>
     <value key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName" type="QString">Выполнить ./run.sh</value>
     <value key="ProjectExplorer.ProjectConfiguration.DisplayName" type="QString">rockbox</value>
     <value key="ProjectExplorer.ProjectConfiguration.Id" type="QString">ProjectExplorer.CustomExecutableRunConfiguration</value>
@@ -91,10 +89,10 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.EnvironmentId</variable>
-  <value type="QString">{9f59220f-91c0-4605-a381-5240133cd3c8}</value>
+  <value type="QString">{b921c77a-2ff6-45a2-96ee-071d55dc857c}</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>
-  <value type="int">8</value>
+  <value type="int">9</value>
  </data>
 </qtcreator>

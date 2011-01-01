@@ -41,6 +41,10 @@
 #include "string-extra.h"
 #include "gcc_extensions.h"
 
+#if !(__INCLUDE_CONFIG)
+#include "../firmware/export/config/cowond2.h"
+#endif
+
 char* strncpy(char *, const char *, size_t);
 void* plugin_get_buffer(size_t *buffer_size);
 

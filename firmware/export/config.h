@@ -24,6 +24,10 @@
 
 #include "autoconf.h"
 
+#if !(__INCLUDE_CONFIG)
+#include "config/cowond2.h"
+#endif
+
 /* symbolic names for multiple choice configurations: */
 
 /* CONFIG_STORAGE (note these are combineable bit-flags) */
