@@ -314,11 +314,11 @@ static const struct plugin_api rockbox_api = {
 #ifdef HAVE_PLUGIN_CHECK_OPEN_CLOSE
     (creat_func)creat_wrapper,
 #else
-    (creat_func)creat,
+    PREFIX(creat),
 #endif
     (write_func)PREFIX(write),
-    remove,
-    rename,
+    PREFIX(remove),
+    PREFIX(rename),
     PREFIX(ftruncate),
     PREFIX(filesize),
     fdprintf,
@@ -338,11 +338,11 @@ static const struct plugin_api rockbox_api = {
     crc_32,
 
     /* dir */
-    opendir,
-    closedir,
-    readdir,
-    mkdir,
-    rmdir,
+    (opendir_func)PREFIX(opendir),
+    (closedir_func)PREFIX(closedir),
+    (readdir_func)PREFIX(readdir),
+    PREFIX(mkdir),
+    PREFIX(rmdir),
     dir_exists,
     dir_get_info,
 
@@ -726,6 +726,7 @@ static const struct plugin_api rockbox_api = {
 
     /* new stuff at the end, sort into place next time
        the API gets incompatible */
+    filetype_get_attr,
 };
 
 int plugin_load(const char* plugin, const void* parameter)
