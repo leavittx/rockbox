@@ -564,6 +564,8 @@ void UpdateAI(Game *G, Player *Players)
             {
                 if (FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
                     AI[i].Danger = true;
+                else
+                  continue;
             }
 
             if (AI[i].Danger)
@@ -585,7 +587,7 @@ void UpdateAI(Game *G, Player *Players)
                 }
             }
             else if (IsPlayerNearPlayer(G, &Players[i], &Players[AI[i].ClosestPlayer])
-                    /* && AI[i].Danger == false*/) // commented by lp3
+                      && AI[i].Danger == false)
             {
                 PlayerPlaceBomb(G, &Players[i]);
             }
