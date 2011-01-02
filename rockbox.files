@@ -1302,7 +1302,6 @@ apps/plugins/bitmaps/viewer_defaults/viewers.6x8x2.bmp
 apps/plugins/blackjack.c
 apps/plugins/bomberman/ai.c
 apps/plugins/bomberman/ai.h
-apps/plugins/bomberman/ai_back.c
 apps/plugins/bomberman/bomberman.c
 apps/plugins/bomberman/draw.c
 apps/plugins/bomberman/draw.h
@@ -5769,3 +5768,4 @@ wps/UniCatcher/volume-s.bmp
 wps/UniCatcher/volume.bmp
 wps/zezayer/RockBoxWPSd.bmp
 apps/plugins/lib/pdbox-func.h
+todo.txt

@@ -29,7 +29,7 @@
 
 #define MAX_PLAYERS 4
 
-#define MAX_BOMBS 8
+#define MAX_BOMBS 10
 
 #define CYCLETIME 40
 
@@ -202,13 +202,13 @@ typedef enum {
 } GameState;
 
 typedef struct {
+    	GameState state;
 	Field field;
 	Player players[MAX_PLAYERS];
 	Player *draw_order[MAX_PLAYERS];
 	int nplayers;
 	int bomb_rad[5];
-	GameState state;
-	int aftergame_y;
+        int max_move_phase[3];
 } Game;
 
 void PlayerMoveUp(Game *game, Player *player);

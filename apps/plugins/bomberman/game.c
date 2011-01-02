@@ -188,8 +188,8 @@ void PickBonus(Game *game, Player *player)
             player->bomb_power++;
         break;
     case BONUS_SPEEDUP:
-        if (player->speed > 1)
-            player->speed--;
+        if (player->speed < 2)
+            player->speed++;
         break;
     case BONUS_FULLPOWER:
         player->isFullPower = true;
@@ -212,7 +212,7 @@ int UpdatePlayer(Game *game, Player *player)
             if ((tick - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
             {
                 // actually it's 5, just speedup player
-                if (player->move_phase == 2)
+                if (player->move_phase == game->max_move_phase[player->speed])
                 {
                     player->ismove = false;
                     player->move_phase = 0;
@@ -286,8 +286,7 @@ int UpdatePlayer(Game *game, Player *player)
             if (player->isAI)
                 return -GAME_GAMEOVER;
             else
-                return
-                        -GAME_WON;
+                return -GAME_WON;
         }
 
         player->status.state =
@@ -418,9 +417,9 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir, bool is
             }
 
             if (game->field.bonuses[curx][cury] != BONUS_NONE) {
-                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
-                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
-                    game->field.bonuses[curx][cury] = BONUS_NONE;
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE + 1);
+                //if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                //    game->field.bonuses[curx][cury] = BONUS_NONE;
             }
         }
         else
@@ -507,9 +506,9 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir, bool isFu
             }
 
             if (game->field.bonuses[curx][cury] != BONUS_NONE) {
-                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
-                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
-                    game->field.bonuses[curx][cury] = BONUS_NONE;
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE + 1);
+                //if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                //    game->field.bonuses[curx][cury] = BONUS_NONE;
             }
         }
         else
@@ -596,9 +595,9 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir, bool isFu
             }
 
             if (game->field.bonuses[curx][cury] != BONUS_NONE) {
-                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
-                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
-                    game->field.bonuses[curx][cury] = BONUS_NONE;
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE + 1);
+                //if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                //    game->field.bonuses[curx][cury] = BONUS_NONE;
             }
         }
         else
@@ -685,9 +684,9 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir, bool isFu
             }
 
             if (game->field.bonuses[curx][cury] != BONUS_NONE) {
-                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
-                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
-                    game->field.bonuses[curx][cury] = BONUS_NONE;
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE + 1);
+                //if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                //    game->field.bonuses[curx][cury] = BONUS_NONE;
             }
         }
         else
@@ -807,9 +806,9 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
             }
 
             if (game->field.bonuses[curx][cury] != BONUS_NONE) {
-                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE);
-                if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
-                    game->field.bonuses[curx][cury] = BONUS_NONE;
+                game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE + 1);
+                //if (game->field.bonuses[curx][cury] == BONUS_SPEEDUP)
+                //    game->field.bonuses[curx][cury] = BONUS_NONE;
             }
         }
         else

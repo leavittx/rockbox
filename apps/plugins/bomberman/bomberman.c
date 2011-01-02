@@ -22,10 +22,9 @@
  ****************************************************************************/
 
 #include "plugin.h"
-
 #include "lib/pluginlib_actions.h"
+#include "lib/pluginlib_exit.h"
 #include "lib/helper.h"
-#include "lib/playback_control.h"
 
 #include "game.h"
 #include "draw.h"
@@ -41,11 +40,14 @@ const struct button_mapping *plugin_contexts[] = {
 #define NB_ACTION_CONTEXTS \
     (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
-void cleanup(void *parameter)
+void cleanup(void)
 {
-    (void)parameter;
+#ifdef HAVE_ADJUSTABLE_CPU_FREQ
+    rb->cpu_boost(false);
+#endif
 
-    backlight_use_settings();
+    /* Turn on backlight timeout (revert to settings) */
+    backlight_use_settings(); /* backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
     remote_backlight_use_settings();
 #endif
@@ -55,7 +57,8 @@ void cleanup(void *parameter)
  * Main code 
  */
 
-Game game;
+static Game game;
+static unsigned long starttimer; /* Timer value at the beginning */
 unsigned long tick = 0;
 
 void InitGame(Game *game)
@@ -149,12 +152,20 @@ void InitGame(Game *game)
 
     game->nplayers = MAX_PLAYERS;
 
+    for (i = 0; i < MAX_PLAYERS; i++)
+        game->draw_order[i] = &game->players[i];
+
     // set radius of explosion for each bomb power
     game->bomb_rad[BOMB_PWR_SINGLE] = 1;
     game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
     game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
-    game->bomb_rad[BOMB_PWR_QUAD] = 6;
+    game->bomb_rad[BOMB_PWR_QUAD]   = 6;
     game->bomb_rad[BOMB_PWR_KILLER] = MAX(MAP_W, MAP_H);
+
+    // set player maximum move phase for each speed
+    game->max_move_phase[0] = 5;
+    game->max_move_phase[1] = 2;
+    game->max_move_phase[2] = 1;
 
     // place bonuses
     int nboxes = 0, nbonuses;
@@ -173,10 +184,11 @@ void InitGame(Game *game)
         if (game->field.map[i][j] == SQUARE_BOX && game->field.bonuses[i][j] == BONUS_NONE)
         {
             // choose a random bonus for this box
+            game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE);
             // - 2 -- not all bonuses implemented yet
-            game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE - 1);
-            if (game->field.bonuses[i][j] == BONUS_SPEEDUP)
-                game->field.bonuses[i][j] = BONUS_FULLPOWER;
+            //game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE - 1);
+            //if (game->field.bonuses[i][j] == BONUS_SPEEDUP)
+            //    game->field.bonuses[i][j] = BONUS_FULLPOWER;
             nbonuses--;
         }
     }
@@ -191,7 +203,7 @@ void InitPlayer(Player *player, int num, int x, int y)
     player->xpos = x;
     player->ypos = y;
     player->look = LOOK_DOWN;
-    player->speed = 1;
+    player->speed = 0;
     player->bombs_max = 1;
     player->bombs_placed = 0;
     player->bomb_power = BOMB_PWR_SINGLE;
@@ -214,7 +226,7 @@ void InitAI(Player *player, int num, int x, int y)
     player->xpos = x;
     player->ypos = y;
     player->look = LOOK_DOWN;
-    player->speed = 3;
+    player->speed = 0;
     player->bombs_max = 1;
     player->bombs_placed = 0;
     player->bomb_power = BOMB_PWR_SINGLE;
@@ -230,94 +242,59 @@ void InitAI(Player *player, int num, int x, int y)
     player->num = num;
 }
 
-int plugin_main(void)
+inline static void bomberman_update(void)
 {
-    int action; /* Key action */
     int i;
-    int end; /* End tick */
-    
-    //rb->splashf(HZ, "%f",  PLAYER_MOVE_PART_TIME);
-    
-    rb->srand(get_tick());
-    
-    InitGame(&game);
 
-    InitPlayer(&game.players[0], 0, 1, 1);
-    //InitAI(&game.players[1], 3, 9);
-    //InitAI(&game.players[1], 10, 9);
-    /*InitAI(&game.players[1], 1, 1, 9);
-    InitAI(&game.players[2], 2, 15, 9);
-    InitAI(&game.players[3], 3, 15, 1);*/
-    InitAI(&game.players[1], 1, 1, MAP_H - 3);
-    InitAI(&game.players[2], 2, MAP_W - 3, 1);
-    InitAI(&game.players[3], 3, MAP_W - 3, MAP_H - 2);
-
-    for (i = 0; i < MAX_PLAYERS; i++)
+    if (game.state == GAME_GAME)
     {
-        game.draw_order[i] = &game.players[i];
-        //game->draw_order[i].order = i;
-    }
-
-    /* Main loop */
-    while (true)
-    {
-        end = get_tick() + (CYCLETIME * HZ) / 1000;
-
-        Draw(&game);
-
-        if (game.state == GAME_GAME)
-            for (i = 0; i < MAX_PLAYERS; i++)
+        for (i = 0; i < MAX_PLAYERS; i++)
+        {
+            //if (!(tick % game.players[i].speed))
+            //{
+            int upd = UpdatePlayer(&game, &game.players[i]);
+            if (upd == DEAD)
             {
-                int upd;
-
-                //if (!(tick % game.players[i].speed))
-                //{
-                upd = UpdatePlayer(&game, &game.players[i]);
-                if (upd == DEAD)
+                game.nplayers--;
+                if (game.nplayers == 1 || !game.players[i].isAI)
                 {
-                    game.nplayers--;
-                    if (game.nplayers == 1 || !game.players[i].isAI)
+                    for (i = 0; i < MAX_PLAYERS; i++)
                     {
-                        for (i = 0; i < MAX_PLAYERS; i++)
+                        if (game.players[i].status.state == ALIVE)
                         {
-                            if (game.players[i].status.state == ALIVE)
-                            {
-                                game.players[i].status.state = WIN_PHASE1;
-                                //if (game.players[i].isAI)
-                                //	rb->splash(HZ * 5, "You lose");
-                                //else
-                                //	rb->splash(HZ * 5, "You won");
-                            }
+                            game.players[i].status.state = WIN_PHASE1;
+                            //if (game.players[i].isAI)
+                            //	rb->splash(HZ * 5, "You lose");
+                            //else
+                            //	rb->splash(HZ * 5, "You won");
                         }
                     }
                 }
-                else if (upd == -GAME_GAMEOVER || upd == -GAME_WON)
-                {
-                    game.state = -upd;
-                    tick = 0;
-                }
-                //}
             }
-
-        if (game.state == GAME_GAMEOVER || game.state == GAME_WON)
-        {
-            if (tick >= AFTERGAME_DUR)
-                return PLUGIN_OK;
+            else if (upd == -GAME_GAMEOVER || upd == -GAME_WON)
+            {
+                game.state = -upd;
+                tick = 0;
+            }
+            //}
         }
+    }
 
-        UpdateBombs(&game);
-        UpdateBoxes(&game);
-        UpdateAI(&game, game.players);
+    if (game.state == GAME_GAMEOVER || game.state == GAME_WON)
+    {
+        if (tick >= AFTERGAME_DUR)
+            exit(PLUGIN_OK);
+    }
+}
 
-        action = pluginlib_getaction(TIMEOUT_NOBLOCK,
-                                     plugin_contexts,
-                                     NB_ACTION_CONTEXTS);
+inline static void bomberman_keyboard(void)
+{
+    int action = pluginlib_getaction(TIMEOUT_NOBLOCK, plugin_contexts, NB_ACTION_CONTEXTS);
 
-        switch (action)
-        {
+    switch (action)
+    {
         case PLA_EXIT:
-            cleanup(NULL);
-            return PLUGIN_OK;
+            exit(PLUGIN_OK);
 
         case PLA_UP:
         case PLA_UP_REPEAT:
@@ -345,14 +322,64 @@ int plugin_main(void)
 
         case PLA_CANCEL:
             break;
-        }
+    }
+}
 
+inline static void bomberman_interrupt(void)
+{
+    unsigned long current_tick;
+    unsigned long timer, runtime;
+
+    //chip8_update_display();
+    //chip8_keyboard();
+    tick++;
+    runtime = tick * HZ / 30;
+    timer = starttimer + runtime;
+    current_tick = get_tick();
+
+    if (TIME_AFTER(timer, current_tick))
+        rb->sleep(timer - current_tick);
+    else
+        rb->yield();
+}
+
+int main(void)
+{
+    InitGame(&game);
+    InitPlayer(&game.players[0], 0, 1, 1);
+    InitAI(&game.players[1], 1, 1, MAP_H - 3);
+    InitAI(&game.players[2], 2, MAP_W - 3, 1);
+    InitAI(&game.players[3], 3, MAP_W - 3, MAP_H - 2);
+
+    game.players[1].status.state = DEAD;
+    game.players[2].status.state = DEAD;
+
+    rb->srand(get_tick());
+    starttimer = get_tick();
+
+    /* Main loop */
+    while (true)
+    {
+        //end = get_tick() + (CYCLETIME * HZ) / 1000;
+
+        Draw(&game);
+
+        bomberman_update();
+        UpdateBombs(&game);
+        UpdateBoxes(&game);
+        UpdateAI(&game, game.players);
+        bomberman_keyboard();
+
+        bomberman_interrupt();
+
+        /*
         if (TIME_BEFORE(get_tick(), end))
             rb->sleep(end - get_tick());
         else
             rb->yield();
 
         tick++;
+        */
     }
 }
 
@@ -361,8 +388,12 @@ enum plugin_status plugin_start(const void* parameter)
 {
     int ret;
 
-    /* avoid the compiler warning about unused parameter */
     (void)parameter;
+    atexit(cleanup);
+
+#ifdef HAVE_ADJUSTABLE_CPU_FREQ
+    rb->cpu_boost(true);
+#endif
     
 #if LCD_DEPTH > 1
     rb->lcd_set_backdrop(NULL);
@@ -372,7 +403,7 @@ enum plugin_status plugin_start(const void* parameter)
     remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
 #endif
 
-    ret = plugin_main();
+    ret = main();
 
     return ret;
 }

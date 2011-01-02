@@ -21,9 +21,9 @@
  *
  ****************************************************************************/
 
-#ifndef _AI_H_
-#define _AI_H_
+#ifndef _AI_H
+#define _AI_H
 
 void UpdateAI(Game *G, Player *Players);
 
-#endif /* _AI_H_ */
+#endif /* _AI_H */

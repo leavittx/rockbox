@@ -1,0 +1,2 @@
+- do something if wins niether player nor ai
+- add menu and highscores integration
