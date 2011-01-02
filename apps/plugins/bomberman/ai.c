@@ -22,11 +22,14 @@
  ****************************************************************************/
 
 #include "plugin.h"
+
 #include "game.h"
 
 #define UNREAL_F 999
 #define PATH_OFFSET 1
 #define MOVE_COST 10
+
+#define PATH_CACHE_UPD_TIME 20
 
 typedef struct {
     bool IsWalkable;
@@ -50,6 +53,8 @@ typedef struct {
     bool Danger;
     PATHELEM SafetyPlace;
     int Bombs;
+    PATH PathCache;
+    unsigned int PathCacheUpdTime;
 } AiVars;
 
 static NODE Nodes[MAP_W][MAP_H];
@@ -357,14 +362,14 @@ static int FoundDangerBombs(Game *G, int x, int y)
             {
                 Checked = true;
 
-                if (abs(G->field.bombs[i].xpos - x) > G->bomb_rad[G->field.bombs[i].power] + 1)
+                if (abs(G->field.bombs[i].xpos - x) > G->bomb_rad[G->field.bombs[i].power])
                     ProtectWalls++;
                 else if (G->field.bombs[i].xpos < x)
                 {
                     for (j = G->field.bombs[i].xpos; j < x; j++)
                     {
-                        if (G->field.map[j][y] == SQUARE_BLOCK
-                                || G->field.map[j][y] == SQUARE_BOX)
+                        if (G->field.map[j][y] == SQUARE_BLOCK ||
+                            G->field.map[j][y] == SQUARE_BOX)
                         {
                             ProtectWalls++;
                             break;
@@ -375,8 +380,8 @@ static int FoundDangerBombs(Game *G, int x, int y)
                 {
                     for (j = x; j < G->field.bombs[i].xpos; j++)
                     {
-                        if (G->field.map[j][y] == SQUARE_BLOCK
-                                || G->field.map[j][y] == SQUARE_BOX)
+                        if (G->field.map[j][y] == SQUARE_BLOCK ||
+                            G->field.map[j][y] == SQUARE_BOX)
                         {
                             ProtectWalls++;
                             break;
@@ -390,7 +395,7 @@ static int FoundDangerBombs(Game *G, int x, int y)
             {
                 Checked = true;
 
-                if (abs(G->field.bombs[i].ypos - y) > G->bomb_rad[G->field.bombs[i].power] + 1)
+                if (abs(G->field.bombs[i].ypos - y) > G->bomb_rad[G->field.bombs[i].power])
                     ProtectWalls++;
                 else if (G->field.bombs[i].ypos < y)
                 {
@@ -432,12 +437,12 @@ inline static bool IsPlayerNearPlayer(Game *G, Player *P1, Player *P2)
 {
     if (P1->xpos == P2->xpos)
     {
-        if (abs(P1->ypos - P2->ypos) <= G->bomb_rad[P1->bomb_power] + 1)
+        if (abs(P1->ypos - P2->ypos) <= G->bomb_rad[P1->bomb_power])
             return true;
     }
     else if (P1->ypos == P2->ypos)
     {
-        if (abs(P1->xpos - P2->xpos) <= G->bomb_rad[P1->bomb_power] + 1)
+        if (abs(P1->xpos - P2->xpos) <= G->bomb_rad[P1->bomb_power])
             return true;
     }
 
@@ -523,6 +528,13 @@ void UpdateAI(Game *G, Player *Players)
     {
         if (Players[i].isAI && !Players[i].ismove && Players[i].status.state == ALIVE)
         {
+            if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
+            {
+                MovePlayer(G, &Players[i], &AI[i].PathCache);
+                //rb->splash(HZ/20, "USE CACHE!");
+                return;
+            }
+
             isDanger = false;
             MinDist = UNREAL_F;
 
@@ -566,10 +578,14 @@ void UpdateAI(Game *G, Player *Players)
 
                     //if (!CheckFire(G, CurPath.Path[PATH_OFFSET].X, CurPath.Path[PATH_OFFSET].Y))
                     MovePlayer(G, &Players[i], &CurPath);
+
+                    // create path cache
+                    rb->memcpy(&AI[i].PathCache, &CurPath, sizeof(PATH));
+                    AI[i].PathCacheUpdTime = get_tick();
                 }
             }
             else if (IsPlayerNearPlayer(G, &Players[i], &Players[AI[i].ClosestPlayer])
-                     && AI[i].Danger == false)
+                    /* && AI[i].Danger == false*/) // commented by lp3
             {
                 PlayerPlaceBomb(G, &Players[i]);
             }
@@ -579,9 +595,17 @@ void UpdateAI(Game *G, Player *Players)
                         && !Players[i].bombs_placed)
                 {
                     if (IsABox(G, &CurPath.Path[PATH_OFFSET]) && AI[i].Danger == false)
+                    {
                         PlayerPlaceBomb(G, &Players[i]);
+                    }
                     else
+                    {
                         MovePlayer(G, &Players[i], &CurPath);
+
+                        // create path cache
+                        rb->memcpy(&AI[i].PathCache, &CurPath, sizeof(PATH));
+                        AI[i].PathCacheUpdTime = get_tick();
+                    }
                 }
             }
         }

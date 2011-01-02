@@ -107,7 +107,7 @@ void InitGame(Game *game)
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
     };*/
     //now listening to me with hands 'i will (no man's land) (radiohead cover)'
-
+    /*
     int DefaultMap[MAP_H][MAP_W] = {
             {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
             {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
@@ -119,6 +119,19 @@ void InitGame(Game *game)
             {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
             {2,0,2,1,2,1,2,1,2,1,2,1,2,1,2,0,2},
             {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
+            {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
+        };*/
+    int DefaultMap[MAP_H][MAP_W] = {
+            {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
+            {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
+            {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
+            {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
+            {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
+            {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
+            {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
+            {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
+            {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
+            {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
             {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
         };
     /*int DefaultMap[MAP_H][MAP_W] = {
@@ -196,17 +209,17 @@ void InitGame(Game *game)
     game->state = GAME_GAME;
 }
 
-void InitPlayer(Player *player, int num, int x, int y)
+void InitPlayer(Player *player, int num, int x, int y, bool isAI)
 {
     player->status.state = ALIVE;
     player->status.health = 100;
     player->xpos = x;
     player->ypos = y;
     player->look = LOOK_DOWN;
-    player->speed = 0;
-    player->bombs_max = 1;
+    player->speed = 1;
+    player->bombs_max = 5;
     player->bombs_placed = 0;
-    player->bomb_power = BOMB_PWR_SINGLE;
+    player->bomb_power = BOMB_PWR_TRIPLE;
     player->isFullPower = false;
 
     player->rxpos = 0;
@@ -214,11 +227,12 @@ void InitPlayer(Player *player, int num, int x, int y)
     player->ismove = false;
     player->move_phase = 0;
 
-    player->isAI = false;
+    player->isAI = isAI;
 
     player->num = num;
 }
 
+/*
 void InitAI(Player *player, int num, int x, int y)
 {
     player->status.state = ALIVE;
@@ -241,6 +255,7 @@ void InitAI(Player *player, int num, int x, int y)
 
     player->num = num;
 }
+*/
 
 inline static void bomberman_update(void)
 {
@@ -333,7 +348,7 @@ inline static void bomberman_interrupt(void)
     //chip8_update_display();
     //chip8_keyboard();
     tick++;
-    runtime = tick * HZ / 30;
+    runtime = tick * HZ / 20;
     timer = starttimer + runtime;
     current_tick = get_tick();
 
@@ -346,13 +361,13 @@ inline static void bomberman_interrupt(void)
 int main(void)
 {
     InitGame(&game);
-    InitPlayer(&game.players[0], 0, 1, 1);
-    InitAI(&game.players[1], 1, 1, MAP_H - 3);
-    InitAI(&game.players[2], 2, MAP_W - 3, 1);
-    InitAI(&game.players[3], 3, MAP_W - 3, MAP_H - 2);
+    InitPlayer(&game.players[0], 0, 1, 1, false);
+    InitPlayer(&game.players[1], 1, 1, MAP_H - 3, true);
+    InitPlayer(&game.players[2], 2, MAP_W - 3, 1, true);
+    InitPlayer(&game.players[3], 3, MAP_W - 3, MAP_H - 2, true);
 
-    game.players[1].status.state = DEAD;
-    game.players[2].status.state = DEAD;
+    //game.players[1].status.state = DEAD;
+    //game.players[2].status.state = DEAD;
 
     rb->srand(get_tick());
     starttimer = get_tick();
