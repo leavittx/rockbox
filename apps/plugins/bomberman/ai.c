@@ -29,7 +29,7 @@
 #define PATH_OFFSET 1
 #define MOVE_COST 10
 
-#define PATH_CACHE_UPD_TIME 20
+#define PATH_CACHE_UPD_TIME 5
 
 typedef struct {
     bool IsWalkable;
@@ -50,6 +50,7 @@ typedef struct {
 
 typedef struct {
     int ClosestPlayer;
+    bool BeDead;
     bool Danger;
     PATHELEM SafetyPlace;
     int Bombs;
@@ -233,7 +234,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
     return 1;
 }
 
-inline static void CopyPaths(PATH *Dst, PATH *Src)
+/*inline static void CopyPaths(PATH *Dst, PATH *Src)
 {
     int i;
 
@@ -244,7 +245,7 @@ inline static void CopyPaths(PATH *Dst, PATH *Src)
         Dst->Path[(Src->Distance - 1) - i].X = Src->Path[i].X;
         Dst->Path[(Src->Distance - 1) - i].Y = Src->Path[i].Y;
     }
-}
+}*/
 
 #ifdef __DEBUG
 void LogPath(PATH *P)
@@ -499,7 +500,7 @@ inline static bool IsABox(Game *G, PATHELEM *P)
 
 inline static void MovePlayer(Game *G, Player *P, PATH *Path)
 {
-    if (Path->Distance > 1)
+   /* if (Path->Distance > 1)
     {
 	if (P->xpos < Path->Path[PATH_OFFSET].X)
 	    PlayerMoveRight(G, P);
@@ -509,7 +510,18 @@ inline static void MovePlayer(Game *G, Player *P, PATH *Path)
 	    PlayerMoveDown(G, P);
 	else if (P->ypos > Path->Path[PATH_OFFSET].Y) 
 	    PlayerMoveUp(G, P);  
-    }
+    }*/
+  if (Path->Distance > 1)
+  {
+    if (P->xpos < Path->Path[Path->Distance - 1 - PATH_OFFSET].X)
+        PlayerMoveRight(G, P);
+    else if (P->xpos > Path->Path[Path->Distance - 1 - PATH_OFFSET].X)
+        PlayerMoveLeft(G, P);
+    else if (P->ypos < Path->Path[Path->Distance - 1 - PATH_OFFSET].Y)
+        PlayerMoveDown(G, P);
+    else if (P->ypos > Path->Path[Path->Distance - 1 - PATH_OFFSET].Y)
+        PlayerMoveUp(G, P);
+}
 }
 
 inline static int CheckFire(Game *G, int x, int y)
@@ -521,19 +533,21 @@ void UpdateAI(Game *G, Player *Players)
 {
     int i, j;
     bool isDanger;
-    PATH Path, CurPath;
+    PATH Path;//, CurPath;
     int MinDist = UNREAL_F;
 
     for (i = 0; i < MAX_PLAYERS; i++)
     {
-        if (Players[i].isAI && !Players[i].ismove && Players[i].status.state == ALIVE)
+        if (Players[i].isAI &&
+            !Players[i].ismove &&
+            Players[i].status.state == ALIVE && AI[i].BeDead == false)
         {
-            if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
+            /*if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
             {
                 MovePlayer(G, &Players[i], &AI[i].PathCache);
                 //rb->splash(HZ/20, "USE CACHE!");
                 return;
-            }
+            }*/
 
             isDanger = false;
             MinDist = UNREAL_F;
@@ -548,14 +562,14 @@ void UpdateAI(Game *G, Player *Players)
                 {
                     if (j == i || Players[j].status.state > ALIVE)
                         continue;
-
+                  if (get_tick() - AI[i].PathCacheUpdTime >= PATH_CACHE_UPD_TIME)
                     FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
                                        Players[j].xpos, Players[j].ypos, true);
 
                     if (Path.Distance < MinDist)
                     {
                         MinDist = Path.Distance;
-                        CopyPaths(&CurPath, &Path);
+                        //CopyPaths(&CurPath, &Path);
                         AI[i].ClosestPlayer = j;
                     }
                 }
@@ -565,24 +579,27 @@ void UpdateAI(Game *G, Player *Players)
                 if (FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
                     AI[i].Danger = true;
                 else
+                {
+                  AI[i].BeDead = true;
                   continue;
+                }
             }
 
             if (AI[i].Danger)
             {
                 if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
-                    FindSafetyPlace(G, &AI[i], &Path, &Players[i]);
+                    if(FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
 
-                if (FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
-                             AI[i].SafetyPlace.X, AI[i].SafetyPlace.Y, false))
+                /*if (FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
+                             AI[i].SafetyPlace.X, AI[i].SafetyPlace.Y, false))*/
                 {
-                    CopyPaths(&CurPath, &Path);
+                   // CopyPaths(&CurPath, &Path);
 
                     //if (!CheckFire(G, CurPath.Path[PATH_OFFSET].X, CurPath.Path[PATH_OFFSET].Y))
-                    MovePlayer(G, &Players[i], &CurPath);
+                    MovePlayer(G, &Players[i], &Path);
 
                     // create path cache
-                    rb->memcpy(&AI[i].PathCache, &CurPath, sizeof(PATH));
+                    //rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
                     AI[i].PathCacheUpdTime = get_tick();
                 }
             }
@@ -593,19 +610,21 @@ void UpdateAI(Game *G, Player *Players)
             }
             else
             {
-                if (!CheckFire(G, CurPath.Path[PATH_OFFSET].X, CurPath.Path[PATH_OFFSET].Y)
+                if (!CheckFire(G, Path.Path[Path.Distance - 1 - PATH_OFFSET].X,
+                                  Path.Path[Path.Distance - 1 - PATH_OFFSET].Y)
                         && !Players[i].bombs_placed)
                 {
-                    if (IsABox(G, &CurPath.Path[PATH_OFFSET]) && AI[i].Danger == false)
+                    if (IsABox(G, &Path.Path[Path.Distance - 1 - PATH_OFFSET])
+                        && AI[i].Danger == false)
                     {
                         PlayerPlaceBomb(G, &Players[i]);
                     }
                     else
                     {
-                        MovePlayer(G, &Players[i], &CurPath);
+                        MovePlayer(G, &Players[i], &Path);
 
                         // create path cache
-                        rb->memcpy(&AI[i].PathCache, &CurPath, sizeof(PATH));
+                       // rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
                         AI[i].PathCacheUpdTime = get_tick();
                     }
                 }
