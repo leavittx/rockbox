@@ -29,7 +29,7 @@
 #define PATH_OFFSET 1
 #define MOVE_COST 10
 
-#define PATH_CACHE_UPD_TIME 5
+#define PATH_CACHE_UPD_TIME 0
 
 typedef struct {
     bool IsWalkable;
@@ -60,10 +60,12 @@ typedef struct {
 
 static NODE Nodes[MAP_W][MAP_H];
 static AiVars AI[MAX_PLAYERS];
+static int FoundDangerBombs(Game *G, int x, int y);
 
 inline static bool GetNode(Field *field, int x, int y, bool UseBoxes)
 {
-    return (field->map[x][y] == SQUARE_FREE || (UseBoxes && field->map[x][y] == SQUARE_BOX));
+    return (field->map[x][y] == SQUARE_FREE ||
+            (UseBoxes && field->map[x][y] == SQUARE_BOX));
 }
 
 static void InitNodes(Field *F, bool UseBoxes)
@@ -73,7 +75,7 @@ static void InitNodes(Field *F, bool UseBoxes)
     for (x = 0; x < MAP_W; x++)
         for (y = 0; y < MAP_H; y++)
         {
-	    Nodes[x][y].IsWalkable = GetNode(F, x, y, UseBoxes);
+            Nodes[x][y].IsWalkable = GetNode(F, x, y, UseBoxes);
 	    Nodes[x][y].IsOnOpen = false;
 	    Nodes[x][y].IsOnClose = false;
 	    Nodes[x][y].G = 0;
@@ -116,7 +118,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
     {
 	count++;
 	
-	if (count > 100)
+        if (count > 50)
 	{
 #ifdef __DEBUG
             rb->memset(logStr, 0, 100);
@@ -223,7 +225,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
 #endif /* #ifdef __DEBUG */
 	
 	Path->Distance++;
-	if (Path->Distance > 100)
+        if (Path->Distance > 50)
             return 0;
     }
 
@@ -521,7 +523,9 @@ inline static void MovePlayer(Game *G, Player *P, PATH *Path)
         PlayerMoveDown(G, P);
     else if (P->ypos > Path->Path[Path->Distance - 1 - PATH_OFFSET].Y)
         PlayerMoveUp(G, P);
+    //Path->Distance--;
 }
+
 }
 
 inline static int CheckFire(Game *G, int x, int y)
@@ -540,7 +544,7 @@ void UpdateAI(Game *G, Player *Players)
     {
         if (Players[i].isAI &&
             !Players[i].ismove &&
-            Players[i].status.state == ALIVE && AI[i].BeDead == false)
+            Players[i].status.state == ALIVE)
         {
             /*if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
             {
@@ -552,10 +556,11 @@ void UpdateAI(Game *G, Player *Players)
             isDanger = false;
             MinDist = UNREAL_F;
 
-            if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
+            if (AI[i].BeDead == false &&
+                FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
                 isDanger = true;
 
-            if (!isDanger)
+            if (AI[i].BeDead == false && !isDanger)
             {
                 AI[i].Danger = false;
                 for (j = 0; j < MAX_PLAYERS; j++)
@@ -577,7 +582,10 @@ void UpdateAI(Game *G, Player *Players)
             else /* Danger */
             {
                 if (FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
+                {
                     AI[i].Danger = true;
+                    AI[i].BeDead = false;
+                }
                 else
                 {
                   AI[i].BeDead = true;
@@ -587,7 +595,7 @@ void UpdateAI(Game *G, Player *Players)
 
             if (AI[i].Danger)
             {
-                if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
+                if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos))
                     if(FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
 
                 /*if (FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
@@ -603,7 +611,8 @@ void UpdateAI(Game *G, Player *Players)
                     AI[i].PathCacheUpdTime = get_tick();
                 }
             }
-            else if (IsPlayerNearPlayer(G, &Players[i], &Players[AI[i].ClosestPlayer])
+            else if (IsPlayerNearPlayer(G, &Players[i],
+                                        &Players[AI[i].ClosestPlayer])
                       && AI[i].Danger == false)
             {
                 PlayerPlaceBomb(G, &Players[i]);
@@ -612,7 +621,7 @@ void UpdateAI(Game *G, Player *Players)
             {
                 if (!CheckFire(G, Path.Path[Path.Distance - 1 - PATH_OFFSET].X,
                                   Path.Path[Path.Distance - 1 - PATH_OFFSET].Y)
-                        && !Players[i].bombs_placed)
+                        /*&& !Players[i].bombs_placed*/)
                 {
                     if (IsABox(G, &Path.Path[Path.Distance - 1 - PATH_OFFSET])
                         && AI[i].Danger == false)
