@@ -25,11 +25,16 @@
 
 #include "game.h"
 
+#define USE_PATH_CACHE 0
+
+#define MAX_PATH_LEN 50
 #define UNREAL_F 999
-#define PATH_OFFSET 1
+#define PATH_OFFSET 2
 #define MOVE_COST 10
 
-#define PATH_CACHE_UPD_TIME 0
+#if USE_PATH_CACHE
+#define PATH_CACHE_UPD_TIME 20
+#endif /* USE_PATH_CACHE */
 
 typedef struct {
     bool IsWalkable;
@@ -50,22 +55,22 @@ typedef struct {
 
 typedef struct {
     int ClosestPlayer;
-    bool BeDead;
     bool Danger;
     PATHELEM SafetyPlace;
     int Bombs;
+
+#if USE_PATH_CACHE
     PATH PathCache;
     unsigned int PathCacheUpdTime;
+#endif /* USE_PATH_CACHE */
 } AiVars;
 
 static NODE Nodes[MAP_W][MAP_H];
 static AiVars AI[MAX_PLAYERS];
-static int FoundDangerBombs(Game *G, int x, int y);
 
 inline static bool GetNode(Field *field, int x, int y, bool UseBoxes)
 {
-    return (field->map[x][y] == SQUARE_FREE ||
-            (UseBoxes && field->map[x][y] == SQUARE_BOX));
+    return (field->map[x][y] == SQUARE_FREE || (UseBoxes && field->map[x][y] == SQUARE_BOX));
 }
 
 static void InitNodes(Field *F, bool UseBoxes)
@@ -75,7 +80,7 @@ static void InitNodes(Field *F, bool UseBoxes)
     for (x = 0; x < MAP_W; x++)
         for (y = 0; y < MAP_H; y++)
         {
-            Nodes[x][y].IsWalkable = GetNode(F, x, y, UseBoxes);
+	    Nodes[x][y].IsWalkable = GetNode(F, x, y, UseBoxes);
 	    Nodes[x][y].IsOnOpen = false;
 	    Nodes[x][y].IsOnClose = false;
 	    Nodes[x][y].G = 0;
@@ -118,7 +123,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
     {
 	count++;
 	
-        if (count > 50)
+        if (count > MAX_PATH_LEN)
 	{
 #ifdef __DEBUG
             rb->memset(logStr, 0, 100);
@@ -225,7 +230,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
 #endif /* #ifdef __DEBUG */
 	
 	Path->Distance++;
-        if (Path->Distance > 50)
+        if (Path->Distance > MAX_PATH_LEN)
             return 0;
     }
 
@@ -235,19 +240,6 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
 
     return 1;
 }
-
-/*inline static void CopyPaths(PATH *Dst, PATH *Src)
-{
-    int i;
-
-    Dst->Distance = Src->Distance;
-
-    for (i = Src->Distance - 1; i >= 0; i--)
-    {
-        Dst->Path[(Src->Distance - 1) - i].X = Src->Path[i].X;
-        Dst->Path[(Src->Distance - 1) - i].Y = Src->Path[i].Y;
-    }
-}*/
 
 #ifdef __DEBUG
 void LogPath(PATH *P)
@@ -274,74 +266,6 @@ void LogPath(PATH *P)
     rb->close(file);
 }
 #endif /* #ifdef __DEBUG */
-
-/*
-int CheckIfThereAnyWall(Game *G, Player *P)
-{
-  int i, j;
-  int ProtectWalls = 0;
-  
-  for (i = 0; i < MAX_BOMBS; i++)
-  {
-    ProtectWalls = 0;
-    if (G->field.bombs[i] >= BOMB_PLACED)
-    {
-      if (G->field.bombs[i].ypos == P->ypos)
-      {
-       if (G->field.bombs[i].xpos < P->xpos)
-       {
-         for (j = G->field.bombs[i].xpos; j < P->xpos; j++)
-    if (G->field.map[j][P->ypos] == SQUARE_BLOCK
-     || G->field.map[j][P->ypos] == SQUARE_BOX)
-     {
-       ProtectWalls++;
-       break;
-     }
-       }
-       else
-       {
-         for (j = P->xpos; j < G->field.bombs[i].xpos; j++)
-    if (G->field.map[j][P->ypos] == SQUARE_BLOCK
-     || G->field.map[j][P->ypos] == SQUARE_BOX)
-     {
-       ProtectWalls++;
-       break;
-     }
-       }
-     }
-     
-     if (G->field.bombs[i].xpos == P->xpos)
-     {
-       if (G->field.bombs[i].ypos < P->ypos)
-       {
-         for (j = G->field.bombs[i].ypos; j < P->ypos; j++)
-    if (G->field.map[P->xpos][j] == SQUARE_BLOCK
-     || G->field.map[P->xpos][j] == SQUARE_BOX)
-     {
-       ProtectWalls++;
-       break;
-     }
-       }
-       else
-       {
-         for (j = P->ypos; j < G->field.bombs[i].ypos; j++)
-    if (G->field.map[P->xpos][j] == SQUARE_BLOCK
-     || G->field.map[P->xpos][j] == SQUARE_BOX)
-     {
-       ProtectWalls++;
-       break;
-     }
-       }
-     }
-     
-     if (ProtectWalls >= 1)
-       continue;
-     return 0;
-    }
-  }
-  return 1;
-}
-*/
 
 static int FoundDangerBombs(Game *G, int x, int y)
 {
@@ -502,30 +426,17 @@ inline static bool IsABox(Game *G, PATHELEM *P)
 
 inline static void MovePlayer(Game *G, Player *P, PATH *Path)
 {
-   /* if (Path->Distance > 1)
+    if (Path->Distance > 1)
     {
-	if (P->xpos < Path->Path[PATH_OFFSET].X)
+        if (P->xpos < Path->Path[Path->Distance - PATH_OFFSET].X)
 	    PlayerMoveRight(G, P);
-	else if (P->xpos > Path->Path[PATH_OFFSET].X)
+        else if (P->xpos > Path->Path[Path->Distance - PATH_OFFSET].X)
 	    PlayerMoveLeft(G, P);
-	else if (P->ypos < Path->Path[PATH_OFFSET].Y)
+        else if (P->ypos < Path->Path[Path->Distance - PATH_OFFSET].Y)
 	    PlayerMoveDown(G, P);
-	else if (P->ypos > Path->Path[PATH_OFFSET].Y) 
+        else if (P->ypos > Path->Path[Path->Distance - PATH_OFFSET].Y)
 	    PlayerMoveUp(G, P);  
-    }*/
-  if (Path->Distance > 1)
-  {
-    if (P->xpos < Path->Path[Path->Distance - 1 - PATH_OFFSET].X)
-        PlayerMoveRight(G, P);
-    else if (P->xpos > Path->Path[Path->Distance - 1 - PATH_OFFSET].X)
-        PlayerMoveLeft(G, P);
-    else if (P->ypos < Path->Path[Path->Distance - 1 - PATH_OFFSET].Y)
-        PlayerMoveDown(G, P);
-    else if (P->ypos > Path->Path[Path->Distance - 1 - PATH_OFFSET].Y)
-        PlayerMoveUp(G, P);
-    //Path->Distance--;
-}
-
+    }
 }
 
 inline static int CheckFire(Game *G, int x, int y)
@@ -537,44 +448,43 @@ void UpdateAI(Game *G, Player *Players)
 {
     int i, j;
     bool isDanger;
-    PATH Path;//, CurPath;
+    PATH Path, PathToClosestPlayer;
     int MinDist = UNREAL_F;
 
     for (i = 0; i < MAX_PLAYERS; i++)
     {
-        if (Players[i].isAI &&
-            !Players[i].ismove &&
-            Players[i].status.state == ALIVE)
+        if (Players[i].isAI && !Players[i].ismove && Players[i].status.state == ALIVE)
         {
-            /*if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
+#if USE_PATH_CACHE
+            if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
             {
                 MovePlayer(G, &Players[i], &AI[i].PathCache);
                 //rb->splash(HZ/20, "USE CACHE!");
                 return;
-            }*/
+            }
+#endif /* USE_PATH_CACHE */
 
             isDanger = false;
             MinDist = UNREAL_F;
 
-            if (/*AI[i].BeDead == false &&*/
-                FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
+            if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
                 isDanger = true;
 
-            if (/*AI[i].BeDead == false && */!isDanger)
+            if (!isDanger)
             {
                 AI[i].Danger = false;
                 for (j = 0; j < MAX_PLAYERS; j++)
                 {
                     if (j == i || Players[j].status.state > ALIVE)
                         continue;
-                  //if (get_tick() - AI[i].PathCacheUpdTime >= PATH_CACHE_UPD_TIME)
+
                     FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
                                        Players[j].xpos, Players[j].ypos, true);
 
                     if (Path.Distance < MinDist)
                     {
                         MinDist = Path.Distance;
-                        //CopyPaths(&CurPath, &Path);
+                        memcpy(&PathToClosestPlayer, &Path, sizeof(PATH));
                         AI[i].ClosestPlayer = j;
                     }
                 }
@@ -582,59 +492,52 @@ void UpdateAI(Game *G, Player *Players)
             else /* Danger */
             {
                 if (FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
-                {
                     AI[i].Danger = true;
-                    //AI[i].BeDead = false;
-                }
                 else
-                {
-                 // AI[i].BeDead = true;
                   continue;
-                }
             }
 
             if (AI[i].Danger)
             {
-                if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos))
+                if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
                     FindSafetyPlace(G, &AI[i], &Path, &Players[i]);
 
                 if (FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
                              AI[i].SafetyPlace.X, AI[i].SafetyPlace.Y, false))
                 {
-                   // CopyPaths(&CurPath, &Path);
-
-                    //if (!CheckFire(G, CurPath.Path[PATH_OFFSET].X, CurPath.Path[PATH_OFFSET].Y))
                     MovePlayer(G, &Players[i], &Path);
 
+#if USE_PATH_CACHE
                     // create path cache
-                    //rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
+                    rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
                     AI[i].PathCacheUpdTime = get_tick();
+#endif /* USE_PATH_CACHE */
                 }
             }
-            else if (IsPlayerNearPlayer(G, &Players[i],
-                                        &Players[AI[i].ClosestPlayer])
+            else if (IsPlayerNearPlayer(G, &Players[i], &Players[AI[i].ClosestPlayer])
                       && AI[i].Danger == false)
             {
                 PlayerPlaceBomb(G, &Players[i]);
             }
             else
             {
-                if (!CheckFire(G, Path.Path[Path.Distance - 1 - PATH_OFFSET].X,
-                                  Path.Path[Path.Distance - 1 - PATH_OFFSET].Y)
+                if (!CheckFire(G, Path.Path[Path.Distance - PATH_OFFSET].X,
+                                  Path.Path[Path.Distance - PATH_OFFSET].Y)
                         && !Players[i].bombs_placed)
                 {
-                    if (IsABox(G, &Path.Path[Path.Distance - 1 - PATH_OFFSET])
-                        && AI[i].Danger == false)
+                    if (IsABox(G, &Path.Path[Path.Distance - PATH_OFFSET]) && AI[i].Danger == false)
                     {
                         PlayerPlaceBomb(G, &Players[i]);
                     }
                     else
                     {
-                        MovePlayer(G, &Players[i], &Path);
+                        MovePlayer(G, &Players[i], &PathToClosestPlayer);
 
+#if USE_PATH_CACHE
                         // create path cache
-                       // rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
+                        rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
                         AI[i].PathCacheUpdTime = get_tick();
+#endif /* USE_PATH_CACHE */
                     }
                 }
             }
