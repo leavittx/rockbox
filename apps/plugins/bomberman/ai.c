@@ -514,8 +514,7 @@ void UpdateAI(Game *G, Player *Players)
 #endif /* USE_PATH_CACHE */
                 }
             }
-            else if (IsPlayerNearPlayer(G, &Players[i], &Players[AI[i].ClosestPlayer])
-                      && AI[i].Danger == false)
+            else if (IsPlayerNearPlayer(G, &Players[i], &Players[AI[i].ClosestPlayer]))
             {
                 PlayerPlaceBomb(G, &Players[i]);
             }
