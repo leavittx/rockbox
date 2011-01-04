@@ -556,18 +556,18 @@ void UpdateAI(Game *G, Player *Players)
             isDanger = false;
             MinDist = UNREAL_F;
 
-            if (AI[i].BeDead == false &&
+            if (/*AI[i].BeDead == false &&*/
                 FoundDangerBombs(G, Players[i].xpos, Players[i].ypos) == 1)
                 isDanger = true;
 
-            if (AI[i].BeDead == false && !isDanger)
+            if (/*AI[i].BeDead == false && */!isDanger)
             {
                 AI[i].Danger = false;
                 for (j = 0; j < MAX_PLAYERS; j++)
                 {
                     if (j == i || Players[j].status.state > ALIVE)
                         continue;
-                  if (get_tick() - AI[i].PathCacheUpdTime >= PATH_CACHE_UPD_TIME)
+                  //if (get_tick() - AI[i].PathCacheUpdTime >= PATH_CACHE_UPD_TIME)
                     FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
                                        Players[j].xpos, Players[j].ypos, true);
 
@@ -584,11 +584,11 @@ void UpdateAI(Game *G, Player *Players)
                 if (FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
                 {
                     AI[i].Danger = true;
-                    AI[i].BeDead = false;
+                    //AI[i].BeDead = false;
                 }
                 else
                 {
-                  AI[i].BeDead = true;
+                 // AI[i].BeDead = true;
                   continue;
                 }
             }
@@ -596,10 +596,10 @@ void UpdateAI(Game *G, Player *Players)
             if (AI[i].Danger)
             {
                 if (FoundDangerBombs(G, Players[i].xpos, Players[i].ypos))
-                    if(FindSafetyPlace(G, &AI[i], &Path, &Players[i]))
+                    FindSafetyPlace(G, &AI[i], &Path, &Players[i]);
 
-                /*if (FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
-                             AI[i].SafetyPlace.X, AI[i].SafetyPlace.Y, false))*/
+                if (FindPath(G, &Path, Players[i].xpos, Players[i].ypos,
+                             AI[i].SafetyPlace.X, AI[i].SafetyPlace.Y, false))
                 {
                    // CopyPaths(&CurPath, &Path);
 
@@ -621,7 +621,7 @@ void UpdateAI(Game *G, Player *Players)
             {
                 if (!CheckFire(G, Path.Path[Path.Distance - 1 - PATH_OFFSET].X,
                                   Path.Path[Path.Distance - 1 - PATH_OFFSET].Y)
-                        /*&& !Players[i].bombs_placed*/)
+                        && !Players[i].bombs_placed)
                 {
                     if (IsABox(G, &Path.Path[Path.Distance - 1 - PATH_OFFSET])
                         && AI[i].Danger == false)
