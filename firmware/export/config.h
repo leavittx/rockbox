@@ -24,8 +24,9 @@
 
 #include "autoconf.h"
 
-#if !(__INCLUDE_CONFIG)
-#include "config/cowond2.h"
+// by Lev
+#ifndef COWON_D2
+#define COWON_D2
 #endif
 
 /* symbolic names for multiple choice configurations: */
