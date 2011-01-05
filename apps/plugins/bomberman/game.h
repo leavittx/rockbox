@@ -27,11 +27,11 @@
 #define MAP_W 17
 #define MAP_H 11
 
-#define MAX_PLAYERS 4
+#define MAX_PLAYERS 7
 
-#define MAX_BOMBS 10
+#define MAX_BOMBS 5
 
-#define CYCLETIME 40
+#define CYCLETIME 50
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)

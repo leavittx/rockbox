@@ -107,8 +107,7 @@ void InitGame(Game *game)
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
     };*/
     //now listening to me with hands 'i will (no man's land) (radiohead cover)'
-    /*
-    int DefaultMap[MAP_H][MAP_W] = {
+    /*int DefaultMap[MAP_H][MAP_W] = {
             {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
             {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
             {2,0,2,1,2,1,2,1,2,1,2,1,2,1,2,0,2},
@@ -232,31 +231,6 @@ void InitPlayer(Player *player, int num, int x, int y, bool isAI)
     player->num = num;
 }
 
-/*
-void InitAI(Player *player, int num, int x, int y)
-{
-    player->status.state = ALIVE;
-    player->status.health = 100;
-    player->xpos = x;
-    player->ypos = y;
-    player->look = LOOK_DOWN;
-    player->speed = 0;
-    player->bombs_max = 1;
-    player->bombs_placed = 0;
-    player->bomb_power = BOMB_PWR_SINGLE;
-    player->isFullPower = false;
-
-    player->rxpos = 0;
-    player->rypos = 0;
-    player->ismove = false;
-    player->move_phase = 0;
-
-    player->isAI = true;
-
-    player->num = num;
-}
-*/
-
 inline static void bomberman_update(void)
 {
     int i;
@@ -265,8 +239,6 @@ inline static void bomberman_update(void)
     {
         for (i = 0; i < MAX_PLAYERS; i++)
         {
-            //if (!(tick % game.players[i].speed))
-            //{
             int upd = UpdatePlayer(&game, &game.players[i]);
             if (upd == DEAD)
             {
@@ -275,13 +247,9 @@ inline static void bomberman_update(void)
                 {
                     for (i = 0; i < MAX_PLAYERS; i++)
                     {
-                        if (game.players[i].status.state == ALIVE)
-                        {
+                        if (game.players[i].status.state == ALIVE) {
                             game.players[i].status.state = WIN_PHASE1;
-                            //if (game.players[i].isAI)
-                            //	rb->splash(HZ * 5, "You lose");
-                            //else
-                            //	rb->splash(HZ * 5, "You won");
+                            break;
                         }
                     }
                 }
@@ -291,7 +259,6 @@ inline static void bomberman_update(void)
                 game.state = -upd;
                 tick = 0;
             }
-            //}
         }
     }
 
@@ -340,15 +307,14 @@ inline static void bomberman_keyboard(void)
     }
 }
 
+/*
 inline static void bomberman_interrupt(void)
 {
     unsigned long current_tick;
     unsigned long timer, runtime;
 
-    //chip8_update_display();
-    //chip8_keyboard();
     tick++;
-    runtime = tick * HZ / 20;
+    runtime = tick * HZ / 30;
     timer = starttimer + runtime;
     current_tick = get_tick();
 
@@ -357,6 +323,7 @@ inline static void bomberman_interrupt(void)
     else
         rb->yield();
 }
+*/
 
 int main(void)
 {
@@ -365,9 +332,9 @@ int main(void)
     InitPlayer(&game.players[1], 1, 1, MAP_H - 3, true);
     InitPlayer(&game.players[2], 2, MAP_W - 3, 1, true);
     InitPlayer(&game.players[3], 3, MAP_W - 3, MAP_H - 2, true);
-
-    //game.players[1].status.state = DEAD;
-    //game.players[2].status.state = DEAD;
+    InitPlayer(&game.players[4], 1, 3, MAP_H - 5, true);
+    InitPlayer(&game.players[5], 2, MAP_W - 6, 5, true);
+    InitPlayer(&game.players[6], 3, MAP_W - 5, MAP_H - 5, true);
 
     rb->srand(get_tick());
     starttimer = get_tick();
@@ -375,7 +342,7 @@ int main(void)
     /* Main loop */
     while (true)
     {
-        //end = get_tick() + (CYCLETIME * HZ) / 1000;
+        int end = get_tick() + HZ / CYCLETIME;
 
         Draw(&game);
 
@@ -385,16 +352,14 @@ int main(void)
         UpdateAI(&game, game.players);
         bomberman_keyboard();
 
-        bomberman_interrupt();
+        //bomberman_interrupt();
 
-        /*
         if (TIME_BEFORE(get_tick(), end))
             rb->sleep(end - get_tick());
         else
             rb->yield();
 
         tick++;
-        */
     }
 }
 
