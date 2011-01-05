@@ -24,11 +24,6 @@
 
 #include "autoconf.h"
 
-// by Lev
-#ifndef COWON_D2
-#define COWON_D2
-#endif
-
 /* symbolic names for multiple choice configurations: */
 
 /* CONFIG_STORAGE (note these are combineable bit-flags) */
