@@ -195,10 +195,10 @@ typedef struct {
 
 typedef enum {
 	BONUS_EXTRABOMB, // extra bomb
-	BONUS_POWER, // increase bomb explosion radius
-	BONUS_SPEEDUP, // increase player speed
+	BONUS_POWER,     // increase bomb explosion radius
+	BONUS_SPEEDUP,   // increase player speed
 	BONUS_FULLPOWER, // destroy all destroyable objects in radius
-	BONUS_NONE // no bonus
+	BONUS_NONE       // no bonus
 } BonusType;
 
 typedef struct {

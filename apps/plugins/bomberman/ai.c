@@ -26,15 +26,14 @@
 #include "game.h"
 
 #define USE_PATH_CACHE 0
+#if USE_PATH_CACHE
+#define PATH_CACHE_UPD_TIME 50
+#endif /* USE_PATH_CACHE */
 
 #define MAX_PATH_LEN 50
 #define UNREAL_F 999
 #define PATH_OFFSET 2
 #define MOVE_COST 10
-
-#if USE_PATH_CACHE
-#define PATH_CACHE_UPD_TIME 20
-#endif /* USE_PATH_CACHE */
 
 typedef struct {
     bool IsWalkable;
@@ -459,6 +458,8 @@ void UpdateAI(Game *G, Player *Players)
             if (get_tick() - AI[i].PathCacheUpdTime < PATH_CACHE_UPD_TIME)
             {
                 MovePlayer(G, &Players[i], &AI[i].PathCache);
+                if (AI[i].PathCache.Distance > PATH_OFFSET)
+                    AI[i].PathCache.Distance--;
                 //rb->splash(HZ/20, "USE CACHE!");
                 return;
             }
@@ -510,6 +511,8 @@ void UpdateAI(Game *G, Player *Players)
 #if USE_PATH_CACHE
                     // create path cache
                     rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
+                    if (AI[i].PathCache.Distance > PATH_OFFSET)
+                        AI[i].PathCache.Distance--;
                     AI[i].PathCacheUpdTime = get_tick();
 #endif /* USE_PATH_CACHE */
                 }
@@ -534,7 +537,9 @@ void UpdateAI(Game *G, Player *Players)
 
 #if USE_PATH_CACHE
                         // create path cache
-                        rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
+                        rb->memcpy(&AI[i].PathCache, &PathToClosestPlayer, sizeof(PATH));
+                        if (AI[i].PathCache.Distance > PATH_OFFSET)
+                            AI[i].PathCache.Distance--;
                         AI[i].PathCacheUpdTime = get_tick();
 #endif /* USE_PATH_CACHE */
                     }

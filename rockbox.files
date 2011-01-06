@@ -1559,7 +1559,6 @@ apps/plugins/goban.c
 apps/plugins/greyscale.c
 apps/plugins/helloworld.c
 apps/plugins/imageviewer/bmp/bmp.c
-apps/plugins/imageviewer/bmp/bmp_ui.c
 apps/plugins/imageviewer/imageviewer.c
 apps/plugins/imageviewer/imageviewer.h
 apps/plugins/imageviewer/jpeg/jpeg.c
@@ -5769,3 +5768,7 @@ wps/UniCatcher/volume.bmp
 wps/zezayer/RockBoxWPSd.bmp
 apps/plugins/lib/pdbox-func.h
 todo.txt
+apps/plugins/imageviewer/imageviewer.h
+apps/plugins/imageviewer/image_decoder.h
+apps/plugins/imageviewer/imageviewer.c
+apps/plugins/imageviewer/image_decoder.c

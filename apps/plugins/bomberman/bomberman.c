@@ -319,9 +319,6 @@ static int bomberman_menu(void)
                 InitPlayer(&game.players[1], 1, 1, MAP_H - 3, true);
                 InitPlayer(&game.players[2], 2, MAP_W - 3, 1, true);
                 InitPlayer(&game.players[3], 3, MAP_W - 3, MAP_H - 2, true);
-                //InitPlayer(&game.players[4], 1, 3, MAP_H - 5, true);
-                //InitPlayer(&game.players[5], 2, MAP_W - 6, 5, true);
-                //InitPlayer(&game.players[6], 3, MAP_W - 5, MAP_H - 5, true);
                 return 0;
             case 2: // Help
                 if (bomberman_help())
@@ -350,44 +347,6 @@ static int bomberman_menu(void)
     }
 }
 
-inline static void bomberman_update(void)
-{
-    int i;
-
-    if (game.state == GAME_GAME)
-    {
-        for (i = 0; i < MAX_PLAYERS; i++)
-        {
-            int upd = UpdatePlayer(&game, &game.players[i]);
-            if (upd == DEAD)
-            {
-                game.nplayers--;
-                if (game.nplayers == 1 || !game.players[i].isAI)
-                {
-                    for (i = 0; i < MAX_PLAYERS; i++)
-                    {
-                        if (game.players[i].status.state == ALIVE) {
-                            game.players[i].status.state = WIN_PHASE1;
-                            break;
-                        }
-                    }
-                }
-            }
-            else if (upd == -GAME_GAMEOVER || upd == -GAME_WON)
-            {
-                game.state = -upd;
-                tick = 0;
-            }
-        }
-    }
-
-    if (game.state == GAME_GAMEOVER || game.state == GAME_WON)
-    {
-        if (tick >= AFTERGAME_DUR)
-            exit(PLUGIN_OK);
-    }
-}
-
 static int bomberman_game_loop(void)
 {
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
@@ -411,13 +370,11 @@ static int bomberman_game_loop(void)
 
         Draw(&game);
 
-        bomberman_update();
         UpdateBombs(&game);
         UpdateBoxes(&game);
         UpdateAI(&game, game.players);
 
         int action = pluginlib_getaction(TIMEOUT_NOBLOCK, plugin_contexts, NB_ACTION_CONTEXTS);
-
         switch (action)
         {
             case PLA_CANCEL:
@@ -454,6 +411,37 @@ static int bomberman_game_loop(void)
                     return 1;
                 break;
         }
+
+        if (game.state == GAME_GAME)
+        {
+            for (int i = 0; i < MAX_PLAYERS; i++)
+            {
+                int upd = UpdatePlayer(&game, &game.players[i]);
+                if (upd == DEAD)
+                {
+                    game.nplayers--;
+                    if (game.nplayers == 1 || !game.players[i].isAI)
+                    {
+                        for (int i = 0; i < MAX_PLAYERS; i++)
+                        {
+                            if (game.players[i].status.state == ALIVE) {
+                                game.players[i].status.state = WIN_PHASE1;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else if (upd == -GAME_GAMEOVER || upd == -GAME_WON)
+                {
+                    game.state = -upd;
+                    tick = 0;
+                }
+            }
+        }
+
+        if (game.state == GAME_GAMEOVER || game.state == GAME_WON)
+            if (tick >= AFTERGAME_DUR)
+                return 0;
 
         rb->yield();
 
