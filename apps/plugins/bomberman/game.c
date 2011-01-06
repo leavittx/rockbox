@@ -345,7 +345,6 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir, bool is
                 (game->players[i].status.state == ALIVE ||
                  game->players[i].status.state == GONNA_DIE))
         {
-            game->players[i].status.health = 0;
             game->players[i].status.state = EXPL_PHASE1;
             game->players[i].status.time_of_death = tick;
         }
@@ -408,7 +407,6 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir, bool is
                         (game->players[i].status.state == ALIVE ||
                          game->players[i].status.state == GONNA_DIE))
                 {
-                    game->players[i].status.health = 0;
                     game->players[i].status.state = EXPL_PHASE1;
                     game->players[i].status.time_of_death = tick;
                 }

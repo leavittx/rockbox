@@ -24,14 +24,20 @@
 #ifndef _GAME_H
 #define _GAME_H
 
+/*
+ * Global game params
+ */
+
 #define MAP_W 17
 #define MAP_H 11
+#define MAX_PLAYERS 4
+#define MAX_BOMBS 10
 
-#define MAX_PLAYERS 7
+/*
+ * Animation params
+ */
 
-#define MAX_BOMBS 5
-
-#define CYCLETIME 50
+#define CYCLETIME 25
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
@@ -48,6 +54,17 @@
 #define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 5 / (CYCLETIME / 10))
 
 #define AFTERGAME_DUR (HZ * 3 / (CYCLETIME / 10))
+
+/*
+ * Two types of ticks
+ */
+
+#define get_tick() (*rb->current_tick)
+extern unsigned long tick;
+
+/*
+ * Enums and structs
+ */
 
 typedef enum {
 	SQUARE_FREE = 0,
@@ -85,7 +102,6 @@ typedef enum {
 
 typedef struct {
 	PlayerState state;
-	int health;
 	unsigned long time_of_death;
 } PlayerStatus;
 
@@ -197,8 +213,7 @@ typedef struct {
 typedef enum {
 	GAME_GAME = 0,
 	GAME_GAMEOVER,
-	GAME_WON,
-	GAME_GREETZ
+	GAME_WON
 } GameState;
 
 typedef struct {
@@ -209,20 +224,27 @@ typedef struct {
 	int nplayers;
 	int bomb_rad[5];
         int max_move_phase[3];
+        int score;
+        int level;
 } Game;
+
+/*
+ * Player control functions
+ */
 
 void PlayerMoveUp(Game *game, Player *player);
 void PlayerMoveDown(Game *game, Player *player);
 void PlayerMoveRight(Game *game, Player *player);
 void PlayerMoveLeft(Game *game, Player *player);
-int  UpdatePlayer(Game *game, Player *player);
 void PlayerPlaceBomb(Game *game, Player *player);
+
+/*
+ * Game update functions
+ */
+
+int  UpdatePlayer(Game *game, Player *player);
 void UpdateBombs(Game *game);
 void UpdateBoxes(Game *game);
 void UpdateAftergame(Game *game);
-
-#define get_tick() (*rb->current_tick)
-
-extern unsigned long tick;
 
 #endif /* _GAME_H */
