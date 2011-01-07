@@ -76,6 +76,6 @@ pluginlib_touchscreen.c
 #endif
 
 #if defined(COWON_D2) || defined(IPOD_NANO) || defined(IPOD_VIDEO) \
-	|| defined(OLYMPUS_MROBE_500)
+    ||  defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5)
 pdbox-func.c
 #endif
