@@ -209,7 +209,7 @@ int UpdatePlayer(Game *game, Player *player)
         {
             if ((tick - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
             {
-                // control player speed
+                /* control player speed */
                 if (player->move_phase == game->max_move_phase[player->speed])
                 {
                     player->ismove = false;
@@ -266,7 +266,7 @@ int UpdatePlayer(Game *game, Player *player)
     }
     else if (player->status.state > GONNA_DIE && player->status.state < DEAD)
     {
-        // 2 -- ALIVE, GONNA_DIE
+        /* 2 -- ALIVE, GONNA_DIE */
         player->status.state =
                 (tick - player->status.time_of_death) / PLAYER_DELAY_DEATH_ANIM + 2;
 
@@ -338,7 +338,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir, bool is
     int j;
     int i;
 
-    /* Kill player in the center of explosion */
+    /* kill player in the center of explosion */
     for (i = 0; i < MAX_PLAYERS; i++)
     {
         if (game->players[i].xpos == x && game->players[i].ypos == y &&
@@ -400,7 +400,7 @@ static void FirePhaseEnd(Game *game, int x, int y, int rad, FireDir dir, bool is
                 break;
             }
 
-            // todo: figure out if we need detonate other bombs on this phase or not
+            /* todo: figure out if we need detonate other bombs on this phase or not */
             for (i = 0; i < MAX_PLAYERS; i++)
             {
                 if (game->players[i].xpos == curx && game->players[i].ypos == cury &&
@@ -474,7 +474,7 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 break;
             }
 
-            // Detonate other bombs
+            /* detonate other bombs */
             else if (game->field.map[curx][cury] == SQUARE_BOMB)
             {
                 for (i = 0; i < MAX_BOMBS; i++)
@@ -489,7 +489,7 @@ static void FirePhase4(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 }
             }
 
-            // Player gets killed by explosion
+            /* player gets killed by explosion */
             for (i = 0; i < MAX_PLAYERS; i++)
             {
                 if (game->players[i].xpos == curx && game->players[i].ypos == cury &&
@@ -561,7 +561,7 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 break;
             }
 
-            // Detonate other bombs
+            /* detonate other bombs */
             else if (game->field.map[curx][cury] == SQUARE_BOMB)
             {
                 for (i = 0; i < MAX_BOMBS; i++)
@@ -576,7 +576,7 @@ static void FirePhase3(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 }
             }
 
-            // Player gets killed by explosion
+            /* player gets killed by explosion */
             for (i = 0; i < MAX_PLAYERS; i++)
             {
                 if (game->players[i].xpos == curx && game->players[i].ypos == cury &&
@@ -648,7 +648,7 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 break;
             }
 
-            // Detonate other bombs
+            /* detonate other bombs */
             else if (game->field.map[curx][cury] == SQUARE_BOMB)
             {
                 for (i = 0; i < MAX_BOMBS; i++)
@@ -663,7 +663,7 @@ static void FirePhase2(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 }
             }
 
-            // Player gets killed by explosion
+            /* player gets killed by explosion */
             for (i = 0; i < MAX_PLAYERS; i++)
             {
                 if (game->players[i].xpos == curx && game->players[i].ypos == cury &&
@@ -689,7 +689,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
     int j;
     int i;
 
-    /* Kill player in the center of explosion */
+    /* kill player in the center of explosion */
     for (i = 0; i < MAX_PLAYERS; i++)
     {
         if (game->players[i].xpos == x && game->players[i].ypos == y &&
@@ -763,7 +763,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 break;
             }
 
-            // Detonate other bombs
+            /* detonate other bombs */
             else if (game->field.map[curx][cury] == SQUARE_BOMB)
             {
                 //rb->splash(HZ,"Found bomb");
@@ -775,7 +775,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                     {
                         game->field.bombs[i].place_time = tick - BOMB_DELAY_DET;
                         //rb->splash(HZ,"det");
-                        // todo: maybe remove it
+                        /* todo: maybe remove it */
                         //if (j > 1)
                         //	game->field.firemap[prevx][prevy].isend = true;
                         break;
@@ -783,7 +783,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
                 }
             }
 
-            // Player gets killed by explosion
+            /* player gets killed by explosion */
             for (i = 0; i < MAX_PLAYERS; i++)
             {
                 if (game->players[i].xpos == curx && game->players[i].ypos == cury &&
@@ -809,7 +809,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
 void UpdateBombs(Game *game)
 {
     int i;
-    static int detphases[4] = { 0, 1, 2, 1 }; // This helps with detonation animation
+    static int detphases[4] = { 0, 1, 2, 1 }; /* this helps with detonation animation */
 
     for (i = 0; i < MAX_BOMBS; i++)
     {
@@ -819,8 +819,8 @@ void UpdateBombs(Game *game)
         int x = game->field.bombs[i].xpos, y = game->field.bombs[i].ypos;
         int rad = game->bomb_rad[game->field.bombs[i].power];
 
-        // todo: check if it neccecary to compute this
-        /* Update detonation animation */
+        /* todo: check if it neccecary to compute this */
+        /* update detonation animation */
         game->field.det[x][y] = detphases[((tick - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
 
         if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)

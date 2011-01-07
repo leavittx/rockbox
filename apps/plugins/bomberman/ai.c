@@ -90,12 +90,13 @@ static void InitNodes(Field *F, bool UseBoxes)
 	}
 }
 
-static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int EndY, bool UseBoxes)
+static int FindPath(Game *G, PATH *Path, int StartX, int StartY,
+                                         int EndX, int EndY, bool UseBoxes)
 {
-    int x = 0, y = 0; // for running through the nodes
-    int dx, dy; // for the 8 (4) squares adjacent to each node
+    int x = 0, y = 0; /* for running through the nodes */
+    int dx, dy; /* for the 8 (4) squares adjacent to each node */
     int cx = StartX, cy = StartY;
-    int lowestf = UNREAL_F; // start with the lowest being the highest
+    int lowestf = UNREAL_F; /* start with the lowest being the highest */
     int count = 0;
 
 #ifdef __DEBUG
@@ -114,7 +115,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
 #endif /* #ifdef __DEBUG */
 
     InitNodes(&G->field, UseBoxes);
-    // add starting node to open list
+    /* add starting node to open list */
     Nodes[StartX][StartY].IsOnOpen = true;
     Nodes[StartX][StartY].IsOnClose = false;
 
@@ -133,7 +134,7 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
             return 0;
         }
 
-        // look for lowest F cost node on open list - this becomes the current node
+        /* look for lowest F cost node on open list - this becomes the current node */
 	lowestf = UNREAL_F;
 	for (x = 0; x < MAP_W; x++)
 	{
@@ -152,32 +153,32 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
             }
 	}
 	
-	// we found it, so now put that node on the closed list
+	/* we found it, so now put that node on the closed list */
 	Nodes[cx][cy].IsOnOpen = false;
 	Nodes[cx][cy].IsOnClose = true;
 	
-	// for each of the 8 (4) adjacent node
+	/* for each of the 8 (4) adjacent node */
 	for (dx = -1; dx <= 1; dx++)
 	{
             for (dy = -1; dy <= 1; dy++)
             {
-		// we don't use diagonals in bomberman
+		/* we don't want to walk by diagonals in bomberman */
 		if (dx != -dy && dx != dy)
 		{
                     if ((cx + dx) < MAP_W && (cx + dx) > -1 &&
                         (cy + dy) < MAP_H && (cy + dy) > -1)
                     {
-                        // if its walkable and not on the closed list
+                        /* if its walkable and not on the closed list */
                         if (Nodes[cx + dx][cy + dy].IsWalkable == true
 				&& Nodes[cx + dx][cy + dy].IsOnClose == false)
                         {
-			    // if its not on open list
+			    /* if its not on open list */
                             if (Nodes[cx + dx][cy + dy].IsOnOpen == false)
                             {
-                                // add it to open list
+                                /* add it to open list */
                                 Nodes[cx + dx][cy + dy].IsOnOpen = true;
                                 Nodes[cx + dx][cy + dy].IsOnClose = false;
-                                // make the current node its parent
+                                /* make the current node its parent */
                                 Nodes[cx + dx][cy + dy].ParentX = cx;
                                 Nodes[cx + dx][cy + dy].ParentY = cy;
 
@@ -188,10 +189,10 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
                                 rb->write(desc, logStr, rb->strlen(logStr));
 #endif /* #ifdef __DEBUG */
 
-                                // work out G
-                                Nodes[cx + dx][cy + dy].G = MOVE_COST; // straights cost 10
-                                // work out H
-                                // MANHATTAN METHOD
+                                /* work out G */
+                                Nodes[cx + dx][cy + dy].G = MOVE_COST; /* straights cost 10 */
+                                /* work out H */
+                                /* MANHATTAN METHOD */
                                 Nodes[cx + dx][cy + dy].H =
                                         (abs(EndX - (cx + dx)) +
                                          abs(EndY - (cy + dy))) * MOVE_COST;
@@ -199,14 +200,14 @@ static int FindPath(Game *G, PATH *Path, int StartX, int StartY, int EndX, int E
                                         Nodes[cx + dx][cy + dy].G +
                                         Nodes[cx + dx][cy + dy].H;
                             }
-			} // end if walkable and not on closed list
+			} /* end if walkable and not on closed list */
 		    }
 		}
             }
 	}
     }
 
-    // follow all the parents back to the start
+    /* follow all the parents back to the start */
     cx = EndX;
     cy = EndY;
     Path->Distance = 0;
@@ -248,7 +249,7 @@ void LogPath(PATH *P)
     char logStr[100] = "\n";
 
     if ((file = rb->open(PLUGIN_GAMES_DIR "/safe_path.txt", 
-                         O_WRONLY | O_CREAT | O_APPEND, 0666)) < 0)
+                         O_WRONLY|O_CREAT|O_APPEND, 0666)) < 0)
     {
 	return;
     }
@@ -316,7 +317,7 @@ static int FoundDangerBombs(Game *G, int x, int y)
                 }
             }
 
-            // else ?
+            /* else ? */
             if (G->field.bombs[i].xpos == x)
             {
                 Checked = true;
@@ -427,13 +428,14 @@ inline static void MovePlayer(Game *G, Player *P, PATH *Path)
 {
     if (Path->Distance > 1)
     {
-        if (P->xpos < Path->Path[Path->Distance - PATH_OFFSET].X)
+        int index = Path->Distance - PATH_OFFSET; /* index is positive */
+        if (P->xpos < Path->Path[index].X)
 	    PlayerMoveRight(G, P);
-        else if (P->xpos > Path->Path[Path->Distance - PATH_OFFSET].X)
+        else if (P->xpos > Path->Path[index].X)
 	    PlayerMoveLeft(G, P);
-        else if (P->ypos < Path->Path[Path->Distance - PATH_OFFSET].Y)
+        else if (P->ypos < Path->Path[index].Y)
 	    PlayerMoveDown(G, P);
-        else if (P->ypos > Path->Path[Path->Distance - PATH_OFFSET].Y)
+        else if (P->ypos > Path->Path[index].Y)
 	    PlayerMoveUp(G, P);  
     }
 }
@@ -509,7 +511,7 @@ void UpdateAI(Game *G, Player *Players)
                     MovePlayer(G, &Players[i], &Path);
 
 #if USE_PATH_CACHE
-                    // create path cache
+                    /* create path cache */
                     rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
                     if (AI[i].PathCache.Distance > PATH_OFFSET)
                         AI[i].PathCache.Distance--;
@@ -523,11 +525,12 @@ void UpdateAI(Game *G, Player *Players)
             }
             else
             {
-                if (!CheckFire(G, Path.Path[Path.Distance - PATH_OFFSET].X,
-                                  Path.Path[Path.Distance - PATH_OFFSET].Y)
-                        && !Players[i].bombs_placed)
+                int index = Path.Distance - PATH_OFFSET;
+                if (index < 0) index = 0;
+                if (!CheckFire(G, Path.Path[index].X, Path.Path[index].Y) &&
+                        !Players[i].bombs_placed)
                 {
-                    if (IsABox(G, &Path.Path[Path.Distance - PATH_OFFSET]) && AI[i].Danger == false)
+                    if (IsABox(G, &Path.Path[index]) && AI[i].Danger == false)
                     {
                         PlayerPlaceBomb(G, &Players[i]);
                     }
@@ -536,7 +539,7 @@ void UpdateAI(Game *G, Player *Players)
                         MovePlayer(G, &Players[i], &PathToClosestPlayer);
 
 #if USE_PATH_CACHE
-                        // create path cache
+                        /* create path cache */
                         rb->memcpy(&AI[i].PathCache, &PathToClosestPlayer, sizeof(PATH));
                         if (AI[i].PathCache.Distance > PATH_OFFSET)
                             AI[i].PathCache.Distance--;

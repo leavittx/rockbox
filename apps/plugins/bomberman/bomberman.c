@@ -154,26 +154,25 @@ void InitGame(Game *game)
     for (i = 0; i < MAX_PLAYERS; i++)
         game->draw_order[i] = &game->players[i];
 
-    // set radius of explosion for each bomb power
+    /* set radius of explosion for each bomb power */
     game->bomb_rad[BOMB_PWR_SINGLE] = 1;
     game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
     game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
     game->bomb_rad[BOMB_PWR_QUAD]   = 6;
     game->bomb_rad[BOMB_PWR_KILLER] = MAX(MAP_W, MAP_H);
 
-    // set player maximum move phase for each speed
+    /* set player maximum move phase for each speed */
     game->max_move_phase[0] = 5;
     game->max_move_phase[1] = 2;
     game->max_move_phase[2] = 1;
 
-    // place bonuses
+    /* place bonuses */
     int nboxes = 0, nbonuses;
     for (i = 0; i < MAP_W; i++)
         for (j = 0; j < MAP_H; j++)
             if (game->field.map[i][j] == SQUARE_BOX)
                 nboxes++;
-
-    // not all boxes consist a bonus
+    /* not all boxes consist a bonus */
     nbonuses = nboxes / 2;
     while (nbonuses)
     {
@@ -182,7 +181,7 @@ void InitGame(Game *game)
 
         if (game->field.map[i][j] == SQUARE_BOX && game->field.bonuses[i][j] == BONUS_NONE)
         {
-            // choose a random bonus for this box
+            /* choose a random bonus for this box */
             game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE);
             nbonuses--;
         }
@@ -309,31 +308,31 @@ static int bomberman_menu(void)
     rb->button_clear_queue();
     while (true) {
         switch (rb->do_menu(&main_menu, &selected, NULL, false)) {
-            case 0: // Resume Game
+            case 0: /* Resume Game */
                 if (resume_file)
                     rb->remove(SAVE_FILE);
                 return 0;
-            case 1: // Start New Game
+            case 1: /* Start New Game */
                 InitGame(&game);
                 InitPlayer(&game.players[0], 0, 1, 1, false);
                 InitPlayer(&game.players[1], 1, 1, MAP_H - 3, true);
                 InitPlayer(&game.players[2], 2, MAP_W - 3, 1, true);
                 InitPlayer(&game.players[3], 3, MAP_W - 3, MAP_H - 2, true);
                 return 0;
-            case 2: // Help
+            case 2: /* Help */
                 if (bomberman_help())
                     return 1;
                 break;
-            case 3: // High Scores
+            case 3: /* High Scores */
                 highscore_show(-1, highscores, NUM_SCORES, true);
                 break;
-            case 4: // Playback Control
+            case 4: /* Playback Control */
                 if (playback_control(NULL))
                     return 1;
                 break;
-            case 5: // Quit without Saving
+            case 5: /* Quit without Saving */
                 return 1;
-            case 6: // Quit
+            case 6: /* Quit */
                 if (resume) {
                     rb->splash(HZ*1, "Saving game ...");
                     bomberman_savegame();
@@ -349,6 +348,8 @@ static int bomberman_menu(void)
 
 static int bomberman_game_loop(void)
 {
+    int i;
+
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     rb->cpu_boost(false);
 #endif
@@ -414,7 +415,7 @@ static int bomberman_game_loop(void)
 
         if (game.state == GAME_GAME)
         {
-            for (int i = 0; i < MAX_PLAYERS; i++)
+            for (i = 0; i < MAX_PLAYERS; i++)
             {
                 int upd = UpdatePlayer(&game, &game.players[i]);
                 if (upd == DEAD)
@@ -422,7 +423,7 @@ static int bomberman_game_loop(void)
                     game.nplayers--;
                     if (game.nplayers == 1 || !game.players[i].isAI)
                     {
-                        for (int i = 0; i < MAX_PLAYERS; i++)
+                        for (i = 0; i < MAX_PLAYERS; i++)
                         {
                             if (game.players[i].status.state == ALIVE) {
                                 game.players[i].status.state = WIN_PHASE1;

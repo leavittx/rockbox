@@ -37,7 +37,7 @@
  * Animation params
  */
 
-#define CYCLETIME 25
+#define CYCLETIME 30
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
