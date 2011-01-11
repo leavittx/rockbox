@@ -809,7 +809,7 @@ static void FirePhase1(Game *game, int x, int y, int rad, FireDir dir, bool isFu
 void UpdateBombs(Game *game)
 {
     int i;
-    static int detphases[4] = { 0, 1, 2, 1 }; /* this helps with detonation animation */
+    static const int detphases[4] = { 0, 1, 2, 1 }; /* this helps with detonation animation */
 
     for (i = 0; i < MAX_BOMBS; i++)
     {
@@ -821,7 +821,8 @@ void UpdateBombs(Game *game)
 
         /* todo: check if it neccecary to compute this */
         /* update detonation animation */
-        game->field.det[x][y] = detphases[((tick - game->field.bombs[i].place_time) / BOMB_DELAY_DET_ANIM) % 4];
+        game->field.det[x][y] = detphases[((tick - game->field.bombs[i].place_time) /
+                                           BOMB_DELAY_DET_ANIM) % 4];
 
         if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
         {
@@ -840,7 +841,6 @@ void UpdateBombs(Game *game)
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE3)
         {
-            //game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
             game->field.map[x][y] = SQUARE_FREE;
 
             game->field.bombs[i].state = BOMB_EXPL_PHASE4;
@@ -854,7 +854,6 @@ void UpdateBombs(Game *game)
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
         {
-            //game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
             game->field.map[x][y] = SQUARE_FREE;
 
             game->field.bombs[i].state = BOMB_EXPL_PHASE3;
@@ -868,7 +867,6 @@ void UpdateBombs(Game *game)
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
         {
-            //game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
             game->field.map[x][y] = SQUARE_FREE;
 
             game->field.bombs[i].state = BOMB_EXPL_PHASE2;
@@ -882,9 +880,7 @@ void UpdateBombs(Game *game)
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_DET)
         {
-            //game->field.map[game->field.bombs[i].xpos][game->field.bombs[i].ypos] = SQUARE_FIRE;
             game->field.map[x][y] = SQUARE_FREE;
-            //rb->splashf(HZ, "Free(%lu %lu)", x, y);
 
             game->field.bombs[i].state = BOMB_EXPL_PHASE1;
 
@@ -910,7 +906,8 @@ void UpdateBoxes(Game *game)
                 //game->field.boxes[i][j].state++;
                 //	break;
                 game->field.boxes[i][j].state =
-                        (tick - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
+                        (tick - game->field.boxes[i][j].expl_time) /
+                        BOX_DELAY_EXPLOSION_ANIM + 1;
                 if (game->field.boxes[i][j].state > BOX_EXPL_PHASE5)
                     game->field.map[i][j] = SQUARE_FREE;
             }

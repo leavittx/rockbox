@@ -30,8 +30,8 @@
 
 #define MAP_W 17
 #define MAP_H 11
-#define MAX_PLAYERS 4
-#define MAX_BOMBS 10
+#define MAX_PLAYERS 1
+#define MAX_BOMBS 100
 
 /*
  * Animation params
@@ -39,12 +39,12 @@
 
 #define CYCLETIME 30
 
-#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 10 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
 #define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 4.05 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 4.06 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 5.03 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 6.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 7.06 / (CYCLETIME / 10))
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
 
