@@ -8,7 +8,7 @@
  * $Id$
  *
  * Copyright (C) 2010 Lev Panov
- * 
+ *
  * Bomberman plugin
  *
  * This program is free software; you can redistribute it and/or
@@ -63,7 +63,7 @@ void Draw(Game *game)
     int i, j;
 
     if (game->state == GAME_GAME)
-	rb->lcd_clear_display();	
+	rb->lcd_clear_display();
 
     if (game->state == GAME_GAME)
     {
@@ -143,8 +143,8 @@ void Draw(Game *game)
             BMPWIDTH_bomberman_player,
             BMPHEIGHT_bomberman_player);
         */
-	
-	/* Player and ai's (with movement animation) */	
+
+	/* Player and ai's (with movement animation) */
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
             if (game->draw_order[i]->status.state > GONNA_DIE)
@@ -317,7 +317,7 @@ void Draw(Game *game)
                 }
             }
 	}
-	
+
 	/* Explosions */
 	for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
