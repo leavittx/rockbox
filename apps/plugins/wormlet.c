@@ -358,7 +358,8 @@ CONFIG_KEYPAD == MROBE500_PAD
 #define ARGH_SIZE 5
 #define SPEED 9
 #define MAX_WORM_SEGMENTS 128
-#elif (LCD_WIDTH == 160) && (LCD_HEIGHT == 128)
+#elif ((LCD_WIDTH == 160) && (LCD_HEIGHT == 128)) || \
+      ((LCD_WIDTH == 128) && (LCD_HEIGHT == 160))
 #define FOOD_SIZE 4
 #define ARGH_SIZE 5
 #define SPEED 8
@@ -2312,7 +2313,7 @@ static bool launch_wormlet(void)
     rb->lcd_clear_display();
 
     /* Turn off backlight timeout */
-    backlight_force_on(); /* backlight control in lib/helper.c */
+    backlight_ignore_timeout();
 
     /* start the game */
     while (game_result == 1)
@@ -2322,7 +2323,7 @@ static bool launch_wormlet(void)
     {
         case 2:
             /* Turn on backlight timeout (revert to settings) */
-            backlight_use_settings(); /* backlight control in lib/helper.c */
+            backlight_use_settings();
             return false;
             break;
     }

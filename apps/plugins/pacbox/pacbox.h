@@ -211,8 +211,8 @@
 #define PACMAN_RIGHT   BUTTON_NEXT
 #define PACMAN_1UP     BUTTON_VOL_UP
 #define PACMAN_2UP     BUTTON_VOL_DOWN
-#define PACMAN_COIN    BUTTON_RIGHT
-#define PACMAN_MENU    BUTTON_MENU
+#define PACMAN_COIN    BUTTON_MENU
+#define PACMAN_MENU    BUTTON_POWER
 
 #elif CONFIG_KEYPAD == ONDAVX747_PAD
 
@@ -293,17 +293,23 @@
 #define YOFS ((LCD_HEIGHT-224/2)/2)
 #elif (LCD_WIDTH >= 128)
 #define XOFS ((LCD_WIDTH-224/2)/2)
+#if LCD_HEIGHT < 144
 #define YCLIP ((288-2*LCD_HEIGHT)/2)
+#define YOFS 0
+#else
+#define YCLIP 0
+#define YOFS ((LCD_HEIGHT-288/2)/2)
+#endif
 #endif
 
 /* How many video frames (out of a possible 60) we display each second.
    NOTE: pacbox.c assumes this is an integer divisor of 60
  */
-#if defined(TOSHIBA_GIGABEAT_S)
-/* Gigabeat S can manage the full framerate (1 in 1 frames) */
+#if defined(TOSHIBA_GIGABEAT_S) || defined (TOSHIBA_GIGABEAT_F)
+/* Gigabeat S,F can manage the full framerate (1 in 1 frames) */
 #define FPS 60
-#elif defined(IPOD_NANO) || defined (TOSHIBA_GIGABEAT_F)
-/* The Nano and Gigabeat F can manage full-speed at 30fps (1 in 2 frames) */
+#elif defined(IPOD_NANO)
+/* The Nano can manage full-speed at 30fps (1 in 2 frames) */
 #define FPS 30
 #else
 /* We aim for 20fps on the other targets (1 in 3 frames) */

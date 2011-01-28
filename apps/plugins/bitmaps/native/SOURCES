@@ -139,6 +139,9 @@ bubbles_background.176x132x16.bmp
 #elif (LCD_WIDTH >= 160) && (LCD_HEIGHT >= 128)
 bubbles_emblem.160x128x16.bmp
 bubbles_background.160x128x16.bmp
+#elif (LCD_WIDTH >= 128) && (LCD_HEIGHT >= 160)
+bubbles_emblem.160x128x16.bmp
+bubbles_background.128x160x16.bmp
 #elif (LCD_WIDTH >= 128) && (LCD_HEIGHT >= 128)
 bubbles_emblem.160x128x16.bmp
 bubbles_background.128x128x16.bmp
@@ -381,6 +384,8 @@ jewels.112x64x1.bmp
 jewels.112x64x1.bmp
 #elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 128)
 jewels.128x128x16.bmp
+#elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 160)
+jewels.128x128x16.bmp
 #elif (LCD_WIDTH == 132) && (LCD_HEIGHT == 80)
 jewels.132x80x16.bmp
 #elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 96)
@@ -490,7 +495,9 @@ rockblox_background.176x220x16.bmp
 rockblox_background.176x132x16.bmp
 #elif (LCD_WIDTH == 160) && (LCD_HEIGHT == 128)
 rockblox_background.160x128x16.bmp
-#elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 128)
+#elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 160)
+rockblox_background.128x160x16.bmp
+#elif (LCD_WIDTH == 128) && (LCD_HEIGHT >= 128)
 rockblox_background.128x128x16.bmp
 #elif (LCD_WIDTH == 132) && (LCD_HEIGHT == 80)
 rockblox_background.132x80x16.bmp
@@ -755,8 +762,12 @@ sudoku_start.640x480x16.bmp
 sudoku_normal.640x480x16.bmp
 sudoku_inverse.640x480x16.bmp
 #endif
-#else
-#if ((LCD_WIDTH == 176) && (LCD_HEIGHT == 220) && (LCD_DEPTH == 16))
+#else /* LCD_WIDTH < LCD_HEIGHT */
+#if ((LCD_WIDTH == 128) && (LCD_HEIGHT == 160) && (LCD_DEPTH == 16))
+sudoku_start.128x128x16.bmp
+sudoku_normal.128x128x16.bmp
+sudoku_inverse.128x128x16.bmp
+#elif ((LCD_WIDTH == 176) && (LCD_HEIGHT == 220) && (LCD_DEPTH == 16))
 sudoku_start.220x176x16.bmp
 sudoku_normal.220x176x16.bmp
 sudoku_inverse.220x176x16.bmp

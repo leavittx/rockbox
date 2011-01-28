@@ -601,6 +601,7 @@ static int parse_progressbar_tag(struct skin_element* element,
     pb->nobar = false;
     pb->image = NULL;
     pb->slider = NULL;
+    pb->backdrop = NULL;
     pb->invert_fill_direction = false;
     pb->horizontal = true;
     
@@ -696,6 +697,18 @@ static int parse_progressbar_tag(struct skin_element* element,
             else /* option needs the next param */
                 return -1;
         }
+        else if (!strcmp(param->data.text, "backdrop"))
+        {
+            if (curr_param+1 < element->params_count)
+            {
+                curr_param++;
+                param++;
+                pb->backdrop = find_image(param->data.text, wps_data);
+                
+            }
+            else /* option needs the next param */
+                return -1;
+        }
         else if (!strcmp(param->data.text, "vertical"))
         {
             pb->horizontal = false;
@@ -735,8 +748,7 @@ static int parse_progressbar_tag(struct skin_element* element,
             add_to_ll_chain(&wps_data->images, item);
             pb->image = img;
         }
-    }
-        
+    }    
         
     if (token->type == SKIN_TOKEN_VOLUME)
         token->type = SKIN_TOKEN_VOLUMEBAR;
@@ -744,6 +756,10 @@ static int parse_progressbar_tag(struct skin_element* element,
         token->type = SKIN_TOKEN_BATTERY_PERCENTBAR;
     else if (token->type == SKIN_TOKEN_TUNER_RSSI)
         token->type = SKIN_TOKEN_TUNER_RSSI_BAR;
+    else if (token->type == SKIN_TOKEN_PEAKMETER_LEFT)
+        token->type = SKIN_TOKEN_PEAKMETER_LEFTBAR;
+    else if (token->type == SKIN_TOKEN_PEAKMETER_RIGHT)
+        token->type = SKIN_TOKEN_PEAKMETER_RIGHTBAR;
     pb->type = token->type;
         
     return 0;
@@ -876,6 +892,7 @@ static const struct touchaction touchactions[] = {
     { "resumeplayback", ACTION_TREE_WPS}, /* returns to previous music, WPS/FM */
     /* not really WPS specific, but no equivilant ACTION_STD_* */
     {"voldown", ACTION_WPS_VOLDOWN},    {"volup", ACTION_WPS_VOLUP},
+    {"mute", ACTION_TOUCH_MUTE },
     
     /* generic settings changers */
     {"setting_inc", ACTION_SETTINGS_INC}, {"setting_dec", ACTION_SETTINGS_DEC}, 
@@ -941,7 +958,7 @@ static int parse_touchregion(struct skin_element *element,
     region->wvp = curr_vp;
     region->armed = false;
     region->reverse_bar = false;
-    region->extradata = NULL;
+    region->data = NULL;
     action = element->params[4].data.text;
 
     strcpy(temp, action);
@@ -994,7 +1011,7 @@ static int parse_touchregion(struct skin_element *element,
                                 break;
                         if (j==nb_settings)
                             return WPS_ERROR_INVALID_PARAM;
-                        region->extradata = (void*)&settings[j];
+                        region->data = (void*)&settings[j];
                     }
                 }
                 break;
@@ -1007,6 +1024,13 @@ static int parse_touchregion(struct skin_element *element,
     if (!item)
         return WPS_ERROR_INVALID_PARAM;
     add_to_ll_chain(&wps_data->touchregions, item);
+    
+    if (region->action == ACTION_TOUCH_MUTE)
+    {
+        region->value = global_settings.volume;
+    }
+        
+    
     return 0;
 }
 #endif
@@ -1410,6 +1434,8 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_VOLUME:
                 case SKIN_TOKEN_BATTERY_PERCENT:
                 case SKIN_TOKEN_PLAYER_PROGRESSBAR:
+                case SKIN_TOKEN_PEAKMETER_LEFT:
+                case SKIN_TOKEN_PEAKMETER_RIGHT:
 #ifdef HAVE_RADIO_RSSI
                 case SKIN_TOKEN_TUNER_RSSI:
 #endif

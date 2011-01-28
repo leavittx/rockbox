@@ -97,10 +97,10 @@ void gpt_start(void)
     while (GPTCR & GPTCR_SWR);
     /* No output
      * No capture
-     * Enable in run mode only (doesn't tick while in WFI)
+     * Enable in wait and run mode
      * Freerun mode (count to 0xFFFFFFFF and roll-over to 0x00000000)
      */
-    GPTCR = GPTCR_FRR | GPTCR_CLKSRC_IPG_CLK;
+    GPTCR = GPTCR_FRR | GPTCR_WAITEN | GPTCR_CLKSRC_IPG_CLK;
     GPTPR = ipg_mhz - 1;
     GPTCR |= GPTCR_EN;
 }
@@ -139,7 +139,7 @@ void system_exception_wait(void)
 
 void INIT_ATTR system_init(void)
 {
-    static const int disable_clocks[] =
+    static const enum IMX31_CG_LIST disable_clocks[] INITDATA_ATTR =
     {
         /* CGR0 */
         CG_SD_MMC1,
@@ -210,7 +210,8 @@ void INIT_ATTR system_init(void)
 
 void system_prepare_fw_start(void)
 {
-    dvfs_dptc_stop();
+    dvfs_stop();
+    dptc_stop();
     mc13783_close();
     tick_stop();
     disable_interrupt(IRQ_FIQ_STATUS);

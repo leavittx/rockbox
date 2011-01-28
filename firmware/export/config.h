@@ -693,11 +693,14 @@ Lyre prototype 1 */
 #if (CONFIG_CODEC == SWCODEC)
 #ifdef BOOTLOADER
 
-#if CONFIG_CPU == IMX31L
+#ifdef HAVE_BOOTLOADER_USB_MODE
 /* Priority in bootloader is wanted */
 #define HAVE_PRIORITY_SCHEDULING
 #define USB_STATUS_BY_EVENT
 #define USB_DETECT_BY_DRV
+#if defined(HAVE_USBSTACK) && CONFIG_USBOTG == USBOTG_ARC
+#define INCLUDE_TIMEOUT_API
+#endif
 #endif
 
 #else /* !BOOTLOADER */
@@ -721,9 +724,7 @@ Lyre prototype 1 */
 #if defined(HAVE_USBSTACK) && CONFIG_USBOTG == USBOTG_ARC
 #define USB_STATUS_BY_EVENT
 #define USB_DETECT_BY_DRV
-#if CONFIG_CPU != IMX31L
 #define INCLUDE_TIMEOUT_API
-#endif
 #endif /* HAVE_USBSTACK && USBOTG_ARC */
 
 #if defined(HAVE_USBSTACK) && CONFIG_USBOTG == USBOTG_AS3525
@@ -731,6 +732,12 @@ Lyre prototype 1 */
 #endif /* HAVE_USBSTACK && USBOTG_AS3525 */
 
 #endif /* BOOTLOADER */
+
+#ifdef PHILIPS_SA9200
+/* Instead use the request for a device descriptor to detect a host */
+#undef USB_DETECT_BY_DRV
+#define USB_DETECT_BY_CORE
+#endif
 
 #if defined(HAVE_USBSTACK) || (CONFIG_CPU == JZ4732) \
     || (CONFIG_CPU == AS3525) || (CONFIG_CPU == AS3525v2) \
@@ -835,9 +842,11 @@ Lyre prototype 1 */
  * from crashes to freezes to exploding daps.
  */
 #define INIT_ATTR       __attribute__ ((section(".init")))
+#define INITDATA_ATTR   __attribute__ ((section(".initdata")))
 #define HAVE_INIT_ATTR
 #else
 #define INIT_ATTR
+#define INITDATA_ATTR
 #endif
 
 #if (CONFIG_PLATFORM & PLATFORM_HOSTED) && defined(__APPLE__)
@@ -910,22 +919,17 @@ Lyre prototype 1 */
 
 #ifdef HAVE_HEADPHONE_DETECTION
 /* Timeout objects required if headphone detection is enabled */
-#ifndef INCLUDE_TIMEOUT_API
 #define INCLUDE_TIMEOUT_API
-#endif
 #endif /* HAVE_HEADPHONE_DETECTION */
 
 #ifdef HAVE_TOUCHSCREEN
 /* Timeout objects required for kinetic list scrolling */
-#undef  INCLUDE_TIMEOUT_API
 #define INCLUDE_TIMEOUT_API
 #endif /* HAVE_TOUCHSCREEN */
 
 #if defined(HAVE_USB_CHARGING_ENABLE) && defined(HAVE_USBSTACK)
 /* USB charging support in the USB stack requires timeout objects */
-#ifndef INCLUDE_TIMEOUT_API
 #define INCLUDE_TIMEOUT_API
-#endif
 #endif /* HAVE_USB_CHARGING_ENABLE && HAVE_USBSTACK */
 
 #if defined(HAVE_USBSTACK) || (CONFIG_STORAGE & STORAGE_NAND)
@@ -962,8 +966,8 @@ Lyre prototype 1 */
 #ifdef BOOTLOADER
 
 /* enable usb storage for targets that do bootloader usb */
-#if  (defined(TOSHIBA_GIGABEAT_S) || \
-     (defined(CREATIVE_ZVx) || \
+#if defined(HAVE_BOOTLOADER_USB_MODE) || \
+    ((defined(CREATIVE_ZVx) || \
      defined(CPU_TCC77X) || defined(CPU_TCC780X))) || \
      (CONFIG_USBOTG == USBOTG_JZ4740) || defined(IPOD_NANO2G) || \
      CONFIG_USBOTG == USBOTG_AS3525

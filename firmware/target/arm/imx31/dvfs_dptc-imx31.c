@@ -38,20 +38,28 @@ static volatile unsigned int dvfs_level = DVFS_LEVEL_DEFAULT;
 /* The current DPTC working point */
 static volatile unsigned int dptc_wp = DPTC_WP_DEFAULT;
 
-
-static void update_dptc_counts(unsigned int level, unsigned int wp)
+/* Synchronize DPTC comparator value registers to new table row */
+static void update_dptc_counts(void)
 {
-    int oldlevel = disable_irq_save();
-    const struct dptc_dcvr_table_entry *entry = &dptc_dcvr_table[level][wp];
+    const struct dptc_dcvr_table_entry * const entry =
+        &dptc_dcvr_table[dvfs_level][dptc_wp];
 
     CCM_DCVR0 = entry->dcvr0;
     CCM_DCVR1 = entry->dcvr1;
     CCM_DCVR2 = entry->dcvr2;
     CCM_DCVR3 = entry->dcvr3;
-
-    restore_irq(oldlevel);
 }
 
+/* Enable DPTC and unmask interrupt. */
+static void enable_dptc(void)
+{
+    /* Enable DPTC, assert voltage change request. */
+    CCM_PMCR0 = (CCM_PMCR0 & ~CCM_PMCR0_PTVAIM) | CCM_PMCR0_DPTEN |
+                    CCM_PMCR0_DPVCR;
+    udelay(2);
+    /* Now set that voltage is valid */
+    CCM_PMCR0 |= CCM_PMCR0_DPVV;
+}
 
 static uint32_t check_regulator_setting(uint32_t setting)
 {
@@ -74,17 +82,14 @@ unsigned int dvfs_nr_up = 0;
 unsigned int dvfs_nr_pnc = 0;
 unsigned int dvfs_nr_no = 0;
 
-static void dvfs_stop(void);
-
-
 /* Wait for the UPDTEN flag to be set so that all bits may be written */
-static inline void wait_for_dvfs_update_en(void)
+static inline void updten_wait(void)
 {
     while (!(CCM_PMCR0 & CCM_PMCR0_UPDTEN));
 }
 
-
-static void do_dvfs_update(unsigned int level, bool in_isr)
+/* Do the actual frequency and DVFS pin change - always call with IRQ masked */
+static void do_dvfs_update(unsigned int level)
 {
     const struct dvfs_clock_table_entry *setting = &dvfs_clock_table[level];
     unsigned long pmcr0 = CCM_PMCR0;
@@ -93,6 +98,8 @@ static void do_dvfs_update(unsigned int level, bool in_isr)
     {
         /* Ignore voltage change request from DPTC. Voltage is *not* valid. */
         pmcr0 &= ~CCM_PMCR0_DPVCR;
+        /* Mask DPTC interrupt for when called in thread context */
+        pmcr0 |= CCM_PMCR0_PTVAIM;
     }
 
     pmcr0 &= ~CCM_PMCR0_VSCNT;
@@ -111,6 +118,7 @@ static void do_dvfs_update(unsigned int level, bool in_isr)
     /* DVSUP (new frequency index) setup */
     pmcr0 = (pmcr0 & ~CCM_PMCR0_DVSUP) | (level << CCM_PMCR0_DVSUP_POS);
 
+    /* Save new level */
     dvfs_level = level;
 
     if ((setting->pll_num << CCM_PMCR0_DFSUP_MCUPLL_POS) ^
@@ -129,13 +137,10 @@ static void do_dvfs_update(unsigned int level, bool in_isr)
     CCM_PMCR0 = pmcr0;
     /* Note: changes to frequency with ints unmaked seem to cause spurious
      * DVFS interrupts with value CCM_PMCR0_FSVAI_NO_INT. These aren't
-     * supposed to happen. Only do the lengthy delay with them enabled iff
-     * called from the IRQ handler. */
-    if (in_isr)
-        enable_irq();
+     * supposed to happen. Only do the lengthy delay with them enabled. */
+    enable_irq();
     udelay(100); /* Software wait for voltage ramp-up */
-    if (in_isr)
-        disable_irq();
+    disable_irq();
     CCM_PDR0 = setting->pdr_val;
 
     if (!(pmcr0 & CCM_PMCR0_DFSUP_POST_DIVIDERS))
@@ -151,33 +156,29 @@ static void do_dvfs_update(unsigned int level, bool in_isr)
 
     if (pmcr0 & CCM_PMCR0_DPTEN)
     {
-        update_dptc_counts(level, dptc_wp);
-        /* Enable DPTC to request voltage changes. Voltage is valid. */
-        CCM_PMCR0 |= CCM_PMCR0_DPVCR;
-        udelay(2);
-        CCM_PMCR0 |= CCM_PMCR0_DPVV;
+        update_dptc_counts();
+        enable_dptc();
     }
 }
-
 
 /* Start DVFS, change the set point and stop it */
 static void set_current_dvfs_level(unsigned int level)
 {
-    int oldlevel = disable_irq_save();
+    int oldlevel;
 
+    /* Have to wait at least 3 div3 clocks before enabling after being
+     * stopped. */
+    udelay(1500);
+
+    oldlevel = disable_irq_save();
     CCM_PMCR0 |= CCM_PMCR0_DVFEN;
-
-    wait_for_dvfs_update_en();
-
-    do_dvfs_update(level, false);
-
-    wait_for_dvfs_update_en();
-
-    CCM_PMCR0 &= ~CCM_PMCR0_DVFEN;
-
+    do_dvfs_update(level);
     restore_irq(oldlevel);
-}
 
+    updten_wait();
+
+    bitclr32(&CCM_PMCR0, CCM_PMCR0_DVFEN);
+}
 
 /* DVFS Interrupt handler */
 static void __attribute__((used)) dvfs_int(void)
@@ -233,9 +234,8 @@ static void __attribute__((used)) dvfs_int(void)
         return;     /* Do nothing. Freq change is not required */
     } /* end switch */
 
-    do_dvfs_update(level, true);
+    do_dvfs_update(level);
 }
-
 
 /* Interrupt vector for DVFS */
 static __attribute__((naked, interrupt("IRQ"))) void CCM_DVFS_HANDLER(void)
@@ -246,17 +246,9 @@ static __attribute__((naked, interrupt("IRQ"))) void CCM_DVFS_HANDLER(void)
     AVIC_NESTED_NI_CALL_EPILOGUE(32*4);
 }
 
-
 /* Initialize the DVFS hardware */
 static void INIT_ATTR dvfs_init(void)
 {
-    if (CCM_PMCR0 & CCM_PMCR0_DVFEN)
-    {
-        /* Turn it off first. Really, shouldn't happen though. */
-        dvfs_running = true;
-        dvfs_stop();
-    }
-
     /* Combine SW1A and SW1B DVS pins for a possible five DVS levels
      * per working point. Four, MAXIMUM, are actually used, one for each
      * frequency. */
@@ -279,6 +271,9 @@ static void INIT_ATTR dvfs_init(void)
     iomuxc_set_pin_mux(IOMUXC_GPIO1_5,
                        IOMUXC_MUX_OUT_FUNCTIONAL | IOMUXC_MUX_IN_FUNCTIONAL);
 #endif
+
+    /* GP load bits disabled */
+    bitclr32(&CCM_PMCR1, 0xf);
     
     /* Initialize DVFS signal weights and detection modes. */
     int i;
@@ -307,8 +302,10 @@ static void INIT_ATTR dvfs_init(void)
     /* Set up LTR2-- EMA configuration. */
     bitmod32(&CCM_LTR2, DVFS_EMAC << CCM_LTR2_EMAC_POS, CCM_LTR2_EMAC);
 
-    /* DVFS interrupt goes to MCU. Mask load buffer full interrupt. */
-    bitset32(&CCM_PMCR0, CCM_PMCR0_DVFIS | CCM_PMCR0_LBMI);
+    /* DVFS interrupt goes to MCU. Mask load buffer full interrupt. Do not
+     * always give an event. */
+    bitmod32(&CCM_PMCR0, CCM_PMCR0_DVFIS | CCM_PMCR0_LBMI,
+             CCM_PMCR0_DVFIS | CCM_PMCR0_LBMI | CCM_PMCR0_DVFEV);
 
     /* Initialize current core PLL and dividers for default level. Assumes
      * clocking scheme has been set up appropriately in other init code. */
@@ -322,65 +319,6 @@ static void INIT_ATTR dvfs_init(void)
 }
 
 
-/* Start the DVFS hardware */
-static void dvfs_start(void)
-{
-    int oldlevel;
-
-    /* Have to wait at least 3 div3 clocks before enabling after being
-     * stopped. */
-    udelay(1500);
-
-    oldlevel = disable_irq_save();
-
-    if (!dvfs_running)
-    {
-        dvfs_running = true;
-
-        /* Unmask DVFS interrupt source and enable DVFS. */
-        avic_enable_int(INT_CCM_DVFS, INT_TYPE_IRQ, INT_PRIO_DVFS,
-                        CCM_DVFS_HANDLER);
-
-        CCM_PMCR0 = (CCM_PMCR0 & ~CCM_PMCR0_FSVAIM) | CCM_PMCR0_DVFEN;
-    }
-
-    restore_irq(oldlevel);
-
-    logf("DVFS: started");
-}
-
-
-/* Stop the DVFS hardware and return to default frequency */
-static void dvfs_stop(void)
-{
-    int oldlevel = disable_irq_save();
-
-    if (dvfs_running)
-    {
-        /* Mask DVFS interrupts. */
-        CCM_PMCR0 |= CCM_PMCR0_FSVAIM | CCM_PMCR0_LBMI;
-        avic_disable_int(INT_CCM_DVFS);
-
-        if (((CCM_PMCR0 & CCM_PMCR0_DVSUP) >> CCM_PMCR0_DVSUP_POS) !=
-                DVFS_LEVEL_DEFAULT)
-        {
-            /* Set default frequency level */
-            wait_for_dvfs_update_en();
-            do_dvfs_update(DVFS_LEVEL_DEFAULT, false);
-            wait_for_dvfs_update_en();
-        }
-
-        /* Disable DVFS. */
-        CCM_PMCR0 &= ~CCM_PMCR0_DVFEN;
-        dvfs_running = false;
-    }
-
-    restore_irq(oldlevel);
-
-    logf("DVFS: stopped");
-}
-
-
 /** DPTC **/
 
 /* Request tracking since boot */
@@ -391,52 +329,40 @@ unsigned int dptc_nr_up = 0;
 unsigned int dptc_nr_pnc = 0;
 unsigned int dptc_nr_no = 0;
 
-static struct spi_transfer_desc dptc_pmic_xfer; /* Transfer descriptor */
-static const unsigned char dptc_pmic_regs[2] =  /* Register subaddresses */
-{ MC13783_SWITCHERS0, MC13783_SWITCHERS1 };
-static uint32_t dptc_reg_shadows[2];            /* shadow regs */
-static uint32_t dptc_regs_buf[2];               /* buffer for async write */
-
-
-/* Enable DPTC and unmask interrupt. */
-static void enable_dptc(void)
+struct dptc_async_buf
 {
-    int oldlevel = disable_irq_save();
+    struct spi_transfer_desc xfer; /* transfer descriptor */
+    unsigned int wp;               /* new working point */
+    uint32_t buf[2];               /* buffer for async write */
+};
 
-    /* Enable DPTC, assert voltage change request. */
-    CCM_PMCR0 = (CCM_PMCR0 & ~CCM_PMCR0_PTVAIM) | CCM_PMCR0_DPTEN |
-                    CCM_PMCR0_DPVCR;
+static struct dptc_async_buf dptc_async_buf;    /* ISR async write buffer */
+static const unsigned char dptc_pmic_regs[2] =  /* Register subaddresses */
+    { MC13783_SWITCHERS0, MC13783_SWITCHERS1 };
+static uint32_t dptc_reg_shadows[2];            /* shadow regs */
 
-    udelay(2);
-
-    /* Set voltage valid *after* setting change request */
-    CCM_PMCR0 |= CCM_PMCR0_DPVV;
-
-    restore_irq(oldlevel);
-}
-
-
-/* Called after asynchronous PMIC write is completed */
+/* Called (in SPI INT context) after asynchronous PMIC write is completed */
 static void dptc_transfer_done_callback(struct spi_transfer_desc *xfer)
 {
     if (xfer->count != 0)
         return;
 
-    update_dptc_counts(dvfs_level, dptc_wp);
+    /* Save new working point */
+    dptc_wp = ((struct dptc_async_buf *)xfer)->wp;
+
+    update_dptc_counts();
 
     if (dptc_running)
         enable_dptc();
 }
 
-
-/* Handle the DPTC interrupt and sometimes the manual setting */
-static void dptc_int(unsigned long pmcr0)
+/* Handle the DPTC interrupt and sometimes the manual setting - always call
+ * with IRQ masked. */
+static void dptc_int(unsigned long pmcr0, int wp, struct dptc_async_buf *abuf)
 {
     const union dvfs_dptc_voltage_table_entry *entry;
     uint32_t sw1a, sw1advs, sw1bdvs, sw1bstby;
     uint32_t switchers0, switchers1;
-
-    int wp = dptc_wp;
 
     /* Mask DPTC interrupt and disable DPTC until the change request is
      * serviced. */
@@ -445,30 +371,40 @@ static void dptc_int(unsigned long pmcr0)
     switch (pmcr0 & CCM_PMCR0_PTVAI)
     {
     case CCM_PMCR0_PTVAI_DECREASE:
+        /* Decrease voltage request - increment working point */
         wp++;
         dptc_nr_dn++;
         break;
 
     case CCM_PMCR0_PTVAI_INCREASE:
+        /* Increase voltage request - decrement working point */
         wp--;
         dptc_nr_up++;
         break;
 
     case CCM_PMCR0_PTVAI_INCREASE_NOW:
+        /* Panic request - move immediately to panic working point if
+         * decrement results in greater working point than DPTC_WP_PANIC. */
         if (--wp > DPTC_WP_PANIC)
             wp = DPTC_WP_PANIC;
         dptc_nr_pnc++;
         break;
 
     case CCM_PMCR0_PTVAI_NO_INT:
-        break; /* Just maintain at global level */
+        /* Just maintain at global level */
+        if (abuf == &dptc_async_buf)
+            dptc_nr_no++;
+        break;
     }
 
+    /* Keep result in range */
     if (wp < 0)
         wp = 0;
     else if (wp >= DPTC_NUM_WP)
         wp = DPTC_NUM_WP - 1;
 
+    /* Get new regulator register settings, sanity check them and write them
+     * in the background. */
     entry = &dvfs_dptc_voltage_table[wp];
 
     sw1a = check_regulator_setting(entry->sw1a);
@@ -477,140 +413,183 @@ static void dptc_int(unsigned long pmcr0)
     sw1bstby = check_regulator_setting(entry->sw1bstby);
 
     switchers0 = dptc_reg_shadows[0] & ~(MC13783_SW1A | MC13783_SW1ADVS);
-    dptc_regs_buf[0] = switchers0 |
-                       sw1a << MC13783_SW1A_POS |         /* SW1A */
-                       sw1advs << MC13783_SW1ADVS_POS;    /* SW1ADVS */
+    abuf->buf[0] = switchers0 |
+                   sw1a << MC13783_SW1A_POS |         /* SW1A */
+                   sw1advs << MC13783_SW1ADVS_POS;    /* SW1ADVS */
     switchers1 = dptc_reg_shadows[1] & ~(MC13783_SW1BDVS | MC13783_SW1BSTBY);
-    dptc_regs_buf[1] = switchers1 |
-                       sw1bdvs << MC13783_SW1BDVS_POS |   /* SW1BDVS */
-                       sw1bstby << MC13783_SW1BSTBY_POS;  /* SW1BSTBY */
+    abuf->buf[1] = switchers1 |
+                   sw1bdvs << MC13783_SW1BDVS_POS |   /* SW1BDVS */
+                   sw1bstby << MC13783_SW1BSTBY_POS;  /* SW1BSTBY */
 
-    dptc_wp = wp;
-
-    mc13783_write_async(&dptc_pmic_xfer, dptc_pmic_regs,
-                        dptc_regs_buf, 2, dptc_transfer_done_callback);
+    abuf->wp = wp; /* Save new for xfer completion handler */
+    mc13783_write_async(&abuf->xfer, dptc_pmic_regs, abuf->buf, 2,
+                        dptc_transfer_done_callback);
 }
 
-
+/* Handle setting the working point explicitly - always call with IRQ
+ * masked */
 static void dptc_new_wp(unsigned int wp)
 {
-    dptc_wp = wp;
-    /* "NO_INT" so the working point isn't incremented, just set. */
-    dptc_int((CCM_PMCR0 & ~CCM_PMCR0_PTVAI) | CCM_PMCR0_PTVAI_NO_INT);
-}
+    struct dptc_async_buf buf;
 
+    /* "NO_INT" so the working point isn't incremented, just set. */
+    dptc_int(CCM_PMCR0 & ~CCM_PMCR0_PTVAI, wp, &buf);
+
+    /* Wait for PMIC write */
+    while (!spi_transfer_complete(&buf.xfer))
+    {
+        enable_irq();
+        nop; nop; nop; nop; nop;
+        disable_irq();
+    }
+}
 
 /* Interrupt vector for DPTC */
 static __attribute__((interrupt("IRQ"))) void CCM_CLK_HANDLER(void)
 {
-    unsigned long pmcr0 = CCM_PMCR0;
-
-    if ((pmcr0 & CCM_PMCR0_PTVAI) == CCM_PMCR0_PTVAI_NO_INT)
-        dptc_nr_no++;
-
-    dptc_int(pmcr0);
+    dptc_int(CCM_PMCR0, dptc_wp, &dptc_async_buf);
 }
-
 
 /* Initialize the DPTC hardware */
 static void INIT_ATTR dptc_init(void)
 {
-    /* Force DPTC off if running for some reason. */
-    bitmod32(&CCM_PMCR0, CCM_PMCR0_PTVAIM,
-             CCM_PMCR0_PTVAIM | CCM_PMCR0_DPTEN);
+    int oldlevel;
 
-     /* Shadow the regulator registers */
+    /* Shadow the regulator registers */
     mc13783_read_regs(dptc_pmic_regs, dptc_reg_shadows, 2);
 
     /* Set default, safe working point. */
+    oldlevel = disable_irq_save();
     dptc_new_wp(DPTC_WP_DEFAULT);
+    restore_irq(oldlevel);
 
     /* Interrupt goes to MCU, specified reference circuits enabled when
-     * DPTC is active. */
-    bitset32(&CCM_PMCR0, CCM_PMCR0_PTVIS);
-
-    bitmod32(&CCM_PMCR0, DPTC_DRCE_MASK,
+     * DPTC is active, DPTC counting range = 256 system clocks */
+    bitmod32(&CCM_PMCR0,
+             CCM_PMCR0_PTVIS | DPTC_DRCE_MASK,
+             CCM_PMCR0_PTVIS | CCM_PMCR0_DCR |
              CCM_PMCR0_DRCE0 | CCM_PMCR0_DRCE1 |
              CCM_PMCR0_DRCE2 | CCM_PMCR0_DRCE3);
-
-    /* DPTC counting range = 256 system clocks */
-    bitclr32(&CCM_PMCR0, CCM_PMCR0_DCR);
 
     logf("DPTC: Initialized");
 }
 
 
-/* Start DPTC module */
-static void dptc_start(void)
-{
-    int oldlevel = disable_irq_save();
-
-    if (!dptc_running)
-    {
-        dptc_running = true;
-
-        /* Enable DPTC and unmask interrupt. */
-        avic_enable_int(INT_CCM_CLK, INT_TYPE_IRQ, INT_PRIO_DPTC, 
-                        CCM_CLK_HANDLER);
-
-        update_dptc_counts(dvfs_level, dptc_wp);
-        enable_dptc();
-    }
-
-    restore_irq(oldlevel);
-
-    logf("DPTC: started");
-}
-
-
-/* Stop the DPTC hardware if running and go back to default working point */
-static void dptc_stop(void)
-{
-    int oldlevel = disable_irq_save();
-
-    if (dptc_running)
-    {
-        dptc_running = false;
-
-        /* Disable DPTC and mask interrupt. */
-        CCM_PMCR0 = (CCM_PMCR0 & ~CCM_PMCR0_DPTEN) | CCM_PMCR0_PTVAIM;
-        avic_disable_int(INT_CCM_CLK);
-
-        /* Go back to default working point. */
-        dptc_new_wp(DPTC_WP_DEFAULT);
-    }
-
-    restore_irq(oldlevel);
-
-    logf("DPTC: stopped");
-}
-
-
 /** Main module interface **/
+
+/** DVFS+DPTC **/
 
 /* Initialize DVFS and DPTC */
 void INIT_ATTR dvfs_dptc_init(void)
 {
+    /* DVFS or DPTC on for some reason? Force off. */
+    bitmod32(&CCM_PMCR0,
+             CCM_PMCR0_FSVAIM | CCM_PMCR0_LBMI |
+             CCM_PMCR0_PTVAIM,
+             CCM_PMCR0_FSVAIM | CCM_PMCR0_LBMI | CCM_PMCR0_DVFEN |
+             CCM_PMCR0_PTVAIM | CCM_PMCR0_DPTEN);
+
+    /* Ensure correct order - after this, the two appear independent */
     dptc_init();
     dvfs_init();
 }
 
-
-/* Start DVFS and DPTC */
-void dvfs_dptc_start(void)
+/* Obtain the current core voltage setting, in millivolts 8-) */
+unsigned int dvfs_dptc_get_voltage(void)
 {
-    dvfs_start();
-    dptc_start();
+    unsigned int v;
+
+    int oldlevel = disable_irq_save();
+    v = dvfs_dptc_voltage_table[dptc_wp].sw[dvfs_level];
+    restore_irq(oldlevel);
+
+    /* 25mV steps from 0.900V to 1.675V */
+    return v * 25 + 900;
 }
 
 
-/* Stop DVFS and DPTC */
-void dvfs_dptc_stop(void)
+/** DVFS **/
+
+/* Start the DVFS hardware */
+void dvfs_start(void)
 {
-    dptc_stop();
-    dvfs_stop();
+    if (dvfs_running)
+        return;
+
+    /* Have to wait at least 3 div3 clocks before enabling after being
+     * stopped. */
+    udelay(1500);
+
+    /* Unmask DVFS interrupt source and enable DVFS. */
+    bitmod32(&CCM_PMCR0, CCM_PMCR0_DVFEN,
+             CCM_PMCR0_FSVAIM | CCM_PMCR0_DVFEN);
+
+    dvfs_running = true;
+
+    avic_enable_int(INT_CCM_DVFS, INT_TYPE_IRQ, INT_PRIO_DVFS,
+                    CCM_DVFS_HANDLER);
+
+    logf("DVFS: started");
 }
 
+/* Stop the DVFS hardware and return to default frequency */
+void dvfs_stop(void)
+{
+    if (!dvfs_running)
+        return;
+
+    /* Mask DVFS interrupts. */
+    avic_disable_int(INT_CCM_DVFS);
+    bitset32(&CCM_PMCR0, CCM_PMCR0_FSVAIM | CCM_PMCR0_LBMI);
+
+    if (((CCM_PMCR0 & CCM_PMCR0_DVSUP) >> CCM_PMCR0_DVSUP_POS) !=
+            DVFS_LEVEL_DEFAULT)
+    {
+        int oldlevel;
+        /* Set default frequency level */
+        updten_wait();
+        oldlevel = disable_irq_save();
+        do_dvfs_update(DVFS_LEVEL_DEFAULT);
+        restore_irq(oldlevel);
+        updten_wait();
+    }
+
+    /* Disable DVFS. */
+    bitclr32(&CCM_PMCR0, CCM_PMCR0_DVFEN);
+    dvfs_running = false;
+
+    logf("DVFS: stopped");
+}
+
+/* Is DVFS enabled? */
+bool dvfs_enabled(void)
+{
+   return dvfs_running; 
+}
+
+/* If DVFS is disabled, set the level explicitly */
+void dvfs_set_level(unsigned int level)
+{
+    if (dvfs_running ||
+        level >= DVFS_NUM_LEVELS ||
+        !((1 << level) & DVFS_LEVEL_MASK) ||
+        level == ((CCM_PMCR0 & CCM_PMCR0_DVSUP) >> CCM_PMCR0_DVSUP_POS))
+        return;
+
+    set_current_dvfs_level(level);
+}
+
+/* Get the current DVFS level */
+unsigned int dvfs_get_level(void)
+{
+    return dvfs_level;
+}
+
+/* Get bitmask of levels supported */
+unsigned int dvfs_level_mask(void)
+{
+    return DVFS_LEVEL_MASK;
+}
 
 /* Mask the DVFS interrupt without affecting running status */
 void dvfs_int_mask(bool mask)
@@ -626,7 +605,6 @@ void dvfs_int_mask(bool mask)
         avic_unmask_int(INT_CCM_DVFS);
     }
 }
-
 
 /* Set a signal load tracking weight */
 void dvfs_set_lt_weight(enum DVFS_LT_SIGS index, unsigned long value)
@@ -647,6 +625,24 @@ void dvfs_set_lt_weight(enum DVFS_LT_SIGS index, unsigned long value)
     bitmod32(reg_p, value << shift, 0x7 << shift);
 }
 
+/* Return a signal load tracking weight */
+unsigned long dvfs_get_lt_weight(enum DVFS_LT_SIGS index)
+{
+    volatile unsigned long *reg_p = &CCM_LTR2;
+    unsigned int shift = 3 * index;
+
+    if (index < 9)
+    {
+        reg_p = &CCM_LTR3;
+        shift += 5; /* Bits 7:5, 10:8 ... 31:29 */
+    }
+    else if (index < 16)
+    {
+        shift -= 16; /* Bits 13:11, 16:14 ... 31:29 */
+    }
+
+    return (*reg_p & (0x7 << shift)) >> shift;
+}
 
 /* Set a signal load detection mode */
 void dvfs_set_lt_detect(enum DVFS_LT_SIGS index, bool edge)
@@ -661,7 +657,20 @@ void dvfs_set_lt_detect(enum DVFS_LT_SIGS index, bool edge)
     bitmod32(&CCM_LTR0, edge ? bit : 0, bit);
 }
 
+/* Returns a signal load detection mode */
+bool dvfs_get_lt_detect(enum DVFS_LT_SIGS index)
+{
+    unsigned int shift = 32;
 
+    if ((unsigned)index < 13)
+        shift = index + 3;
+    else if ((unsigned)index < 16)
+        shift = index + 29;
+
+    return !!((CCM_LTR0 & (1ul << shift)) >> shift);
+}
+
+/* Set/clear the general-purpose load tracking bit */
 void dvfs_set_gp_bit(enum DVFS_DVGPS dvgp, bool assert)
 {
     if ((unsigned)dvgp <= 3)
@@ -671,6 +680,79 @@ void dvfs_set_gp_bit(enum DVFS_DVGPS dvgp, bool assert)
     }
 }
 
+/* Return the general-purpose load tracking bit */
+bool dvfs_get_gp_bit(enum DVFS_DVGPS dvgp)
+{
+    if ((unsigned)dvgp <= 3)
+        return (CCM_PMCR1 & (1ul << dvgp)) != 0;
+    return false;
+}
+
+/* Set GP load tracking by code.
+ * level_code:
+ *     lt 0  =defaults
+ *     0     =all off ->
+ *     28    =highest load
+ *     gte 28=highest load
+ * detect_mask bits:
+ *     b[3:0]: 1=LTn edge detect, 0=LTn level detect
+ */
+void dvfs_set_gp_sense(int level_code, unsigned long detect_mask)
+{
+    int i;
+
+    for (i = 0; i <= 3; i++)
+    {
+        int ltsig_num = DVFS_LT_SIG_DVGP0 + i;
+        int gpw_num = DVFS_DVGP_0 + i;
+        unsigned long weight;
+        bool edge;
+        bool assert;
+
+        if (level_code < 0)
+        {
+            /* defaults */
+            detect_mask = 0;
+            assert = 0;
+            weight = lt_signals[ltsig_num].weight;
+            edge = lt_signals[ltsig_num].detect != 0;
+        }
+        else
+        {
+            weight = MIN(level_code, 7);
+            edge = !!(detect_mask & 1);
+            assert = weight > 0;
+            detect_mask >>= 1;
+            level_code -= 7;
+            if (level_code < 0)
+                level_code = 0;
+        }
+
+        dvfs_set_lt_weight(ltsig_num, weight);  /* set weight */
+        dvfs_set_lt_detect(ltsig_num, edge);    /* set detect mode */
+        dvfs_set_gp_bit(gpw_num, assert);       /* set activity */
+    }
+}
+
+/* Return GP weight settings */
+void dvfs_get_gp_sense(int *level_code, unsigned long *detect_mask)
+{
+    int i;
+    int code = 0;
+    unsigned long mask = 0;
+
+    for (i = DVFS_LT_SIG_DVGP0; i <= DVFS_LT_SIG_DVGP3; i++)
+    {
+        code += dvfs_get_lt_weight(i);
+        mask = (mask << 1) | (dvfs_get_lt_detect(i) ? 1 : 0);
+    }
+
+    if (level_code)
+        *level_code = code;
+
+    if (detect_mask)
+        *detect_mask = mask;
+}
 
 /* Turn the wait-for-interrupt monitoring on or off */
 void dvfs_wfi_monitor(bool on)
@@ -679,56 +761,68 @@ void dvfs_wfi_monitor(bool on)
 }
 
 
-/* Obtain the current core voltage setting, in millivolts 8-) */
-unsigned int dvfs_dptc_get_voltage(void)
-{
-    unsigned int v;
+/** DPTC **/
 
-    int oldlevel = disable_irq_save();
-    v = dvfs_dptc_voltage_table[dptc_wp].sw[dvfs_level];
+/* Start DPTC module */
+void dptc_start(void)
+{
+    int oldlevel;
+
+    if (dptc_running)
+        return;
+
+    oldlevel = disable_irq_save();
+    dptc_running = true;
+
+    /* Enable DPTC and unmask interrupt. */
+    update_dptc_counts();
+    enable_dptc();
     restore_irq(oldlevel);
 
-    /* 25mV steps from 0.900V to 1.675V */
-    return v * 25 + 900;
+    avic_enable_int(INT_CCM_CLK, INT_TYPE_IRQ, INT_PRIO_DPTC, 
+                    CCM_CLK_HANDLER);
+
+    logf("DPTC: started");
 }
 
-
-/* Get the current DVFS level */
-unsigned int dvfs_get_level(void)
+/* Stop the DPTC hardware if running and go back to default working point */
+void dptc_stop(void)
 {
-    return dvfs_level;
-}
+    int oldlevel;
 
+    if (!dptc_running)
+        return;
 
-/* If DVFS is disabled, set the level explicitly */
-void dvfs_set_level(unsigned int level)
-{
-    int oldlevel = disable_irq_save();
+    avic_disable_int(INT_CCM_CLK);
 
-    unsigned int currlevel =
-        (CCM_PMCR0 & CCM_PMCR0_DVSUP) >> CCM_PMCR0_DVSUP_POS;
+    oldlevel = disable_irq_save();
+    dptc_running = false;
 
-    if (!dvfs_running && level < DVFS_NUM_LEVELS && level != currlevel)
-        set_current_dvfs_level(level);
+    /* Disable DPTC and mask interrupt. */
+    CCM_PMCR0 = (CCM_PMCR0 & ~CCM_PMCR0_DPTEN) | CCM_PMCR0_PTVAIM;
 
+    /* Go back to default working point. */
+    dptc_new_wp(DPTC_WP_DEFAULT);
     restore_irq(oldlevel);
+
+    logf("DPTC: stopped");
 }
 
+/* Is DPTC enabled? */
+bool dptc_enabled(void)
+{
+    return dptc_running;
+}
+
+/* If DPTC is not running, set the working point explicitly */
+void dptc_set_wp(unsigned int wp)
+{
+    if (!dptc_running && wp < DPTC_NUM_WP)
+        dptc_new_wp(wp);
+}
 
 /* Get the current DPTC working point */
 unsigned int dptc_get_wp(void)
 {
     return dptc_wp;
-}
-
-
-/* If DPTC is not running, set the working point explicitly */
-void dptc_set_wp(unsigned int wp)
-{
-    int oldlevel = disable_irq_save();
-
-    if (!dptc_running && wp < DPTC_NUM_WP)
-        dptc_new_wp(wp);
-
-    restore_irq(oldlevel);
 }

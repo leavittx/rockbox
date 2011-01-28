@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #include "skin_buffer.h"
+#include "skin_parser.h"
 
 /****************************************************************************
  * 
@@ -45,6 +46,7 @@
 
 #ifdef ROCKBOX
 #include "config.h"
+#include "skin_debug.h"
 
 #ifdef APPLICATION
 #   define USE_HOST_MALLOC
@@ -103,7 +105,10 @@ void* skin_buffer_alloc(size_t size)
     /* 32-bit aligned */
     size = (size + 3) & ~3;
     if (size > skin_buffer_freespace())
+    {
+        skin_error(MEMORY_LIMIT_EXCEEDED, NULL);
         return NULL;
+    }
     retval = buffer_front;
     buffer_front += size;
 #elif defined(USE_HOST_MALLOC)

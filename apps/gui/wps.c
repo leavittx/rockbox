@@ -242,8 +242,21 @@ static int skintouch_to_wps(struct wps_data *data)
         case ACTION_SETTINGS_INC:
         case ACTION_SETTINGS_DEC:
         {
-            const struct settings_list *setting = region->extradata;
+            const struct settings_list *setting = region->data;
             option_select_next_val(setting, button == ACTION_SETTINGS_DEC, true);
+        }
+        return ACTION_REDRAW;
+        case ACTION_TOUCH_MUTE:
+        {
+            const int min_vol = sound_min(SOUND_VOLUME);
+            if (global_settings.volume == min_vol)
+                global_settings.volume = region->value;
+            else
+            {
+                region->value = global_settings.volume;
+                global_settings.volume = min_vol;
+            }
+            setvol();
         }
         return ACTION_REDRAW;
     }
@@ -342,8 +355,8 @@ bool ffwd_rew(int button)
 
                 /* set the wps state ff_rewind_count so the progess info
                    displays corectly */
-                skin_get_global_state()->ff_rewind_count = (skin_get_global_state()->wps_time_countup == false)?
-                                            ff_rewind_count:-ff_rewind_count;
+                skin_get_global_state()->ff_rewind_count = ff_rewind_count;
+
                 FOR_NB_SCREENS(i)
                 {
                     skin_update(WPS, i,
@@ -482,7 +495,7 @@ static void prev_track(unsigned long skip_thresh)
 #if (CONFIG_CODEC == SWCODEC)
             audio_pre_ff_rewind();
 #else
-        audio_pause();
+            audio_pause();
 #endif
 
         audio_ff_rewind(0);

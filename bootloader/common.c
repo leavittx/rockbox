@@ -45,7 +45,8 @@
  || defined(SAMSUNG_YH925) || defined(SAMSUNG_YH920) \
  || defined(SAMSUNG_YH820) || defined(PHILIPS_SA9200) \
  || defined(PHILIPS_HDD1630) || defined(PHILIPS_HDD6330) \
- || defined(ONDA_VX747) || defined(PBELL_VIBE500)
+ || defined(ONDA_VX747) || defined(PBELL_VIBE500) \
+ || defined(TOSHIBA_GIGABEAT_S)
 bool verbose = false;
 #else
 bool verbose = true;
@@ -303,7 +304,7 @@ void display_logf(void) /* Doesn't return! */
         if(button == SYS_USB_CONNECTED)
             usb_acknowledge(SYS_USB_CONNECTED_ACK);
         else if(button == SYS_USB_DISCONNECTED)
-            usb_acknowledge(SYS_USB_DISCONNECTED_ACK);
+            ;
         else if(button & LOGF_UP)
             user_index++;
         else if(button & LOGF_DOWN)
