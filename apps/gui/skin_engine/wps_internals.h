@@ -111,6 +111,7 @@ struct progressbar {
     bool nobar;
     struct gui_img *slider;
     bool horizontal;
+    struct gui_img *backdrop;
 };
 #endif
 
@@ -196,7 +197,10 @@ struct touchregion {
     int action;              /* action this button will return */
     bool armed;              /* A region is armed on press. Only armed regions are triggered
                                 on repeat or release. */
-    void* extradata;
+    union {                  /* Extra data, action dependant */
+        void* data;
+        int   value;
+    };
 };
 #endif
 
@@ -302,7 +306,6 @@ struct wps_state
     int  ff_rewind_count;
     bool ff_rewind;
     bool paused;
-    bool wps_time_countup;
     bool is_fading;
 };
 

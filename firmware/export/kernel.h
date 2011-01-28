@@ -64,7 +64,6 @@
 #define SYS_USB_CONNECTED         MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 0)
 #define SYS_USB_CONNECTED_ACK     MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 1)
 #define SYS_USB_DISCONNECTED      MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 2)
-#define SYS_USB_DISCONNECTED_ACK  MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 3)
 #define SYS_USB_LUN_LOCKED        MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 4)
 #define SYS_USB_READ_DATA         MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 5)
 #define SYS_USB_WRITE_DATA        MAKE_SYS_EVENT(SYS_EVENT_CLS_USB, 6)
@@ -178,9 +177,10 @@ struct wakeup
 
 
 /* global tick variable */
-#if defined(CPU_PP) && defined(BOOTLOADER)
-/* We don't enable interrupts in the iPod bootloader, so we need to fake
-   the current_tick variable */
+#if defined(CPU_PP) && defined(BOOTLOADER) && \
+    !defined(HAVE_BOOTLOADER_USB_MODE)
+/* We don't enable interrupts in the PP bootloader unless USB mode is
+   enabled for it, so we need to fake the current_tick variable */
 #define current_tick (signed)(USEC_TIMER/10000)
 
 static inline void call_tick_tasks(void)

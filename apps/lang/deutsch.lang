@@ -10436,15 +10436,15 @@
   user: core
   <source>
     *: none
-    ipodvideo: "Bass Cutoff"
+    ipodvideo,ipod6g: "Bass Cutoff"
   </source>
   <dest>
     *: none
-    ipodvideo: "Tiefengrenzfrequenz"
+    ipodvideo,ipod6g: "Tiefengrenzfrequenz"
   </dest>
   <voice>
     *: none
-    ipodvideo: "Tiefengrenzfrequenz"
+    ipodvideo,ipod6g: "Tiefengrenzfrequenz"
   </voice>
 </phrase>
 <phrase>
@@ -10453,15 +10453,15 @@
   user: core
   <source>
     *: none
-    ipodvideo: "Treble Cutoff"
+    ipodvideo,ipod6g: "Treble Cutoff"
   </source>
   <dest>
     *: none
-    ipodvideo: "Höhengrenzfrequenz"
+    ipodvideo,ipod6g: "Höhengrenzfrequenz"
   </dest>
   <voice>
     *: none
-    ipodvideo: "Höhengrenzfrequenz"
+    ipodvideo,ipod6g: "Höhengrenzfrequenz"
   </voice>
 </phrase>
 <phrase>
@@ -12603,5 +12603,50 @@
   </dest>
   <voice>
     *: "Dateigröße"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_RSSI
+  desc: Signal strength of a received FM station
+  user: core
+  <source>
+    *: none
+    radio: "Signal strength:"
+  </source>
+  <dest>
+    *: none
+    radio: "Signalstärke:"
+  </dest>
+  <voice>
+    *: none
+    radio: "Signalstärke:"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AUTORESUME_ENABLE_YES
+  desc: resume settings menu
+  user: core
+  <source>
+    *: "Yes (requires initialized database)"
+  </source>
+  <dest>
+    *: "Ja (erfordert initialisierte Datenbank)"
+  </dest>
+  <voice>
+    *: "Ja (erfordert initialisierte Datenbank)"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_AUTORESUME_ENABLE
+  desc: resume settings menu
+  user: core
+  <source>
+    *: "Enable automatic resume"
+  </source>
+  <dest>
+    *: "Automatisches Fortsetzen aktivieren"
+  </dest>
+  <voice>
+    *: "Automatisches Fortsetzen aktivieren"
   </voice>
 </phrase>

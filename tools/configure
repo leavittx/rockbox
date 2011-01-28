@@ -381,10 +381,10 @@ calmrisccc () {
 
 coldfirecc () {
  prefixtools m68k-elf-
- GCCOPTS="$CCOPTS -m5206e -Wa\,-m5249 -malign-int -mstrict-align"
+ GCCOPTS="$CCOPTS -mcpu=5249 -malign-int -mstrict-align"
  GCCOPTIMIZE="-fomit-frame-pointer"
  endian="big"
- gccchoice="3.4.6"
+ gccchoice="4.5.2"
 }
 
 arm7tdmicc () {
@@ -478,10 +478,12 @@ mipselcc () {
 }
 
 androidcc () {
+    buildhost=`uname | tr [:upper:] [:lower:]`
     gccchoice="4.4.3"
     gcctarget="arm-linux-androideabi-"
-    gccprefix=$ANDROID_NDK_PATH/toolchains/$gcctarget$gccchoice/prebuilt/linux-x86
-    PATH=$PATH:$gccprefix/bin prefixtools $gcctarget
+    gccprefix=$ANDROID_NDK_PATH/toolchains/$gcctarget$gccchoice/prebuilt/$buildhost-x86
+    PATH=$PATH:$gccprefix/bin
+    prefixtools $gcctarget
     GCCOPTS=`echo $CCOPTS | sed -e s/-ffreestanding// -e s/-nostdlib// -e s/-Wundef//`
     GCCOPTS="$GCCOPTS -ffunction-sections -march=armv5te -mtune=xscale -msoft-float -fomit-frame-pointer \
 		--sysroot=$ANDROID_NDK_PATH/platforms/android-4/arch-arm"
@@ -2346,7 +2348,7 @@ fi
     bmp2rb_native="$rootdir/tools/bmp2rb -f 4"
     output="rockbox.mi4"
     appextra="recorder:gui:radio"
-    plugins=""
+    plugins="yes"
     swcodec="yes"
     boottool="$rootdir/tools/scramble -mi4v3 -model=9200 -type=RBBL"
     bootoutput="FWImage.ebn"

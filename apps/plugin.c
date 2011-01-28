@@ -201,7 +201,7 @@ static const struct plugin_api rockbox_api = {
 #if defined(TOSHIBA_GIGABEAT_F) || defined(SANSA_E200) || defined(SANSA_C200) \
     || defined(IRIVER_H10) || defined(COWON_D2) || defined(PHILIPS_HDD1630) \
     || defined(SANSA_FUZE) || defined(SANSA_E200V2) || defined(SANSA_FUZEV2) \
-    || defined(TOSHIBA_GIGABEAT_S)
+    || defined(TOSHIBA_GIGABEAT_S) || defined(PHILIPS_SA9200)
     lcd_yuv_set_options,
 #endif
 #endif /* MEMORYSIZE > 2 */
@@ -382,6 +382,7 @@ static const struct plugin_api rockbox_api = {
     file_exists,
     strip_extension,
     crc_32,
+    filetype_get_attr,
 
     /* dir */
     (opendir_func)PREFIX(opendir),
@@ -391,6 +392,10 @@ static const struct plugin_api rockbox_api = {
     PREFIX(rmdir),
     dir_exists,
     dir_get_info,
+
+    /* browsing */
+    browse_context_init,
+    rockbox_browse,
 
     /* kernel/ system */
 #if defined(CPU_ARM) && CONFIG_PLATFORM & PLATFORM_NATIVE
@@ -772,7 +777,6 @@ static const struct plugin_api rockbox_api = {
 
     /* new stuff at the end, sort into place next time
        the API gets incompatible */
-    filetype_get_attr,
 };
 
 int plugin_load(const char* plugin, const void* parameter)

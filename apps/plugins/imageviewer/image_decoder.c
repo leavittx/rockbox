@@ -27,10 +27,19 @@ static const char *decoder_names[MAX_IMAGE_TYPES] = {
     "bmp",
     "jpeg",
     "png",
+#ifdef HAVE_LCD_COLOR
+    "ppm"
+#endif
 };
 
-/* check file type by extention */
-enum image_type get_image_type(const char *name)
+/* Check file type by magic number or file extension
+ *
+ * If the file contains magic number, use it to determine image type.
+ * Otherwise use file extension to determine image type.
+ * If the file contains magic number and file extension is not correct,
+ * informs user that something is wrong.
+ */
+enum image_type get_image_type(const char *name, bool quiet)
 {
     static const struct {
         char *ext;
@@ -41,19 +50,64 @@ enum image_type get_image_type(const char *name)
         { ".jpe",   IMAGE_JPEG },
         { ".jpeg",  IMAGE_JPEG },
         { ".png",   IMAGE_PNG  },
+#ifdef HAVE_LCD_COLOR
+        { ".ppm",   IMAGE_PPM  },
+#endif
+    };
+    static const struct {
+        char *magic;    /* magic number */
+        int length;     /* length of the magic number */
+        enum image_type type;
+    } magic_list[] = {
+        { "BM", 2, IMAGE_BMP },
+        { "\xff\xd8\xff\xe0", 4, IMAGE_JPEG },
+        { "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8, IMAGE_PNG },
+#ifdef HAVE_LCD_COLOR
+        { "P3", 2, IMAGE_PPM },
+        { "P6", 2, IMAGE_PPM },
+#endif
     };
 
+    enum image_type type = IMAGE_UNKNOWN;
     const char *ext = rb->strrchr(name, '.');
-    int i;
-    if (!ext)
-        return IMAGE_UNKNOWN;
+    int i, fd;
+    char buf[12];
 
-    for (i = 0; i < (int)ARRAYLEN(ext_list); i++)
+    /* check file extention */
+    if (ext)
     {
-        if (!rb->strcasecmp(ext, ext_list[i].ext))
-            return ext_list[i].type;
+        for (i = 0; i < (int)ARRAYLEN(ext_list); i++)
+        {
+            if (!rb->strcasecmp(ext, ext_list[i].ext))
+            {
+                type = ext_list[i].type;
+                break;
+            }
+        }
     }
-    return IMAGE_UNKNOWN;
+
+    /* check magic value in the file */
+    fd = rb->open(name, O_RDONLY);
+    if (fd >= 0)
+    {
+        rb->memset(buf, 0, sizeof buf);
+        rb->read(fd, buf, sizeof buf);
+        rb->close(fd);
+        for (i = 0; i < (int)ARRAYLEN(magic_list); i++)
+        {
+            if (!rb->memcmp(buf, magic_list[i].magic, magic_list[i].length))
+            {
+                if (!quiet && type != magic_list[i].type)
+                {
+                    /* file extension is wrong. */
+                    rb->splashf(HZ*1, "Note: File extension is not correct");
+                }
+                type = magic_list[i].type;
+                break;
+            }
+        }
+    }
+    return type;
 }
 
 static void *decoder_handle = NULL;

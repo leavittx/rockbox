@@ -557,20 +557,18 @@
 #define LEVEL_Y 49
 #define LINES_Y 82
 
-/* NOTE: This is for the GoGear SA9200 and is only
-   temporary until I can get better coordinates! */
 #elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 160)
 
-#define BLOCK_WIDTH 6
-#define BLOCK_HEIGHT 6
+#define BLOCK_WIDTH 7
+#define BLOCK_HEIGHT 7
 #define BOARD_X 4
-#define BOARD_Y 3
-#define PREVIEW_X 84
-#define PREVIEW_Y 100
-#define LABEL_X 71
-#define SCORE_Y 17
-#define LEVEL_Y 49
-#define LINES_Y 82
+#define BOARD_Y 5
+#define PREVIEW_X 88
+#define PREVIEW_Y 111
+#define LABEL_X 82
+#define SCORE_Y (2+16)
+#define LEVEL_Y (36+16)
+#define LINES_Y (70+16)
 
 #elif (LCD_WIDTH == 128) && (LCD_HEIGHT == 96)
 
@@ -1347,13 +1345,13 @@ static int rockblox_loop (void)
 #ifdef HAS_BUTTON_HOLD
         if (rb->button_hold ()) {
             /* Turn on backlight timeout (revert to settings) */
-            backlight_use_settings(); /* backlight control in lib/helper.c */
+            backlight_use_settings();
             rb->splash(0, "Paused");
             while (rb->button_hold ())
                 rb->sleep(HZ/10);
 
             /* Turn off backlight timeout */
-            backlight_force_on(); /* backlight control in lib/helper.c */
+            backlight_ignore_timeout();
 
             /* get rid of the splash text */
             rb->lcd_bitmap (rockblox_background, 0, 0, LCD_WIDTH, LCD_HEIGHT);
@@ -1529,7 +1527,7 @@ enum plugin_status plugin_start (const void *parameter)
     }
 #endif
     /* Turn off backlight timeout */
-    backlight_force_on(); /* backlight control in lib/helper.c */
+    backlight_ignore_timeout();
     load_game();
     resume_file = resume;
     while(!rockblox_loop()) {
@@ -1550,7 +1548,7 @@ enum plugin_status plugin_start (const void *parameter)
 #endif
     /* Save user's HighScore */
     highscore_save(SCORE_FILE, highscores, NUM_SCORES);
-    backlight_use_settings(); /* backlight control in lib/helper.c */
+    backlight_use_settings();
 
     return PLUGIN_OK;
 }

@@ -569,6 +569,7 @@ void lcd_scroll_fn(void)
     int xpos, ypos;
     bool update;
     struct viewport* old_vp = current_vp;
+    bool makedelay;
 
     update = false;
     for ( index = 0; index < lcd_scroll_info.lines; index++ ) {
@@ -588,26 +589,33 @@ void lcd_scroll_fn(void)
         xpos = s->startx;
         ypos = s->y;
 
+        makedelay = false;
         if (s->bidir)  /* scroll bidirectional */
         {
             if (s->offset <= 0) {
                 /* at beginning of line */
                 s->offset = 0;
                 s->backward = false;
-                s->start_tick = current_tick + lcd_scroll_info.delay * 2;
+                makedelay = true;
             }
-            if (s->offset >= s->len - (current_vp->width - xpos)) {
+            else if (s->offset >= s->len - (current_vp->width - xpos)) {
                 /* at end of line */
                 s->offset = s->len - (current_vp->width - xpos);
                 s->backward = true;
-                s->start_tick = current_tick + lcd_scroll_info.delay * 2;
+                makedelay = true;
             }
         }
         else    /* scroll forward the whole time */
         {
-            if (s->offset >= s->len)
-                s->offset -= s->len;
+            if (s->offset >= s->len) {
+                s->offset = 0;
+                makedelay = true;
+            }
         }
+
+        if (makedelay)
+            s->start_tick = current_tick + lcd_scroll_info.delay +
+                    lcd_scroll_info.ticks;
 
         lcd_putsxyofs(xpos, ypos, s->offset, s->line);
         update = true;

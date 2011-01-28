@@ -31,10 +31,17 @@
 /* Overdrive mode */
 #define CPUFREQ_MAX         528000000
 
-static inline void udelay(unsigned int usecs)
+#define CPU_MULTI_FREQUENCY 3
+
+static inline void udelay(unsigned long usecs)
 {
-    unsigned stop = GPTCNT + usecs;
+    unsigned long stop = GPTCNT + usecs;
     while (TIME_BEFORE(GPTCNT, stop));
+}
+
+static inline unsigned long usec_timer(void)
+{
+    return GPTCNT;
 }
 
 void watchdog_init(unsigned int half_seconds);

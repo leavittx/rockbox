@@ -163,6 +163,10 @@ or \config{\%D(2)}), produce the information for the next file to be played.
     \nopt{player}{%
     \config{\%pm} & Peak Meter. The entire line is used as %
                     volume peak meter.\\%
+    \config{\%pL} & Peak meter for the left channel. Can be used as a value, %
+            a conditional tag or a bar tag.\\
+    \config{\%pR} & Peak meter for the right channel. Can be used as a value, %
+            a conditional tag or a bar tag.\\
     }%
     \config{\%pn} & Playlist name (without path or extension)\\
     \config{\%pp} & Playlist position\\
@@ -590,7 +594,7 @@ display cycling round the defined sublines. See
 \opt{touchscreen}{
   \section{Touchscreen Areas}
     \begin{tagmap}
-      \config{\%T(x,y,[width],\tabnlindent[height],action)}
+      \config{\%T(x,y,width,\tabnlindent{}height,action)}
       & Invoke the action specified when the user presses in the defined
       touchscreen area.\\
     \end{tagmap}
@@ -615,6 +619,11 @@ display cycling round the defined sublines. See
     \item[pitch] -- Open the pitchscreen.
     \item[voldown] -- Decrease the volume by one step.
     \item[volup] -- Increase the volume by one step.
+    \item[mute] -- Un/Mute playback.
+    \item[setting\_inc] -- Increment the subsequently specified setting (e.g
+      \config{\%T(0,0, setting\_inc, volume)} increases the volume by one step).
+    \item[setting\_dec] -- Decrement the subsequently specified setting (e.g
+      \config{\%T(0,0, setting\_dec, volume)} decreases the volume by one step).
   \end{description}
 
   \section{Last Touchscreen Press}
@@ -654,9 +663,12 @@ display cycling round the defined sublines. See
   \item[vertical] -- force the bar to be drawn vertically.
   \item[invert] -- invert the draw direction (i.e. right to left, or top to
     bottom).
-  \item[slider] -- draw an preloaded image over the top of the bar so that
+  \item[slider] -- draw a preloaded image over the top of the bar so that
     the centre of the image matches the current position. This must be
     followed by the label of the desired image.
+  \item[backdrop] -- draw a preloaded image under the bar. The full
+    image will be displayed and must be the same size as the bar. 
+    This must be followed by the label of the desired image.
   \item[nofill] -- don't draw the bar, only its frame (for use with the
      ``slider'' option).
   \item[nobar] -- don't draw the bar or its frame (for use with the

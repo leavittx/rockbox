@@ -196,31 +196,26 @@ void button_init_device(void)
 #endif
 }
 
-    /* read the 2 bits at the same time */
-#define GPIOA_PIN76_offset ((1<<(6+2)) | (1<<(7+2)))
-#define GPIOA_PIN76 (*(volatile unsigned char*)(GPIOA_BASE+GPIOA_PIN76_offset))
-
 void button_gpioa_isr(void)
 {
 #if defined(HAVE_SCROLLWHEEL)
     /* scroll wheel handling */
     if (GPIOA_MIS & SCROLLWHEEL_BITS)
-        scrollwheel(GPIOA_PIN76 >> 6);
+        scrollwheel(GPIOA_PIN_MASK(0xc0) >> 6);
 
     /* ack interrupt */
     GPIOA_IC = SCROLLWHEEL_BITS;
 #endif
 }
 
-
 /*
  * Get button pressed from hardware
  */
 int button_read_device(void)
 {
-    int btn = 0;
-    static bool hold_button_old = false;
     static long power_counter = 0;
+    bool hold = false;
+    int btn;
     unsigned gpiod6;
 
     /* if we don't wait for the fifo to empty, we'll see screen corruption
@@ -245,33 +240,16 @@ int button_read_device(void)
     GPIOB_PIN(0) = 0;
     udelay(2);
 
-    if (GPIOC_PIN(1) & 1<<1)
-        btn |= BUTTON_DOWN;
-    if (GPIOC_PIN(2) & 1<<2)
-        btn |= BUTTON_UP;
-    if (GPIOC_PIN(3) & 1<<3)
-        btn |= BUTTON_LEFT;
-    if (GPIOC_PIN(4) & 1<<4)
-        btn |= BUTTON_SELECT;
-    if (GPIOC_PIN(5) & 1<<5)
-        btn |= BUTTON_RIGHT;
-    if (GPIOB_PIN(1) & 1<<1)
-        btn |= BUTTON_HOME;
+    btn = GPIOC_PIN_MASK(0x3e) | (GPIOB_PIN(1) >> 1);
+
     if (amsv2_variant == 1)
         btn ^= BUTTON_HOME;
 
-    if (gpiod6 & 1<<6)
+    if (gpiod6)
     {   /* power/hold is on the same pin. we know it's hold if the bit isn't
          * set now anymore */
-        if (GPIOD_PIN(6) & 1<<6)
-        {
-            hold_button = false;
-            btn |= BUTTON_POWER;
-        }
-        else
-        {
-            hold_button = true;
-        }
+        btn |= GPIOD_PIN(6);
+        hold = !(btn & BUTTON_POWER);
     }
 
     if(gpiob_pin0_dir)
@@ -283,21 +261,21 @@ int button_read_device(void)
 #ifdef HAS_BUTTON_HOLD
 #ifndef BOOTLOADER
     /* light handling */
-    if (hold_button != hold_button_old)
+    if (hold != hold_button)
     {
-        hold_button_old = hold_button;
-        backlight_hold_changed(hold_button);
+        hold_button = hold;
+        backlight_hold_changed(hold);
         /* mask scrollwheel irq so we don't need to check for
          * the hold button in the isr */
-        if (hold_button)
+        if (hold)
             GPIOA_IE &= ~SCROLLWHEEL_BITS;
         else
             GPIOA_IE |= SCROLLWHEEL_BITS;
     }
 #else
-    (void)hold_button_old;
-#endif
-    if (hold_button)
+    hold_button = hold;
+#endif /* BOOTLOADER */
+    if (hold)
     {
         power_counter = HZ;
         return 0;
@@ -311,7 +289,7 @@ int button_read_device(void)
         power_counter--;
         btn &= ~BUTTON_POWER;
     }
-#endif
+#endif /* HAS_BUTTON_HOLD */
     return btn;
 }
 

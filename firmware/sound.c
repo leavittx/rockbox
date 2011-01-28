@@ -308,7 +308,7 @@ void sound_set_bass(int value)
         return;
 
 #if !defined(AUDIOHW_HAVE_CLIPPING)
-#if defined(HAVE_WM8750) || defined(HAVE_WM8751)
+#if defined(HAVE_WM8750) || defined(HAVE_WM8751) || defined(HAVE_CS42L55)
     current_bass = value;
 #else
     current_bass =  value * 10;
@@ -334,7 +334,7 @@ void sound_set_treble(int value)
         return;
 
 #if !defined(AUDIOHW_HAVE_CLIPPING)
-#if defined(HAVE_WM8750) || defined(HAVE_WM8751)
+#if defined(HAVE_WM8750) || defined(HAVE_WM8751) || defined(HAVE_CS42L55)
     current_treble = value;
 #else
     current_treble = value * 10;
@@ -477,10 +477,14 @@ int sound_enum_hw_eq_band_setting(unsigned int band,
 
 static void sound_set_hw_eq_band_gain(unsigned int band, int value)
 {
+    int setting;
+
     if(!audio_is_initialized)
         return;
 
-    current_eq_band_gain[band] = value;
+    setting = sound_enum_hw_eq_band_setting(band, AUDIOHW_EQ_GAIN);
+    current_eq_band_gain[band] = sound_val2phys(setting + 0x10000, value);
+
     audiohw_set_eq_band_gain(band, value);
     set_prescaled_volume();
 }
