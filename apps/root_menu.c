@@ -271,14 +271,8 @@ static int browser(void* param)
 #endif
     }
     return ret_val;
-}  
-
-static int menu(void* param)
-{
-    (void)param;
-    return do_menu(NULL, 0, NULL, false);
-    
 }
+
 #ifdef HAVE_RECORDING
 static int recscrn(void* param)
 {
@@ -323,6 +317,19 @@ static int radio(void* param)
 }
 #endif
 
+static int miscscrn(void * param)
+{
+    const struct menu_item_ex *menu = (const struct menu_item_ex*)param;
+    int result = do_menu(menu, NULL, NULL, false);
+    switch (result)
+    {
+        case GO_TO_PLAYLIST_VIEWER:
+            return GO_TO_PLAYLIST_VIEWER;
+        default:
+            return GO_TO_ROOT;
+    }
+}
+    
 static int playlist_view(void * param)
 {
     (void)param;
@@ -344,44 +351,7 @@ static int load_bmarks(void* param)
         return GO_TO_WPS;
     return GO_TO_PREVIOUS;
 }
-static int plugins_menu(void* param)
-{
-    (void)param;
-    MENUITEM_STRINGLIST(plugins_menu_items, ID2P(LANG_PLUGINS), NULL,
-                        ID2P(LANG_PLUGIN_GAMES),
-                        ID2P(LANG_PLUGIN_APPS), ID2P(LANG_PLUGIN_DEMOS));
-    const char *folder;
-    struct browse_context browse;
-    char *title;
-    int retval = GO_TO_PREVIOUS;
-    int selection = 0, current = 0;
 
-    while (retval == GO_TO_PREVIOUS)
-    {
-        selection = do_menu(&plugins_menu_items, &current, NULL, false);
-        switch (selection)
-        {
-            case 0:
-                folder = PLUGIN_GAMES_DIR;
-                title = str(LANG_PLUGIN_GAMES);
-                break;
-            case 1:
-                folder = PLUGIN_APPS_DIR;
-                title = str(LANG_PLUGIN_APPS);
-                break;
-            case 2:
-                folder = PLUGIN_DEMOS_DIR;
-                title = str(LANG_PLUGIN_DEMOS);
-                break;
-            default:
-                return selection;
-        }
-        browse_context_init(&browse, SHOW_PLUGINS, 0,
-                            title, Icon_Plugin, folder, NULL);
-        retval = rockbox_browse(&browse);
-    }
-    return retval;
-}
 int time_screen(void* ignored);     
 
 /* These are all static const'd from apps/menus/ *.c
@@ -391,10 +361,14 @@ extern struct menu_item_ex
 #ifdef HAVE_TAGCACHE
         tagcache_menu,
 #endif
+        main_menu_,
         manage_settings,
         recording_settings_menu,
         radio_settings_menu,
         bookmark_settings_menu,
+        plugin_menu,
+        playlist_options,
+        info_menu,
         system_menu;
 static const struct root_items items[] = {
     [GO_TO_FILEBROWSER] =   { browser, (void*)GO_TO_FILEBROWSER, &file_menu},
@@ -402,7 +376,8 @@ static const struct root_items items[] = {
     [GO_TO_DBBROWSER] =     { browser, (void*)GO_TO_DBBROWSER, &tagcache_menu },
 #endif
     [GO_TO_WPS] =           { wpsscrn, NULL, &playback_settings },
-    [GO_TO_MAINMENU] =      { menu, NULL, &manage_settings },
+    [GO_TO_MAINMENU] =      { miscscrn, (struct menu_item_ex*)&main_menu_,
+                                                            &manage_settings },
     
 #ifdef HAVE_RECORDING
     [GO_TO_RECSCREEN] =     {  recscrn, NULL, &recording_settings_menu },
@@ -413,8 +388,11 @@ static const struct root_items items[] = {
 #endif
     
     [GO_TO_RECENTBMARKS] =  { load_bmarks, NULL, &bookmark_settings_menu }, 
-    [GO_TO_BROWSEPLUGINS] = { plugins_menu, NULL, NULL },
+    [GO_TO_BROWSEPLUGINS] = { miscscrn, &plugin_menu, NULL },
+    [GO_TO_PLAYLISTS_SCREEN] = { miscscrn, &playlist_options,
+                                                        &playlist_settings },
     [GO_TO_PLAYLIST_VIEWER] = { playlist_view, NULL, NULL },
+    [GO_TO_SYSTEM_SCREEN] = { miscscrn, &info_menu, &system_menu },
     
 };
 static const int nb_items = sizeof(items)/sizeof(*items);
@@ -451,6 +429,11 @@ MENUITEM_RETURNVALUE(menu_, ID2P(LANG_SETTINGS), GO_TO_MAINMENU,
 MENUITEM_RETURNVALUE(bookmarks, ID2P(LANG_BOOKMARK_MENU_RECENT_BOOKMARKS),
                         GO_TO_RECENTBMARKS,  item_callback, 
                         Icon_Bookmark);
+MENUITEM_RETURNVALUE(playlists, ID2P(LANG_PLAYLISTS), GO_TO_PLAYLISTS_SCREEN,
+                     NULL, Icon_Playlist);
+MENUITEM_RETURNVALUE(system_menu_, ID2P(LANG_SYSTEM), GO_TO_SYSTEM_SCREEN,
+                     NULL, Icon_System_menu);
+
 #ifdef HAVE_LCD_CHARCELLS
 static int do_shutdown(void)
 {
@@ -478,7 +461,7 @@ MAKE_MENU(root_menu_, ID2P(LANG_ROCKBOX_TITLE),
 #if CONFIG_TUNER
             &fm,
 #endif
-            &playlist_options, &rocks_browser,  &info_menu
+            &playlists, &rocks_browser,  &system_menu_
 
 #ifdef HAVE_LCD_CHARCELLS
             ,&do_shutdown_item
