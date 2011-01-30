@@ -33,6 +33,8 @@
 #define MAX_PLAYERS 1
 #define MAX_BOMBS 100
 
+#define NFIREMAP 3
+
 /*
  * Animation params
  */
@@ -204,7 +206,7 @@ typedef enum {
 typedef struct {
 	SqType map[MAP_W][MAP_H];
 	Bomb bombs[MAX_BOMBS];
-	Fire firemap[MAP_W][MAP_H];
+	Fire firemap[MAP_W][MAP_H];//[NFIREMAP];
 	BombDetonation det[MAP_W][MAP_H];
 	BoxDetonation boxes[MAP_W][MAP_H];
 	BonusType bonuses[MAP_W][MAP_H];
