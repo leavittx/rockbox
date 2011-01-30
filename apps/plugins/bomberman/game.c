@@ -47,9 +47,6 @@ struct fire_struct {
     b = tmp; \
 }
 
-#define ISFULLPWR(bomb) \
-    ((bomb).owner->isFullPower)
-
 void PlayerMoveUp(Game *game, Player *player)
 {
     if (player->ismove || player->status.state != ALIVE)
@@ -318,7 +315,7 @@ void PlayerPlaceBomb(Game *game, Player *player)
         return;
 
     if (player->bombs_placed >= player->bombs_max &&
-        player->bombs_max != -1) /* Infinity */
+        player->bombs_max != -1) /* infinity */
             return;
 
     for (i = 0; i < MAX_BOMBS; i++)
@@ -516,7 +513,8 @@ static void DoFire(Game *game, struct fire_struct *fs)
 void UpdateBombs(Game *game)
 {
     int i;
-    static const int detphases[4] = { 0, 1, 2, 1 }; /* this helps with detonation animation */
+    /* this helps with detonation animation */
+    static const int detphases[4] = { 0, 1, 2, 1 };
     struct fire_struct fs;
 
     for (i = 0; i < MAX_BOMBS; i++)
@@ -634,8 +632,6 @@ void UpdateBoxes(Game *game)
         for (j = 0; j < MAP_H; j++)
             if (game->field.map[i][j] == SQUARE_BOX && game->field.boxes[i][j].state > HUNKY)
             {
-                //game->field.boxes[i][j].state++;
-                //	break;
                 game->field.boxes[i][j].state =
                         (tick - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
                 if (game->field.boxes[i][j].state > BOX_EXPL_PHASE5)

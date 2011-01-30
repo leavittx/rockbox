@@ -206,7 +206,7 @@ typedef enum {
 typedef struct {
 	SqType map[MAP_W][MAP_H];
 	Bomb bombs[MAX_BOMBS];
-	Fire firemap[MAP_W][MAP_H][NFIREMAP];
+	Fire firemap[MAP_W][MAP_H];
 	BombDetonation det[MAP_W][MAP_H];
 	BoxDetonation boxes[MAP_W][MAP_H];
 	BonusType bonuses[MAP_W][MAP_H];
