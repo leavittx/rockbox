@@ -26,6 +26,8 @@
 #include <stdbool.h>
 #include "config.h"
 
+extern int sdl_app_has_input_focus;
+
 bool button_hold(void);
 #undef button_init_device
 void button_init_device(void);

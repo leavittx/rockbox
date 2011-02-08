@@ -73,6 +73,9 @@
 #define MP4_udta FOURCC('u', 'd', 't', 'a')
 #define MP4_extra FOURCC('-', '-', '-', '-')
 
+/* Used to correct id3->samples, if SBR upsampling was detected in esds atom. */
+static bool SBR_upsampling_used = false;
+
 /* Read the tag data from an MP4 file, storing up to buffer_size bytes in
  * buffer.
  */
@@ -272,7 +275,6 @@ static bool read_mp4_esds(int fd, struct mp3entry* id3, uint32_t* size)
     
         if (type == 5)
         {
-            DEBUGF("MP4: SBR\n");
             unsigned int old_index = index;
 
             sbr = true;
@@ -298,8 +300,7 @@ static bool read_mp4_esds(int fd, struct mp3entry* id3, uint32_t* size)
         /* Skip 13 bits from above, plus 3 bits, then read 11 bits */
         else if ((length >= 4) && (((bits >> 5) & 0x7ff) == 0x2b7))
         {
-            /* extensionAudioObjectType */
-            DEBUGF("MP4: extensionAudioType\n");
+            /* We found an extensionAudioObjectType */
             type = bits & 0x1f;         /* Object type - 5 bits*/
             bits = get_long_be(&buf[4]);
             
@@ -342,6 +343,12 @@ static bool read_mp4_esds(int fd, struct mp3entry* id3, uint32_t* size)
              * decoding (parts of) the file.
              */
             id3->frequency *= 2;
+            
+            /* Set this to true to be able to calculate the correct runtime 
+             * and bitrate. */
+            SBR_upsampling_used = true;
+
+            sbr = true;
         }
     }
     
@@ -596,7 +603,8 @@ static bool read_mp4_container(int fd, struct mp3entry* id3,
             break;
         
         case MP4_ilst:
-            if (handler == MP4_mdir)
+            /* We need at least a size of 8 to read the next atom. */
+            if (handler == MP4_mdir && size>8)
             {
                 rc = read_mp4_tags(fd, id3, size);
                 size = 0;
@@ -630,7 +638,10 @@ static bool read_mp4_container(int fd, struct mp3entry* id3,
             {
                 uint32_t entries;
                 unsigned int i;
-                
+
+                /* Reset to false. */
+                id3->needs_upsampling_correction = true;
+
                 lseek(fd, 4, SEEK_CUR);
                 read_uint32be(fd, &entries);
                 id3->samples = 0;
@@ -642,7 +653,21 @@ static bool read_mp4_container(int fd, struct mp3entry* id3,
 
                     read_uint32be(fd, &n);
                     read_uint32be(fd, &l);
-                    id3->samples += n * l;
+
+                    /* Some SBR files use upsampling. In this case the number 
+                     * of output samples is doubled to a maximum of 2048 
+                     * samples per frame. This means that files which already 
+                     * report a frame size of 2048 in their header will not 
+                     * need any further special handling. */
+                    if (SBR_upsampling_used && l<=1024)
+                    {
+                        id3->samples += n * l * 2;
+                        id3->needs_upsampling_correction = true;
+                    }
+                    else
+                    {
+                        id3->samples += n * l;
+                    }
                 }
                 
                 size = 0;
@@ -650,33 +675,53 @@ static bool read_mp4_container(int fd, struct mp3entry* id3,
             break;
 
         case MP4_mp4a:
+            {
+                uint32_t subsize;
+                uint32_t subtype;
+
+                /* Move to the next expected mp4 atom. */
+                lseek(fd, 28, SEEK_CUR);
+                read_mp4_atom(fd, &subsize, &subtype, size);
+                size -= 36;
+
+                if (subtype == MP4_esds)
+                {
+                    /* Read esds metadata and return if AAC-HE/SBR is used. */
+                    if (read_mp4_esds(fd, id3, &size))
+                        id3->codectype = AFMT_MP4_AAC_HE;
+                    else
+                        id3->codectype = AFMT_MP4_AAC;
+                }
+            }
+            break;
+
         case MP4_alac:
             {
                 uint32_t frequency;
+                uint32_t subsize;
+                uint32_t subtype;
 
-                id3->codectype = (type == MP4_mp4a) ? AFMT_MP4_AAC : AFMT_MP4_ALAC;
-                lseek(fd, 22, SEEK_CUR);
-                read_uint32be(fd, &frequency);
-                size -= 26;
-                id3->frequency = frequency;
-                
-                if (type == MP4_mp4a)
+                /* Move to the next expected mp4 atom. */
+                lseek(fd, 28, SEEK_CUR);
+                read_mp4_atom(fd, &subsize, &subtype, size);
+                size -= 36;
+#if 0
+                /* We might need to parse for the alac metadata atom. */
+                while (!((subsize==28) && (subtype==MP4_alac)) && (size>0))
                 {
-                    uint32_t subsize;
-                    uint32_t subtype;
-
-                    /* Get frequency from the decoder info tag, if possible. */
-                    lseek(fd, 2, SEEK_CUR);
-                    /* The esds atom is a part of the mp4a atom, so ignore 
-                     * the returned size (it's already accounted for).
-                     */
+                    lseek(fd, -7, SEEK_CUR);
                     read_mp4_atom(fd, &subsize, &subtype, size);
-                    size -= 10;
-                    
-                    if (subtype == MP4_esds)
-                    {
-                        read_mp4_esds(fd, id3, &size);
-                    }
+                    size -= 1;
+                    errno = 0; /* will most likely be set while parsing */
+                }
+#endif
+                if (subtype == MP4_alac)
+                {
+                    lseek(fd, 24, SEEK_CUR);
+                    read_uint32be(fd, &frequency);
+                    size -= 28;
+                    id3->frequency = frequency;
+                    id3->codectype = AFMT_MP4_ALAC;
                 }
             }
             break;
@@ -729,6 +774,7 @@ static bool read_mp4_container(int fd, struct mp3entry* id3,
 
 bool get_mp4_metadata(int fd, struct mp3entry* id3)
 {
+    SBR_upsampling_used = false;
     id3->codectype = AFMT_UNKNOWN;
     id3->filesize = 0;
     errno = 0;

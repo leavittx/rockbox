@@ -1052,20 +1052,6 @@ static bool dbg_cpufreq(void)
 
 #if defined(HAVE_TSC2100) && (CONFIG_PLATFORM & PLATFORM_NATIVE)
 #include "tsc2100.h"
-static char *itob(int n, int len)
-{
-    static char binary[64];
-    int i,j;
-    for (i=1, j=0;i<=len;i++)
-    {
-        binary[j++] = n&(1<<(len-i))?'1':'0';
-        if (i%4 == 0)
-            binary[j++] = ' ';
-    }
-    binary[j] = '\0';
-    return binary;
-}
-
 static const char* tsc2100_debug_getname(int selected_item, void * data,
                                          char *buffer, size_t buffer_len)
 {
@@ -1090,10 +1076,10 @@ static const char* tsc2100_debug_getname(int selected_item, void * data,
             break;
     }
     if (reserved)
-        snprintf(buffer, buffer_len, "%02x: RESERVED", selected_item);
+        snprintf(buffer, buffer_len, "%02x: RSVD", selected_item);
     else
-        snprintf(buffer, buffer_len, "%02x: %s", selected_item,
-                    itob(tsc2100_readreg(*page, selected_item)&0xffff,16));
+        snprintf(buffer, buffer_len, "%02x: %04x", selected_item,
+                    tsc2100_readreg(*page, selected_item)&0xffff);
     return buffer;
 }
 static int tsc2100debug_action_callback(int action, struct gui_synclist *lists)

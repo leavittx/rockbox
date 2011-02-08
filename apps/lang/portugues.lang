@@ -9792,20 +9792,6 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_REC_SIZE
-  desc: deprecated
-  user:
-  <source>
-    *: none
-  </source>
-  <dest>
-    *: none
-  </dest>
-  <voice>
-    *: none
-  </voice>
-</phrase>
-<phrase>
   id: LANG_GAIN
   desc: Generic string for gain used in EQ menu and recording screen
   user: core
@@ -12586,16 +12572,16 @@
 </phrase>
 <phrase>
   id: LANG_AUTORESUME_ENABLE_YES
-  desc: resume settings menu
+  desc: deprecated
   user: core
   <source>
-    *: "Yes (requires initialized database)"
+    *: ""
   </source>
   <dest>
-    *: "Sim (requer base de dados inicializada)"
+    *: ""
   </dest>
   <voice>
-    *: "Sim (requer base de dados inicializada)"
+    *: ""
   </voice>
 </phrase>
 <phrase>
@@ -12617,15 +12603,15 @@
 </phrase>
 <phrase>
   id: LANG_AUTORESUME_ENABLE
-  desc: resume settings menu
+  desc: deprecated
   user: core
   <source>
-    *: "Enable automatic resume"
+    *: ""
   </source>
   <dest>
-    *: "Habilitar retoma da reprodução automática"
+    *: ""
   </dest>
   <voice>
-    *: "Habilitar retoma da reprodução automática"
+    *: ""
   </voice>
 </phrase>
