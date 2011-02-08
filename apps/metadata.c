@@ -25,6 +25,7 @@
 
 #include "debug.h"
 #include "logf.h"
+#include "settings.h"
 #include "cuesheet.h"
 #include "metadata.h"
 
@@ -86,9 +87,9 @@ const struct afmt_entry audio_formats[AFMT_NUM_CODECS] =
     /* FLAC */
     [AFMT_FLAC] =
         AFMT_ENTRY("FLAC",  "flac", NULL,       get_flac_metadata,  "flac\0"),
-    /* Musepack */
-    [AFMT_MPC] =
-        AFMT_ENTRY("MPC",   "mpc",  NULL,       get_musepack_metadata,"mpc\0"),
+    /* Musepack SV7 */
+    [AFMT_MPC_SV7] =
+        AFMT_ENTRY("MPCv7", "mpc",  NULL,       get_musepack_metadata,"mpc\0"),
     /* A/52 (aka AC3) audio */                  
     [AFMT_A52] =
         AFMT_ENTRY("AC3",   "a52",  NULL,       get_a52_metadata,   "a52\0ac3\0"),
@@ -203,6 +204,12 @@ const struct afmt_entry audio_formats[AFMT_NUM_CODECS] =
     /* WMA Voice in ASF */
     [AFMT_WMAVOICE] =
         AFMT_ENTRY("WMAVoice","wmavoice",NULL,  NULL,               "wma\0wmv\0"),
+    /* Musepack SV8 */
+    [AFMT_MPC_SV8] =
+        AFMT_ENTRY("MPCv8", "mpc",  NULL,       get_musepack_metadata,"mpc\0"),
+    /* Advanced Audio Coding High Efficiency in M4A container */
+    [AFMT_MP4_AAC_HE] =
+        AFMT_ENTRY("AAC-HE","aac",  NULL,       get_mp4_metadata,   "mp4\0"),
 #endif
 };
 
@@ -419,3 +426,51 @@ void copy_mp3entry(struct mp3entry *dest, const struct mp3entry *orig)
     memcpy(dest, orig, sizeof(struct mp3entry));
     adjust_mp3entry(dest, dest, orig);
 }
+
+#ifndef __PCTOOL__
+#ifdef HAVE_TAGCACHE
+#if CONFIG_CODEC == SWCODEC
+
+enum { AUTORESUMABLE_UNKNOWN = 0, AUTORESUMABLE_TRUE, AUTORESUMABLE_FALSE };
+
+bool autoresumable(struct mp3entry *id3)
+{
+    unsigned char search[MAX_PATHNAME+1];
+    char *saveptr, *substr;
+    bool is_resumable; 
+    
+    if (id3->autoresumable)             /* result cached? */
+        return id3->autoresumable == AUTORESUMABLE_TRUE;
+
+    is_resumable = true;
+
+    strcpy(search, global_settings.autoresume_strpat);
+    
+    for (substr = strtok_r(search, ",", &saveptr);
+         substr;
+         substr = strtok_r(NULL, ",", &saveptr))
+    {
+        if (id3->path && strcasestr(id3->path, substr))
+            goto out;
+        if (id3->genre_string && strcasestr(id3->genre_string, substr))
+            goto out;
+    }
+    
+    is_resumable = false;
+
+  out:
+    /* cache result */
+    id3->autoresumable =
+        is_resumable ? AUTORESUMABLE_TRUE : AUTORESUMABLE_FALSE;
+
+    logf("autoresumable: %s with genre %s is%s resumable",
+         id3->path,
+         id3->genre_string ? id3->genre_string : "(NULL)",
+         is_resumable ? "" : " not");
+    
+    return is_resumable;
+}
+
+#endif  /* SWCODEC */
+#endif  /* HAVE_TAGCACHE */
+#endif  /* __PCTOOL__ */

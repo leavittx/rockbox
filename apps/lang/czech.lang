@@ -5881,20 +5881,6 @@
   </voice>
 </phrase>
 <phrase>
-  id: LANG_REC_SIZE
-  desc: deprecated
-  user: core
-  <source>
-    *: none
-  </source>
-  <dest>
-    *: none
-  </dest>
-  <voice>
-    *: none
-  </voice>
-</phrase>
-<phrase>
   id: LANG_RECORD_PRERECORD_TIME
   desc: in recording settings_menu
   user: core
@@ -12607,29 +12593,29 @@
 </phrase>
 <phrase>
   id: LANG_AUTORESUME_ENABLE
-  desc: resume settings menu
+  desc: deprecated
   user: core
   <source>
-    *: "Enable automatic resume"
+    *: ""
   </source>
   <dest>
-    *: "Auto.pokračování u všech souborů"
+    *: ""
   </dest>
   <voice>
-    *: "Automatycké pokračování u všech souborů"
+    *: ""
   </voice>
 </phrase>
 <phrase>
   id: LANG_AUTORESUME_ENABLE_YES
-  desc: resume settings menu
+  desc: deprecated
   user: core
   <source>
-    *: "Yes (requires initialized database)"
+    *: ""
   </source>
   <dest>
-    *: "Ano (vyžaduje inicializovanou databázi)"
+    *: ""
   </dest>
   <voice>
-    *: "Ano, vyžaduje inicializovanou databázi"
+    *: ""
   </voice>
 </phrase>

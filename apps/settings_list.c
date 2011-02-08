@@ -760,7 +760,7 @@ const struct settings_list settings[] = {
     SYSTEM_SETTING(NVRAM(4), topruntime, 0),
     INT_SETTING(F_BANFROMQS, max_files_in_playlist, 
                 LANG_MAX_FILES_IN_PLAYLIST,
-#if MEM > 1
+#if MEMORYSIZE > 1
                   10000,
 #else
                   400,
@@ -768,7 +768,7 @@ const struct settings_list settings[] = {
                   "max files in playlist", UNIT_INT, 1000, 32000, 1000,
                   NULL, NULL, NULL),
     INT_SETTING(F_BANFROMQS, max_files_in_dir, LANG_MAX_FILES_IN_DIR,
-#if MEM > 1
+#if MEMORYSIZE > 1
                   1000,
 #else
                   200,
@@ -1258,9 +1258,18 @@ const struct settings_list settings[] = {
 
 #ifdef HAVE_TAGCACHE
 #if CONFIG_CODEC == SWCODEC 
-    BOOL_SETTING(0, autoresume_enable, LANG_AUTORESUME_ENABLE, false,
+    BOOL_SETTING(0, autoresume_enable, LANG_AUTORESUME, false,
                  "autoresume enable", off_on,
-                 LANG_AUTORESUME_ENABLE_YES, LANG_SET_BOOL_NO, NULL),
+                 LANG_SET_BOOL_YES, LANG_SET_BOOL_NO, NULL),
+    CHOICE_SETTING(0, autoresume_automatic, LANG_AUTORESUME_AUTOMATIC,
+                   AUTORESUME_NEXTTRACK_NEVER,
+                   "autoresume next track", "never,all,custom",
+                   NULL, 3,
+                   ID2P(LANG_SET_BOOL_NO),
+                   ID2P(LANG_ALWAYS),
+                   ID2P(LANG_AUTORESUME_CUSTOM)),
+    TEXT_SETTING(0, autoresume_strpat, "autoresume next track patterns",
+                 "podcast", NULL, NULL),
 #endif                  
 
     OFFON_SETTING(0, runtimedb, LANG_RUNTIMEDB_ACTIVE, false,

@@ -46,7 +46,7 @@ enum
     AFMT_PCM_WAV,      /* Uncompressed PCM in a WAV file */
     AFMT_OGG_VORBIS,   /* Ogg Vorbis */
     AFMT_FLAC,         /* FLAC */
-    AFMT_MPC,          /* Musepack */
+    AFMT_MPC_SV7,      /* Musepack SV7 */
     AFMT_A52,          /* A/52 (aka AC3) audio */
     AFMT_WAVPACK,      /* WavPack */
     AFMT_MP4_ALAC,     /* Apple Lossless Audio Codec */
@@ -85,6 +85,8 @@ enum
     AFMT_WAVE64,       /* Wave64 */
     AFMT_TTA,          /* True Audio */
     AFMT_WMAVOICE,     /* WMA Voice in ASF */
+    AFMT_MPC_SV8,      /* Musepack SV8 */
+    AFMT_MP4_AAC_HE,   /* Advanced Audio Coding (AAC-HE) in M4A container */
 #endif
 
     /* add new formats at any index above this line to have a sensible order -
@@ -174,8 +176,10 @@ extern const struct afmt_entry audio_formats[AFMT_NUM_CODECS];
 
 #if MEMORYSIZE > 2
 #define ID3V2_BUF_SIZE 900
+#define ID3V2_MAX_ITEM_SIZE 120
 #else
 #define ID3V2_BUF_SIZE 300
+#define ID3V2_MAX_ITEM_SIZE 60
 #endif
 
 enum {
@@ -238,6 +242,10 @@ struct mp3entry {
     /* Added for ATRAC3 */
     unsigned int channels;       /* Number of channels in the stream */
     unsigned int extradata_size; /* Size (in bytes) of the codec's extradata from the container */
+
+    /* Added for AAC HE SBR */
+    bool needs_upsampling_correction; /* flag used by aac codec */
+
     /* these following two fields are used for local buffering */
     char id3v2buf[ID3V2_BUF_SIZE];
     char id3v1buf[4][92];
@@ -247,6 +255,8 @@ struct mp3entry {
     int index;             /* playlist index */
 
 #ifdef HAVE_TAGCACHE
+    unsigned char autoresumable; /* caches result of autoresumable() */
+    
     /* runtime database fields */
     long tagcache_idx;     /* 0=invalid, otherwise idx+1 */
     int rating;
@@ -279,8 +289,13 @@ bool get_metadata(struct mp3entry* id3, int fd, const char* trackname);
 bool mp3info(struct mp3entry *entry, const char *filename);
 void adjust_mp3entry(struct mp3entry *entry, void *dest, const void *orig);
 void copy_mp3entry(struct mp3entry *dest, const struct mp3entry *orig);
+
 #if CONFIG_CODEC == SWCODEC
 void strip_tags(int handle_id);
+#endif
+
+#ifdef HAVE_TAGCACHE
+bool autoresumable(struct mp3entry *id3);
 #endif
 
 #endif

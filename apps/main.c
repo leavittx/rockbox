@@ -125,7 +125,7 @@
 #define MAIN_NORETURN_ATTR
 #endif
 
-#if (CONFIG_PLATFORM & PLATFORM_SDL)
+#if (CONFIG_PLATFORM & (PLATFORM_SDL|PLATFORM_MAEMO))
 #include "sim_tasks.h"
 #include "system-sdl.h"
 #define HAVE_ARGV_MAIN
@@ -351,7 +351,7 @@ static void init(void)
     show_logo();
     button_init();
     backlight_init();
-#if (CONFIG_PLATFORM & PLATFORM_SDL)
+#if (CONFIG_PLATFORM & (PLATFORM_SDL|PLATFORM_MAEMO))
     sim_tasks_init();
 #endif
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
@@ -430,7 +430,7 @@ static void init(void)
     system_init();
 #if defined(IPOD_VIDEO)
     audiobufend=(unsigned char *)audiobufend_lds;
-    if(MEM==64 && probed_ramsize!=64)
+    if(MEMORYSIZE==64 && probed_ramsize!=64)
     {
         audiobufend -= (32<<20);
     }

@@ -1002,8 +1002,13 @@ static void audio_update_trackinfo(void)
     thistrack_id3->elapsed = 0;
 
 #ifdef HAVE_TAGCACHE
-    /* Resume all manually selected tracks if so configured */
-    resume = global_settings.autoresume_enable && !automatic_skip;
+    /* Ignoring resume position for automatic track change if so configured */
+    resume = global_settings.autoresume_enable &&
+        (!automatic_skip     /* Resume all manually selected tracks */
+         || global_settings.autoresume_automatic == AUTORESUME_NEXTTRACK_ALWAYS
+         || (global_settings.autoresume_automatic != AUTORESUME_NEXTTRACK_NEVER
+                                                /* Not never resume? */
+             && autoresumable(thistrack_id3))); /* Pass Resume filter? */
 #endif
 
     if (!resume)
@@ -2013,6 +2018,15 @@ static void audio_thread(void)
                 LOGFQUEUE("audio < Q_AUDIO_FF_REWIND");
                 if (!playing)
                     break;
+
+                if ((long)ev.data == 0)
+                {
+                    /* About to restart the track - send track finish
+                       events if not already done. */
+                    if (thistrack_id3 == audio_current_track())
+                        send_event(PLAYBACK_EVENT_TRACK_FINISH, thistrack_id3);
+                }
+
                 if (automatic_skip)
                 {
                     /* An automatic track skip is in progress. Finalize it,

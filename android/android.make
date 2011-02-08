@@ -9,7 +9,7 @@
 
 .SECONDEXPANSION: # $$(JAVA_OBJ) is not populated until after this
 .SECONDEXPANSION: # $$(OBJ) is not populated until after this
-.PHONY: apk classes clean dex dirs libs
+.PHONY: apk classes clean dex dirs libs jar
 
 $(BUILDDIR)/$(BINARY): $$(OBJ) $(VOICESPEEXLIB) $(FIRMLIB) $(SKINLIB)
 	$(call PRINTS,LD $(BINARY))$(CC) -o $@ $^ $(LDOPTS) $(GLOBAL_LDOPTS)
@@ -40,6 +40,7 @@ R_OBJ		:= $(BUILDDIR)/bin/$(PACKAGE_PATH)/R.class
 
 JAVA_SRC	:= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/Helper/*.java)
 JAVA_SRC	+= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/*.java)
+JAVA_SRC	+= $(wildcard $(ANDROID_DIR)/src/$(PACKAGE_PATH)/widgets/*.java)
 JAVA_OBJ	:= $(call java2class,$(subst $(ANDROID)/src/$(PACKAGE_PATH),$(ANDROID)/bin/$(PACKAGE_PATH),$(JAVA_SRC)))
 
 
@@ -47,6 +48,7 @@ LIBS		:= $(BINLIB_DIR)/$(BINARY) $(BINLIB_DIR)/libmisc.so
 TEMP_APK	:= $(BUILDDIR)/bin/_rockbox.apk
 TEMP_APK2	:= $(BUILDDIR)/bin/__rockbox.apk
 DEX		:= $(BUILDDIR)/bin/classes.dex
+JAR		:= $(BUILDDIR)/bin/classes.jar
 AP_		:= $(BUILDDIR)/bin/resources.ap_
 APK		:= $(BUILDDIR)/rockbox.apk
 
@@ -60,27 +62,39 @@ RES		:= $(wildcard $(ANDROID_DIR)/res/*/*)
 
 CLEANOBJS += bin gen libs data
 
-$(R_JAVA) $(AP_): $(MANIFEST) $(DIRS) $(RES)
+JAVAC_OPTS += -implicit:none -classpath $(ANDROID_PLATFORM)/android.jar:$(BUILDDIR)/bin
+
+$(R_JAVA) $(AP_): $(MANIFEST) $(RES) | $(DIRS)
 	$(call PRINTS,AAPT $(subst $(BUILDDIR)/,,$@))$(AAPT) package -f -m \
 		-J $(BUILDDIR)/gen -M $(MANIFEST) -S $(ANDROID_DIR)/res \
 		-I $(ANDROID_PLATFORM)/android.jar -F $(AP_)
 
 $(BUILDDIR)/bin/$(PACKAGE_PATH)/R.class: $(R_JAVA)
 	$(call PRINTS,JAVAC $(subst $(ROOTDIR)/,,$<))javac -d $(BUILDDIR)/bin \
-		-classpath $(ANDROID_PLATFORM)/android.jar:$(BUILDDIR)/bin \
-		-sourcepath $(ANDROID_DIR)/gen:$(ANDROID_DIR)/src $<
+		$(JAVAC_OPTS) \
+		-sourcepath $(ANDROID_DIR)/gen $<
 
 $(BUILDDIR)/bin/$(PACKAGE_PATH)/%.class: $(ANDROID_DIR)/src/$(PACKAGE_PATH)/%.java $(BUILDDIR)/bin/$(PACKAGE_PATH)/R.class
 	$(call PRINTS,JAVAC $(subst $(ROOTDIR)/,,$<))javac -d $(BUILDDIR)/bin \
-		-classpath $(ANDROID_PLATFORM)/android.jar:$(BUILDDIR)/bin \
-		-sourcepath $(ANDROID_DIR)/gen:$(ANDROID_DIR)/src $<
+		$(JAVAC_OPTS) \
+		-sourcepath $(ANDROID_DIR)/src $<
 
-$(DEX): $(R_OBJ) $(JAVA_OBJ)
-	$(call PRINTS,DX $(subst $(BUILDDIR)/,,$@))$(DX) --dex --output=$@ $(BUILDDIR)/bin
+$(JAR): $(JAVA_SRC) $(R_JAVA)
+	$(call PRINTS,JAVAC $(subst $(ROOTDIR)/,,$?))javac -d $(BUILDDIR)/bin \
+		$(JAVAC_OPTS) \
+		-sourcepath $(ANDROID_DIR)/src:$(ANDROID_DIR)/gen $?
+	$(call PRINTS,JAR $(subst $(BUILDDIR)/,,$@))jar cf $(JAR) -C $(BUILDDIR)/bin org
 
-classes: $(R_OBJ) $(JAVA_OBJ)
+jar: $(JAR)
+
+$(DEX): $(JAR)
+	@echo "Checking for deleted class files" && $(foreach obj,$(JAVA_OBJ) $(R_OBJ), \
+		(test -f $(obj) || (echo "$(obj) is missing. Run 'make classes' to fix." && false)) && ) true
+	$(call PRINTS,DX $(subst $(BUILDDIR)/,,$@))$(DX) --dex --output=$@ $<
 
 dex: $(DEX)
+
+classes: $(R_OBJ) $(JAVA_OBJ)
 
 $(BINLIB_DIR)/$(BINARY): $(BUILDDIR)/$(BINARY)
 	$(call PRINTS,CP $(BINARY))cp $^ $@
@@ -90,7 +104,7 @@ $(BINLIB_DIR)/libmisc.so: $(BUILDDIR)/rockbox.zip
 
 libs: $(LIBS)
 
-$(TEMP_APK): $(AP_) $(DIRS) $(LIBS) $(DEX)
+$(TEMP_APK): $(AP_) $(LIBS) $(DEX) | $(DIRS)
 	$(call PRINTS,APK $(subst $(BUILDDIR)/,,$@))$(APKBUILDER) $@ \
 	-u -z $(AP_) -f $(DEX) -nf $(BUILDDIR)/libs
 
