@@ -52,6 +52,7 @@
 #include "albumart.h"
 #include "jpeg_load.h"
 #include "bmp.h"
+#include "playback.h"
 #endif
 
 #define GUARD_BUFSIZE   (32*1024)
@@ -254,7 +255,7 @@ static struct memory_handle *add_handle(size_t data_size, bool can_wrap,
     size_t shift;
     size_t new_widx;
     size_t len;
-    int overlap;
+    ssize_t overlap;
 
     if (num_handles >= BUF_MAX_HANDLES)
         return NULL;
@@ -296,7 +297,7 @@ static struct memory_handle *add_handle(size_t data_size, bool can_wrap,
 
     /* How much space are we short in the actual ring buffer? */
     overlap = ringbuf_add_cross(buf_widx, shift + len, buf_ridx);
-    if (overlap >= 0 && (alloc_all || (unsigned)overlap > data_size)) {
+    if (overlap >= 0 && (alloc_all || (size_t)overlap >= data_size)) {
         /* Not enough space for required allocations */
         mutex_unlock(&llist_mod_mutex);
         mutex_unlock(&llist_mutex);
@@ -665,30 +666,24 @@ static bool buffer_handle(int handle_id)
     while (h->filerem > 0 && !stop)
     {
         /* max amount to copy */
-        size_t copy_n = MIN( MIN(h->filerem, BUFFERING_DEFAULT_FILECHUNK),
+        ssize_t copy_n = MIN( MIN(h->filerem, BUFFERING_DEFAULT_FILECHUNK),
                              buffer_len - h->widx);
+        uintptr_t offset = h->next ? ringbuf_offset(h->next) : buf_ridx;
+        ssize_t overlap = ringbuf_add_cross(h->widx, copy_n, offset);
 
-        ssize_t overlap;
-        uintptr_t next_handle = ringbuf_offset(h->next);
+        if (!h->next)
+            overlap++; /* sub one more below to avoid buffer overflow */
 
-        /* stop copying if it would overwrite the reading position */
-        if (ringbuf_add_cross(h->widx, copy_n, buf_ridx) >= 0)
-            return false;
-
-        /* FIXME: This would overwrite the next handle
-         * If this is true, then there's a handle even though we have still
-         * data to buffer. This should NEVER EVER happen! (but it does :( ) */
-        if (h->next && (overlap
-                = ringbuf_add_cross(h->widx, copy_n, next_handle)) > 0)
+        if (overlap > 0)
         {
-            /* stop buffering data for now and post-pone buffering the rest */
+            /* read only up to available space and stop if it would overwrite
+               the reading position or the next handle */
             stop = true;
-            DEBUGF( "%s(): Preventing handle corruption: h1.id:%d h2.id:%d"
-                    " copy_n:%lu overlap:%ld h1.filerem:%lu\n", __func__,
-                    h->id, h->next->id, (unsigned long)copy_n, (long)overlap,
-                    (unsigned long)h->filerem);
             copy_n -= overlap;
         }
+
+        if (copy_n <= 0)
+            return false; /* no space for read */
 
         /* rc is the actual amount read */
         int rc = read(h->fd, &buffer[h->widx], copy_n);
@@ -829,12 +824,14 @@ static void shrink_handle(struct memory_handle *h)
     if (!h)
         return;
 
-    if (h->next && h->filerem == 0 &&
-            (h->type == TYPE_ID3 || h->type == TYPE_CUESHEET ||
-             h->type == TYPE_BITMAP || h->type == TYPE_CODEC ||
-             h->type == TYPE_ATOMIC_AUDIO))
+    if (h->type == TYPE_ID3 || h->type == TYPE_CUESHEET ||
+        h->type == TYPE_BITMAP || h->type == TYPE_CODEC ||
+        h->type == TYPE_ATOMIC_AUDIO)
     {
         /* metadata handle: we can move all of it */
+        if (!h->next || h->filerem != 0)
+            return; /* Last handle or not finished loading */
+
         uintptr_t handle_distance =
             ringbuf_sub(ringbuf_offset(h->next), h->data);
         delta = handle_distance - h->available;
@@ -908,10 +905,12 @@ static bool fill_buffer(void)
 /* Given a file descriptor to a bitmap file, write the bitmap data to the
    buffer, with a struct bitmap and the actual data immediately following.
    Return value is the total size (struct + data). */
-static int load_image(int fd, const char *path, struct dim *dim)
+static int load_image(int fd, const char *path, struct bufopen_bitmap_data *data)
 {
     int rc;
     struct bitmap *bmp = (struct bitmap *)&buffer[buf_widx];
+    struct dim *dim = data->dim;
+    struct mp3_albumart *aa = data->embedded_albumart;
 
     /* get the desired image size */
     bmp->width = dim->width, bmp->height = dim->height;
@@ -928,8 +927,13 @@ static int load_image(int fd, const char *path, struct dim *dim)
                                - sizeof(struct bitmap);
 
 #ifdef HAVE_JPEG
-    int pathlen = strlen(path);
-    if (strcmp(path + pathlen - 4, ".bmp"))
+    if (aa != NULL)
+    {
+        lseek(fd, aa->pos, SEEK_SET);
+        rc = clip_jpeg_fd(fd, aa->size, bmp, free, FORMAT_NATIVE|FORMAT_DITHER|
+                         FORMAT_RESIZE|FORMAT_KEEP_ASPECT, NULL);
+    }
+    else if (strcmp(path + strlen(path) - 4, ".bmp"))
         rc = read_jpeg_fd(fd, bmp, free, FORMAT_NATIVE|FORMAT_DITHER|
                          FORMAT_RESIZE|FORMAT_KEEP_ASPECT, NULL);
     else
@@ -1004,13 +1008,28 @@ int bufopen(const char *file, size_t offset, enum data_type type,
 
         return h->id;
     }
-
+#ifdef APPLICATION
+    /* loading code from memory is not supported in application builds */
+    else if (type == TYPE_CODEC)
+        return ERR_UNSUPPORTED_TYPE;
+#endif
     /* Other cases: there is a little more work. */
     int fd = open(file, O_RDONLY);
     if (fd < 0)
         return ERR_FILE_ERROR;
 
-    size_t size = filesize(fd);
+    size_t size = 0;
+#ifdef HAVE_ALBUMART
+    if (type == TYPE_BITMAP)
+    {   /* if albumart is embedded, the complete file is not buffered,
+         * but only the jpeg part; filesize() would be wrong */
+        struct bufopen_bitmap_data *aa = (struct bufopen_bitmap_data*)user_data;
+        if (aa->embedded_albumart)
+            size = aa->embedded_albumart->size;
+    }
+#endif
+    if (size == 0)
+        size = filesize(fd);
     bool can_wrap = type==TYPE_PACKET_AUDIO || type==TYPE_CODEC;
 
     size_t adjusted_offset = offset;
@@ -1058,7 +1077,7 @@ int bufopen(const char *file, size_t offset, enum data_type type,
         /* Bitmap file: we load the data instead of the file */
         int rc;
         mutex_lock(&llist_mod_mutex); /* Lock because load_bitmap yields */
-        rc = load_image(fd, file, (struct dim*)user_data);
+        rc = load_image(fd, file, (struct bufopen_bitmap_data*)user_data);
         mutex_unlock(&llist_mod_mutex);
         if (rc <= 0)
         {
@@ -1572,6 +1591,11 @@ void buffering_init(void)
 /* Initialise the buffering subsystem */
 bool buffering_reset(char *buf, size_t buflen)
 {
+    /* Wraps of storage-aligned data must also be storage aligned,
+       thus buf and buflen must be a aligned to an integer multiple of
+       the storage alignment */
+    STORAGE_ALIGN_BUFFER(buf, buflen);
+
     if (!buf || !buflen)
         return false;
 
