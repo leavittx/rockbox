@@ -1,14 +1,15 @@
-- fix do something if wins niether player nor ai
-* add menu and highscores integration
- fix on resume sometimes:
+- fix: do something if wins niether player nor ai
+* add: menu and highscores integration
+? fix on resume sometimes:
     Program received signal SIGSEGV, Segmentation fault.
     0x00007fffecf1c403 in CheckFire (G=0x7fffed182920, x=42604896, y=0)
         at /home/lev/work/rockbox/rockbox_my/apps/plugins/bomberman/ai.c:445
     445            return !(G->field.firemap[x][y].state == BOMB_NONE);
-- add new bonus - box explodes like a bomb
-- add several lifes, health, several first seconds after re-alival player's health is infinum
-- add levels and scores (think about good format of storing levels)
-- fix good fire map with multiple fire directions in one cell
-- fix check code style (to be rockbox-ok): remove typedefs, funcs names in lowercase, no //, ...
-- fix ai: path cache
-- add support for different screen sizes
+? add: new bonus - box explodes like a bomb
+- add: several lifes, health, several first seconds after re-alival player's health is infinum
+- add: levels and scores (think about good format of storing levels)
+* fix: good fire map with multiple fire directions in one cell
+- fix: check code style (to be rockbox-ok): remove typedefs, funcs names in lowercase, no //, ...
+- fix: ai path cache
+- add: support for different screen sizes
+- fix: when big explode radius, the fire ignores one box on it's way
