@@ -319,6 +319,56 @@ void Draw(Game *game)
 	}
 
 	/* Explosions */
+        for (i = 0; i < MAP_W; i++)
+            for (j = 0; j < MAP_H; j++)
+            {
+                int dir;
+
+                for (dir = 0; dir < 5; dir++)
+                {
+                    bool is_set = game->field.firemap[i][j] & (BITMASK_ALL_PHASES << (dir * 4));
+
+                    if (is_set)
+                    {
+                        bool is_end = game->field.firemap[i][j] & (BITMASK_IS_END << dir);
+                        int phase;
+
+                        for (phase = 0; phase < 4; phase++)
+                        {
+                            if (game->field.firemap[i][j] & ((BITMASK_SING_PHASE << (dir * 4)) << phase))
+                                break;
+                        }
+
+                        if (dir == FIRE_CENTER)
+                        {
+                            rb->lcd_bitmap_transparent_part(bomberman_explode,
+                                (phase) * SQUARE_SIZE,
+                                0,
+                                STRIDE(SCREEN_MAIN,
+                                       BMPWIDTH_bomberman_explode,
+                                       BMPHEIGHT_bomberman_explode),
+                                i * SQUARE_SIZE + XMAPOFFSET,
+                                j * SQUARE_SIZE + YMAPOFFSET,
+                                SQUARE_SIZE,
+                                SQUARE_SIZE);
+                        }
+                        else
+                        {
+                            rb->lcd_bitmap_transparent_part(bomberman_explode,
+                                dir * SQUARE_SIZE,
+                                SQUARE_SIZE + SQUARE_SIZE * (phase) * 2 +
+                                SQUARE_SIZE * is_end,
+                                STRIDE(SCREEN_MAIN,
+                                       BMPWIDTH_bomberman_explode,
+                                       BMPHEIGHT_bomberman_explode),
+                                i * SQUARE_SIZE + XMAPOFFSET,
+                                j * SQUARE_SIZE + YMAPOFFSET,
+                                SQUARE_SIZE,
+                                SQUARE_SIZE);
+                        }
+                    }
+                }
+            }
         /*
 	for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)

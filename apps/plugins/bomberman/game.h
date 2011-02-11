@@ -33,20 +33,18 @@
 #define MAX_PLAYERS 1
 #define MAX_BOMBS 100
 
-#define NFIREMAP 3
-
 /*
  * Animation params
  */
 
 #define CYCLETIME 30
 
-#define BOMB_DELAY_DET (HZ * 10 / (CYCLETIME / 10)) /* Delay before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
-#define BOMB_DELAY_PHASE1 (HZ * 11.02 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 12.03 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 13.05 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 14.06 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1 (HZ * 5.02 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 6.03 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 7.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 8.06 / (CYCLETIME / 10))
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
 
@@ -143,14 +141,31 @@ typedef struct {
  |  1  |  1  |  1  |
  |_____|_____|_____|
  */
- 
+
+#define BITMASK_ALL_DIRS    0x000FFFFF
+#define BITMASK_ALL_PHASES  0x0000000F
+#define BITMASK_SING_PHASE  0x00000001
+
+#define BITMASK_RIGHT       0x00000001
+#define BITMASK_DOWN        0x00000010
+#define BITMASK_LEFT        0x00000100
+#define BITMASK_UP          0x00001000
+#define BITMASK_CENTER      0x00010000
+
+#define BITMASK_IS_END      0x00100000
+
+//#define BITMASK_PHASE1 0x00000001
+//#define BITMASK_PHASE2 0x00000002
+//#define BITMASK_PHASE3 0x00000004
+//#define BITMASK_PHASE4 0x00000008
+
 typedef enum {
-	BOMB_NONE = 0,
-	BOMB_PLACED,
-	BOMB_EXPL_PHASE1,
-	BOMB_EXPL_PHASE2,
-	BOMB_EXPL_PHASE3,
-	BOMB_EXPL_PHASE4
+        BOMB_EXPL_PHASE1 = 0,
+        BOMB_EXPL_PHASE2 = 1,
+        BOMB_EXPL_PHASE3 = 2,
+        BOMB_EXPL_PHASE4 = 3,
+        BOMB_NONE,
+        BOMB_PLACED,
 } BombState;
 
 typedef struct {
@@ -206,7 +221,7 @@ typedef enum {
 typedef struct {
 	SqType map[MAP_W][MAP_H];
 	Bomb bombs[MAX_BOMBS];
-	int firemap[MAP_W][MAP_H];
+        volatile uint32_t firemap[MAP_W][MAP_H];
 	BombDetonation det[MAP_W][MAP_H];
 	BoxDetonation boxes[MAP_W][MAP_H];
 	BonusType bonuses[MAP_W][MAP_H];

@@ -70,7 +70,7 @@ static struct highscore highscores[NUM_SCORES];
 void InitGame(Game *game)
 {
     int i, j;
-
+rb->splashf(2*HZ, "%d %d %d %d", BOMB_EXPL_PHASE1, BOMB_EXPL_PHASE2, BOMB_EXPL_PHASE3, BOMB_NONE);
     /*int DefaultMap[MAP_H][MAP_W] = {
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
         {2,0,0,1,1,1,0,1,0,1,0,1,0,1,0,0,2},
@@ -156,7 +156,7 @@ void InitGame(Game *game)
         {
             game->field.map[i][j] = DefaultMap[j][i];
             //game->field.firemap[i][j].state = BOMB_NONE;
-            game->field.firemap[i][j] = 0;
+            //game->field.firemap[i][j] = 0;
             game->field.boxes[i][j].state = HUNKY;
             game->field.bonuses[i][j] = BONUS_NONE;
         }
@@ -495,6 +495,8 @@ int main(void)
     }
 
     highscore_save(SCORE_FILE, highscores, NUM_SCORES);
+
+    return PLUGIN_OK;
 }
 
 static void cleanup(void)
