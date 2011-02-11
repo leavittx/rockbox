@@ -156,7 +156,6 @@ void InitGame(Game *game)
         for (j = 0; j < MAP_H; j++)
         {
             game->field.map[i][j] = DefaultMap[j][i];
-            //game->field.firemap[i][j].state = BOMB_NONE;
             game->field.boxes[i][j].state = HUNKY;
             game->field.bonuses[i][j] = BONUS_NONE;
         }
@@ -442,7 +441,6 @@ static int bomberman_game_loop(void)
                         {
                             if (game.players[i].status.state == ALIVE) {
                                 game.players[i].status.state = WIN_PHASE1;
-                                //break;
                             }
                         }
                     }

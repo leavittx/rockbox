@@ -369,42 +369,6 @@ void Draw(Game *game)
                     }
                 }
             }
-        /*
-	for (i = 0; i < MAP_W; i++)
-            for (j = 0; j < MAP_H; j++)
-            {
-                if (game->field.firemap[i][j].state > BOMB_PLACED)
-                {
-                    if (game->field.firemap[i][j].dir == FIRE_CENTER)
-                    {
-                        rb->lcd_bitmap_transparent_part(bomberman_explode,
-                            (game->field.firemap[i][j].state - 2) * SQUARE_SIZE,
-                            0,
-                            STRIDE(SCREEN_MAIN,
-                                   BMPWIDTH_bomberman_explode,
-                                   BMPHEIGHT_bomberman_explode),
-                            i * SQUARE_SIZE + XMAPOFFSET,
-                            j * SQUARE_SIZE + YMAPOFFSET,
-                            SQUARE_SIZE,
-                            SQUARE_SIZE);
-                    }
-                    else
-                    {
-                        rb->lcd_bitmap_transparent_part(bomberman_explode,
-                            game->field.firemap[i][j].dir * SQUARE_SIZE,
-                            SQUARE_SIZE + SQUARE_SIZE * (game->field.firemap[i][j].state - 2) * 2 +
-                            SQUARE_SIZE * game->field.firemap[i][j].isend,
-                            STRIDE(SCREEN_MAIN,
-                                   BMPWIDTH_bomberman_explode,
-                                   BMPHEIGHT_bomberman_explode),
-                            i * SQUARE_SIZE + XMAPOFFSET,
-                            j * SQUARE_SIZE + YMAPOFFSET,
-                            SQUARE_SIZE,
-                            SQUARE_SIZE);
-                    }
-                }
-            }
-            */
     }
     else if (game->state == GAME_GAMEOVER)
     {

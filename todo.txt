@@ -1,5 +1,5 @@
 - fix: do something if wins niether player nor ai
-* add: menu and highscores integration
++ add: menu and highscores integration
 ? fix on resume sometimes:
     Program received signal SIGSEGV, Segmentation fault.
     0x00007fffecf1c403 in CheckFire (G=0x7fffed182920, x=42604896, y=0)

@@ -442,7 +442,6 @@ inline static void MovePlayer(Game *G, Player *P, PATH *Path)
 
 inline static int CheckFire(Game *G, int x, int y)
 {
-//    return !(G->field.firemap[x][y].state == BOMB_NONE);
     return G->field.firemap[x][y] & BITMASK_ALL_DIRS;
 }
 

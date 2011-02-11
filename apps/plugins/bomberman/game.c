@@ -428,27 +428,15 @@ static void DoFire(Game *game, struct fire_struct *fs)
         {
             if (IsTransparentSquare(&game->field, curx, cury))
             {
-//                game->field.firemap[curx][cury].state = phase;
-
-//                if (phase == Phase1) {
                     game->field.firemap[curx][cury] |= (dir_bitmask << phase);
                     if (j == rad) {
                         if (!already_used)
                             game->field.firemap[curx][cury] |= (BITMASK_IS_END << dir);
-                        //if (already_used && !already_is_end)
-                        //    ;
-                        //else
-                        //    game->field.firemap[curx][cury] |= (BITMASK_IS_END << dir);
                     }
                     else {
                         if (already_is_end)
                             game->field.firemap[curx][cury] ^= (BITMASK_IS_END << dir);
                     }
-//                    if (j == rad)
-//                        game->field.firemap[curx][cury].isend = true;
-//                    else
-//                        game->field.firemap[curx][cury].isend = false;
-//                }
             }
             else if (game->field.map[curx][cury] == SQUARE_BOX)
             {
@@ -459,28 +447,14 @@ static void DoFire(Game *game, struct fire_struct *fs)
                     game->field.boxes[curx][cury].state = BOX_EXPL_PHASE1;
                     game->field.boxes[curx][cury].expl_time = tick;
                 }
-//                game->field.firemap[curx][cury].state = phase;
-
-//                if (phase == Phase1) {
-//                    game->field.firemap[curx][cury].dir = dir;
-//                    game->field.firemap[curx][cury].isend = true;
-//                }
-//                else if (phase == PhaseEnd) {
-//                    game->field.boxes[curx][cury].state = BOX_EXPL_PHASE1;
-//                    game->field.boxes[curx][cury].expl_time = tick;
-//                }
 
                 if (isFullPower) continue;
                 else             break;
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK)
             {
-                //if (phase == Phase1) {
-                    if (j > 1)
-                        game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
-//                    if (j > 1)
-//                        game->field.firemap[prevx][prevy].isend = true;
-                //}
+                if (j > 1)
+                    game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
                 break;
             }
 
@@ -529,12 +503,8 @@ static void DoFire(Game *game, struct fire_struct *fs)
         }
         else
         {
-            //if (phase == Phase1) {
-                if (j > 1)
-                    game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
-//                if (j > 1)
-//                    game->field.firemap[prevy][prevx].isend = true;
-            //}
+            if (j > 1)
+                game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
             break;
         }
     }
@@ -569,7 +539,6 @@ void UpdateBombs(Game *game)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_NONE;
-//            game->field.firemap[x][y].state = BOMB_NONE;
 
             fs.phase = BOMB_NONE;
 
@@ -595,7 +564,6 @@ void UpdateBombs(Game *game)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE4;
-//            game->field.firemap[x][y].state = BOMB_EXPL_PHASE4;
             game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE4 - 2));
 
             fs.phase = BOMB_EXPL_PHASE4;
@@ -620,7 +588,6 @@ void UpdateBombs(Game *game)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE3;
-//            game->field.firemap[x][y].state = BOMB_EXPL_PHASE3;
             game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE3 - 2));
 
             fs.phase = BOMB_EXPL_PHASE3;
@@ -645,7 +612,6 @@ void UpdateBombs(Game *game)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE2;
-//            game->field.firemap[x][y].state = BOMB_EXPL_PHASE2;
             game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE2 - 2));
 
             fs.phase = BOMB_EXPL_PHASE2;
@@ -670,8 +636,6 @@ void UpdateBombs(Game *game)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE1;
-//            game->field.firemap[x][y].state = BOMB_EXPL_PHASE1;
-//            game->field.firemap[x][y].dir = FIRE_CENTER;
             game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE1 - 2));
 
             fs.phase = BOMB_EXPL_PHASE1;
