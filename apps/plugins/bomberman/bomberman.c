@@ -70,9 +70,7 @@ static struct highscore highscores[NUM_SCORES];
 void InitGame(Game *game)
 {
     int i, j;
-//rb->splashf(2*HZ, "%d %d %d %d %d %d",
-//            BOMB_NONE, BOMB_PLACED,
-//            BOMB_EXPL_PHASE1, BOMB_EXPL_PHASE2, BOMB_EXPL_PHASE3, BOMB_EXPL_PHASE4);
+
     /*int DefaultMap[MAP_H][MAP_W] = {
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
         {2,0,0,1,1,1,0,1,0,1,0,1,0,1,0,0,2},

@@ -472,13 +472,12 @@ static void DoFire(Game *game, struct fire_struct *fs)
             }
             else if (game->field.map[curx][cury] == SQUARE_BLOCK)
             {
-                if (phase == Phase1) {
+                //if (phase == Phase1) {
                     if (j > 1)
                         game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
 //                    if (j > 1)
 //                        game->field.firemap[prevx][prevy].isend = true;
-                }
-
+                //}
                 break;
             }
 
@@ -527,12 +526,12 @@ static void DoFire(Game *game, struct fire_struct *fs)
         }
         else
         {
-            if (phase == Phase1) {
-                //if (j > 1)
-                //    game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
+            //if (phase == Phase1) {
+                if (j > 1)
+                    game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
 //                if (j > 1)
 //                    game->field.firemap[prevy][prevx].isend = true;
-            }
+            //}
             break;
         }
     }
