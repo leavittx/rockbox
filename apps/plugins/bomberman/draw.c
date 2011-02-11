@@ -319,6 +319,7 @@ void Draw(Game *game)
 	}
 
 	/* Explosions */
+        /*
 	for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
             {
@@ -353,6 +354,7 @@ void Draw(Game *game)
                     }
                 }
             }
+            */
     }
     else if (game->state == GAME_GAMEOVER)
     {

@@ -155,7 +155,8 @@ void InitGame(Game *game)
         for (j = 0; j < MAP_H; j++)
         {
             game->field.map[i][j] = DefaultMap[j][i];
-            game->field.firemap[i][j].state = BOMB_NONE;
+            //game->field.firemap[i][j].state = BOMB_NONE;
+            game->field.firemap[i][j] = 0;
             game->field.boxes[i][j].state = HUNKY;
             game->field.bonuses[i][j] = BONUS_NONE;
         }
