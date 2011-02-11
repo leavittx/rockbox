@@ -30,7 +30,7 @@
 
 #define MAP_W 17
 #define MAP_H 11
-#define MAX_PLAYERS 1
+#define MAX_PLAYERS 4
 #define MAX_BOMBS 100
 
 /*
@@ -39,12 +39,12 @@
 
 #define CYCLETIME 30
 
-#define BOMB_DELAY_DET (HZ * 6 / (CYCLETIME / 10)) /* Delay before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
-#define BOMB_DELAY_PHASE1 (HZ * 7.02 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 8.03 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 9.05 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 10.06 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 4.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 4.06 / (CYCLETIME / 10))
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
 
@@ -153,11 +153,6 @@ typedef struct {
 #define BITMASK_CENTER      0x00010000
 
 #define BITMASK_IS_END      0x00100000
-
-//#define BITMASK_PHASE1 0x00000001
-//#define BITMASK_PHASE2 0x00000002
-//#define BITMASK_PHASE3 0x00000004
-//#define BITMASK_PHASE4 0x00000008
 
 typedef enum {
         BOMB_NONE = 0,

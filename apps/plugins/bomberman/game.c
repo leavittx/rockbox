@@ -193,7 +193,10 @@ void PickBonus(Game *game, Player *player)
     switch (game->field.bonuses[x][y])
     {
     case BONUS_EXTRABOMB:
-        player->bombs_max++;
+        if (player->bombs_max > 3)
+            player->bombs_max = -1;
+        else if (player->bombs_max != -1)
+            player->bombs_max++;
         break;
     case BONUS_POWER:
         if (player->bomb_power < BOMB_PWR_KILLER)

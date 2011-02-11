@@ -528,6 +528,7 @@ void UpdateAI(Game *G, Player *Players)
             {
                 int index = Path.Distance - PATH_OFFSET;
                 if (index < 0) index = 0;
+                else if (index >= MAP_W * MAP_H) index = 0;
                 if (!CheckFire(G, Path.Path[index].X, Path.Path[index].Y) &&
                         !Players[i].bombs_placed)
                 {
