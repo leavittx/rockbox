@@ -39,7 +39,7 @@ struct fire_struct {
      FireDir dir;
      bool isFullPower;
      enum fire_phase phase;
-     volatile uint32_t phase_bitmask;
+     volatile uint32_t dir_bitmask;
 };
 
 #define swap(a, b) { \
@@ -353,8 +353,8 @@ static void DoFire(Game *game, struct fire_struct *fs)
     int x = fs->x, y = fs->y, rad = fs->rad;
     FireDir dir = fs->dir;
     bool isFullPower = fs->isFullPower;
-    enum fire_phase phase = fs->phase;
-    volatile uint32_t phase_bitmask = fs->phase_bitmask;
+    enum fire_phase phase = fs->phase - 2;
+    volatile uint32_t dir_bitmask = fs->dir_bitmask;
 
     /* kill player in the center of explosion */
     if (phase == Phase1) {
@@ -415,6 +415,9 @@ static void DoFire(Game *game, struct fire_struct *fs)
             break;
         }
 
+        bool already_used = (game->field.firemap[curx][cury] & (BITMASK_ALL_PHASES << (dir * 4)));
+        bool already_is_end = (game->field.firemap[curx][cury] & (BITMASK_IS_END << dir));
+
         if ((dir == FIRE_RIGNT && curx < MAP_W - 1) ||
             (dir == FIRE_DOWN  && cury < MAP_H - 1) ||
             (dir == FIRE_LEFT  && curx >= 0) ||
@@ -425,9 +428,19 @@ static void DoFire(Game *game, struct fire_struct *fs)
 //                game->field.firemap[curx][cury].state = phase;
 
 //                if (phase == Phase1) {
-                    game->field.firemap[curx][cury] |= (phase_bitmask << phase);
-                    if (j == rad)
-                        game->field.firemap[curx][cury] |= (BITMASK_IS_END << dir);
+                    game->field.firemap[curx][cury] |= (dir_bitmask << phase);
+                    if (j == rad) {
+                        if (!already_used)
+                            game->field.firemap[curx][cury] |= (BITMASK_IS_END << dir);
+                        //if (already_used && !already_is_end)
+                        //    ;
+                        //else
+                        //    game->field.firemap[curx][cury] |= (BITMASK_IS_END << dir);
+                    }
+                    else {
+                        if (already_is_end)
+                            game->field.firemap[curx][cury] ^= (BITMASK_IS_END << dir);
+                    }
 //                    if (j == rad)
 //                        game->field.firemap[curx][cury].isend = true;
 //                    else
@@ -436,7 +449,7 @@ static void DoFire(Game *game, struct fire_struct *fs)
             }
             else if (game->field.map[curx][cury] == SQUARE_BOX)
             {
-                game->field.firemap[curx][cury] |= (phase_bitmask << phase);
+                game->field.firemap[curx][cury] |= (dir_bitmask << phase);
                 game->field.firemap[curx][cury] |= (BITMASK_IS_END << dir);
 
                 if (phase == PhaseEnd) {
@@ -515,8 +528,8 @@ static void DoFire(Game *game, struct fire_struct *fs)
         else
         {
             if (phase == Phase1) {
-                if (j > 1)
-                    game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
+                //if (j > 1)
+                //    game->field.firemap[prevx][prevy] |= (BITMASK_IS_END << dir);
 //                if (j > 1)
 //                    game->field.firemap[prevy][prevx].isend = true;
             }
@@ -555,24 +568,23 @@ void UpdateBombs(Game *game)
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_NONE;
 //            game->field.firemap[x][y].state = BOMB_NONE;
-            game->field.firemap[x][y] |= (BITMASK_CENTER << BOMB_EXPL_PHASE1);
 
             fs.phase = BOMB_NONE;
 
             fs.dir = FIRE_RIGNT;
-            fs.phase_bitmask = BITMASK_RIGHT;
+            fs.dir_bitmask = BITMASK_RIGHT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_DOWN;
-            fs.phase_bitmask = BITMASK_DOWN;
+            fs.dir_bitmask = BITMASK_DOWN;
             DoFire(game, &fs);
 
             fs.dir = FIRE_LEFT;
-            fs.phase_bitmask = BITMASK_LEFT;
+            fs.dir_bitmask = BITMASK_LEFT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_UP;
-            fs.phase_bitmask = BITMASK_UP;
+            fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
 
             game->field.bombs[i].owner->bombs_placed--;
@@ -582,24 +594,24 @@ void UpdateBombs(Game *game)
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE4;
 //            game->field.firemap[x][y].state = BOMB_EXPL_PHASE4;
-            game->field.firemap[x][y] |= (BITMASK_CENTER << BOMB_EXPL_PHASE1);
+            game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE4 - 2));
 
             fs.phase = BOMB_EXPL_PHASE4;
 
             fs.dir = FIRE_RIGNT;
-            fs.phase_bitmask = BITMASK_RIGHT;
+            fs.dir_bitmask = BITMASK_RIGHT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_DOWN;
-            fs.phase_bitmask = BITMASK_DOWN;
+            fs.dir_bitmask = BITMASK_DOWN;
             DoFire(game, &fs);
 
             fs.dir = FIRE_LEFT;
-            fs.phase_bitmask = BITMASK_LEFT;
+            fs.dir_bitmask = BITMASK_LEFT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_UP;
-            fs.phase_bitmask = BITMASK_UP;
+            fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
@@ -607,24 +619,24 @@ void UpdateBombs(Game *game)
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE3;
 //            game->field.firemap[x][y].state = BOMB_EXPL_PHASE3;
-            game->field.firemap[x][y] |= (BITMASK_CENTER << BOMB_EXPL_PHASE1);
+            game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE3 - 2));
 
             fs.phase = BOMB_EXPL_PHASE3;
 
             fs.dir = FIRE_RIGNT;
-            fs.phase_bitmask = BITMASK_RIGHT;
+            fs.dir_bitmask = BITMASK_RIGHT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_DOWN;
-            fs.phase_bitmask = BITMASK_DOWN;
+            fs.dir_bitmask = BITMASK_DOWN;
             DoFire(game, &fs);
 
             fs.dir = FIRE_LEFT;
-            fs.phase_bitmask = BITMASK_LEFT;
+            fs.dir_bitmask = BITMASK_LEFT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_UP;
-            fs.phase_bitmask = BITMASK_UP;
+            fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
@@ -632,24 +644,24 @@ void UpdateBombs(Game *game)
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE2;
 //            game->field.firemap[x][y].state = BOMB_EXPL_PHASE2;
-            game->field.firemap[x][y] |= (BITMASK_CENTER << BOMB_EXPL_PHASE1);
+            game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE2 - 2));
 
             fs.phase = BOMB_EXPL_PHASE2;
 
             fs.dir = FIRE_RIGNT;
-            fs.phase_bitmask = BITMASK_RIGHT;
+            fs.dir_bitmask = BITMASK_RIGHT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_DOWN;
-            fs.phase_bitmask = BITMASK_DOWN;
+            fs.dir_bitmask = BITMASK_DOWN;
             DoFire(game, &fs);
 
             fs.dir = FIRE_LEFT;
-            fs.phase_bitmask = BITMASK_LEFT;
+            fs.dir_bitmask = BITMASK_LEFT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_UP;
-            fs.phase_bitmask = BITMASK_UP;
+            fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
         else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_DET)
@@ -658,24 +670,24 @@ void UpdateBombs(Game *game)
             game->field.bombs[i].state = BOMB_EXPL_PHASE1;
 //            game->field.firemap[x][y].state = BOMB_EXPL_PHASE1;
 //            game->field.firemap[x][y].dir = FIRE_CENTER;
-            game->field.firemap[x][y] |= (BITMASK_CENTER << BOMB_EXPL_PHASE1);
+            game->field.firemap[x][y] |= (BITMASK_CENTER << (BOMB_EXPL_PHASE1 - 2));
 
             fs.phase = BOMB_EXPL_PHASE1;
 
             fs.dir = FIRE_RIGNT;
-            fs.phase_bitmask = BITMASK_RIGHT;
+            fs.dir_bitmask = BITMASK_RIGHT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_DOWN;
-            fs.phase_bitmask = BITMASK_DOWN;
+            fs.dir_bitmask = BITMASK_DOWN;
             DoFire(game, &fs);
 
             fs.dir = FIRE_LEFT;
-            fs.phase_bitmask = BITMASK_LEFT;
+            fs.dir_bitmask = BITMASK_LEFT;
             DoFire(game, &fs);
 
             fs.dir = FIRE_UP;
-            fs.phase_bitmask = BITMASK_UP;
+            fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
     }

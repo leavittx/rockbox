@@ -41,10 +41,10 @@
 
 #define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
-#define BOMB_DELAY_PHASE1 (HZ * 5.02 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 6.03 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 7.05 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 8.06 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3 (HZ * 4.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4 (HZ * 4.06 / (CYCLETIME / 10))
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
 
@@ -160,12 +160,12 @@ typedef struct {
 //#define BITMASK_PHASE4 0x00000008
 
 typedef enum {
-        BOMB_EXPL_PHASE1 = 0,
-        BOMB_EXPL_PHASE2 = 1,
-        BOMB_EXPL_PHASE3 = 2,
-        BOMB_EXPL_PHASE4 = 3,
-        BOMB_NONE,
+        BOMB_NONE = 0,
         BOMB_PLACED,
+        BOMB_EXPL_PHASE1,
+        BOMB_EXPL_PHASE2,
+        BOMB_EXPL_PHASE3,
+        BOMB_EXPL_PHASE4
 } BombState;
 
 typedef struct {
