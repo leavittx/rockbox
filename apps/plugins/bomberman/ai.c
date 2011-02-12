@@ -35,37 +35,37 @@
 #define PATH_OFFSET 2
 #define MOVE_COST 10
 
-typedef struct {
+struct node_t {
     bool IsWalkable;
     bool IsOnOpen;
     bool IsOnClose;
     int G, H, F;
     int ParentX, ParentY;
-} NODE;
+};
 
-typedef struct {
+struct path_elem {
     int X, Y;
-} PATHELEM;
+};
 
-typedef struct {
-    PATHELEM Path[MAP_W * MAP_H];
+struct path_t {
+    struct path_elem Path[MAP_W * MAP_H];
     int Distance;
-} PATH;
+};
 
-typedef struct {
+struct ai_vars {
     int ClosestPlayer;
     bool Danger;
-    PATHELEM SafetyPlace;
+    struct path_elem SafetyPlace;
     int Bombs;
 
 #if USE_PATH_CACHE
-    PATH PathCache;
+    struct path_t PathCache;
     unsigned int PathCacheUpdTime;
 #endif /* USE_PATH_CACHE */
-} AiVars;
+};
 
-static NODE Nodes[MAP_W][MAP_H];
-static AiVars AI[MAX_PLAYERS];
+static struct node_t Nodes[MAP_W][MAP_H];
+static struct ai_vars AI[MAX_PLAYERS];
 
 inline static bool GetNode(struct field_t *field, int x, int y, bool UseBoxes)
 {
@@ -90,7 +90,7 @@ static void InitNodes(struct field_t *F, bool UseBoxes)
 	}
 }
 
-static int FindPath(struct game_t *G, PATH *Path, int StartX, int StartY,
+static int FindPath(struct game_t *G, struct path_t *Path, int StartX, int StartY,
                                          int EndX, int EndY, bool UseBoxes)
 {
     int x = 0, y = 0; /* for running through the nodes */
@@ -242,7 +242,7 @@ static int FindPath(struct game_t *G, PATH *Path, int StartX, int StartY,
 }
 
 #ifdef __DEBUG
-void LogPath(PATH *P)
+void LogPath(struct path_t *P)
 {
     int file;
     int i;
@@ -376,11 +376,11 @@ inline static bool IsPlayerNearPlayer(struct game_t *G, struct player_t *P1, str
     return false;
 }
 
-static bool FindSafetyPlace(struct game_t *G, AiVars *P,  PATH *Path, struct player_t *Pl)
+static bool FindSafetyPlace(struct game_t *G, struct ai_vars *P,  struct path_t *Path, struct player_t *Pl)
 {
     int dx, dy;
     int MinDist = UNREAL_F;
-    PATHELEM Tmp;
+    struct path_elem Tmp;
     int x = Pl->xpos, y = Pl->ypos;
 
     Tmp.X = 0;
@@ -419,12 +419,12 @@ static bool FindSafetyPlace(struct game_t *G, AiVars *P,  PATH *Path, struct pla
     return false;
 }
 
-inline static bool IsABox(struct game_t *G, PATHELEM *P)
+inline static bool IsABox(struct game_t *G, struct path_elem *P)
 {
     return (G->field.map[P->X][P->Y] == SQUARE_BOX);
 }
 
-inline static void MovePlayer(struct game_t *G, struct player_t *P, PATH *Path)
+inline static void MovePlayer(struct game_t *G, struct player_t *P, struct path_t *Path)
 {
     if (Path->Distance > 1)
     {
@@ -449,7 +449,7 @@ void UpdateAI(struct game_t *G, struct player_t *Players)
 {
     int i, j;
     bool isDanger;
-    PATH Path, PathToClosestPlayer;
+    struct path_t Path, PathToClosestPlayer;
     int MinDist = UNREAL_F;
 
     for (i = 0; i < MAX_PLAYERS; i++)
@@ -487,7 +487,7 @@ void UpdateAI(struct game_t *G, struct player_t *Players)
                     if (Path.Distance < MinDist)
                     {
                         MinDist = Path.Distance;
-                        memcpy(&PathToClosestPlayer, &Path, sizeof(PATH));
+                        memcpy(&PathToClosestPlayer, &Path, sizeof(struct path_t));
                         AI[i].ClosestPlayer = j;
                     }
                 }
@@ -512,7 +512,7 @@ void UpdateAI(struct game_t *G, struct player_t *Players)
 
 #if USE_PATH_CACHE
                     /* create path cache */
-                    rb->memcpy(&AI[i].PathCache, &Path, sizeof(PATH));
+                    rb->memcpy(&AI[i].PathCache, &Path, sizeof(struct path_t));
                     if (AI[i].PathCache.Distance > PATH_OFFSET)
                         AI[i].PathCache.Distance--;
                     AI[i].PathCacheUpdTime = get_tick();
@@ -541,7 +541,7 @@ void UpdateAI(struct game_t *G, struct player_t *Players)
 
 #if USE_PATH_CACHE
                         /* create path cache */
-                        rb->memcpy(&AI[i].PathCache, &PathToClosestPlayer, sizeof(PATH));
+                        rb->memcpy(&AI[i].PathCache, &PathToClosestPlayer, sizeof(struct path_t));
                         if (AI[i].PathCache.Distance > PATH_OFFSET)
                             AI[i].PathCache.Distance--;
                         AI[i].PathCacheUpdTime = get_tick();

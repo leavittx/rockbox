@@ -36,36 +36,36 @@
 #define PATH_OFFSET 1
 #define MOVE_COST 10
 
-typedef struct
+struct node_t
 {
   bool IsWalkable;
   bool IsOnOpen;
   bool IsOnClose;
   int G, H, F;
   int ParentX, ParentY;
-} NODE;
+};
 
-typedef struct
+struct path_elem
 {
   int X, Y;
-} PATHELEM;
+};
 
-typedef struct
+struct path_t
 {
-  PATHELEM Path[MAP_W * MAP_H];
+  struct path_elem Path[MAP_W * MAP_H];
   int Distance;
-} PATH;
+};
 
-typedef struct
+struct ai_vars
 {
   int ClosestPlayer;
   bool Danger;
-  PATHELEM SafetyPlace;
+  struct path_elem SafetyPlace;
   int Bombs;
-} AiVars;
+};
 
-NODE Nodes[MAP_W][MAP_H]; 
-AiVars AI[MAX_PLAYERS];
+node_t Nodes[MAP_W][MAP_H]; 
+struct ai_vars AI[MAX_PLAYERS];
 
 bool GetNode(struct field_t *field, int x, int y, bool IsBoxesUsed)
 {  
@@ -94,7 +94,7 @@ void InitNodes(struct field_t *F, bool IsBoxesUsed)
 	}
 }
 
-int FindPath(struct game_t *G, PATH *Path, int StartX, int StartY,
+int FindPath(struct game_t *G, struct path_t *Path, int StartX, int StartY,
                 int EndX, int EndY, bool IsBoxesUsed)
 {
 	int x = 0, y = 0; // for running through the nodes
@@ -246,7 +246,7 @@ int FindPath(struct game_t *G, PATH *Path, int StartX, int StartY,
   return 1;
 }
 
-void MovePlayer(struct game_t *G, struct player_t *P, PATH *Path)
+void MovePlayer(struct game_t *G, struct player_t *P, struct path_t *Path)
 {
 	//
     if (Path->Distance > 1)
@@ -276,7 +276,7 @@ void MovePlayer(struct game_t *G, struct player_t *P, PATH *Path)
    }
 }
 
-void CopyPaths(PATH *Dst, PATH *Src)
+void CopyPaths(struct path_t *Dst, struct path_t *Src)
 {
 	int i;
 	
@@ -289,7 +289,7 @@ void CopyPaths(PATH *Dst, PATH *Src)
 	}
 }
 
-void LogPath(PATH *P, char *label, int n)
+void LogPath(struct path_t *P, char *label, int n)
 {
     int file;
     int i;
@@ -358,12 +358,12 @@ int CheckIfThereAnyBomb(int *Num, struct game_t *G, struct player_t *P)
     return 0;
 }
 
-int FindSafetyPlace(struct game_t *G, AiVars *P,  PATH *Path, int x, int y)
+int FindSafetyPlace(struct game_t *G, struct ai_vars *P,  struct path_t *Path, int x, int y)
 {
   int dx, dy;
   int i = 0, res = 0;
   int MinDist = UNREAL_F;
-  PATHELEM TempSafePlace;
+  struct path_elem TempSafePlace;
   
   TempSafePlace.X = 0;
   TempSafePlace.Y = 0;
@@ -418,7 +418,7 @@ int FindSafetyPlace(struct game_t *G, AiVars *P,  PATH *Path, int x, int y)
   return 0;
 }
 
-int IsABox(struct game_t *G, PATHELEM *P)
+int IsABox(struct game_t *G, struct path_elem *P)
 {
   if(G->field.map[P->X][P->Y] == SQUARE_BOX)
     return 1;
@@ -469,7 +469,7 @@ void UpdateAI(struct game_t *G, struct player_t *Players)
 {
   int i, j, Danger = 0;
   int Bombs2 = 0;
-  PATH Path, CurPath;
+  struct path_t Path, CurPath;
   int MinDist = UNREAL_F;
 
   for (i = 0; i < MAX_PLAYERS; i++)
