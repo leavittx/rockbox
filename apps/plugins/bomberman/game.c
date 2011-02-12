@@ -42,6 +42,7 @@ struct fire_struct {
      volatile uint32_t dir_bitmask;
 };
 
+/* Swap macro. */
 #define swap(a, b) { \
     register typeof (a) tmp = a; \
     a = b; \
@@ -226,7 +227,7 @@ int UpdatePlayer(Game *game, Player *player)
         {
             if ((tick - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
             {
-                /* control player speed */
+                /* Control player speed. */
                 if (player->move_phase == game->max_move_phase[player->speed])
                 {
                     player->ismove = false;
@@ -319,7 +320,7 @@ void PlayerPlaceBomb(Game *game, Player *player)
         return;
 
     if (player->bombs_placed >= player->bombs_max &&
-        player->bombs_max != -1) /* infinity */
+        player->bombs_max != -1) /* Infinity. */
             return;
 
     for (i = 0; i < MAX_BOMBS; i++)
@@ -359,7 +360,7 @@ static void DoFire(Game *game, struct fire_struct *fs)
     enum fire_phase phase = fs->phase - 2;
     volatile uint32_t dir_bitmask = fs->dir_bitmask;
 
-    /* kill player in the center of explosion */
+    /* Kill player in the center of explosion. */
     if (phase == Phase1) {
         for (i = 0; i < MAX_PLAYERS; i++)
         {
@@ -458,7 +459,7 @@ static void DoFire(Game *game, struct fire_struct *fs)
                 break;
             }
 
-            /* detonate other bombs */
+            /* Detonate other bombs. */
             else if (game->field.map[curx][cury] == SQUARE_BOMB)
             {
                 for (i = 0; i < MAX_BOMBS; i++)
@@ -473,7 +474,7 @@ static void DoFire(Game *game, struct fire_struct *fs)
                 }
             }
 
-            /* player gets killed by explosion */
+            /* Player gets killed by explosion. */
             if (phase == PhaseEnd) {
                 for (i = 0; i < MAX_PLAYERS; i++)
                 {
@@ -513,29 +514,30 @@ static void DoFire(Game *game, struct fire_struct *fs)
 void UpdateBombs(Game *game)
 {
     int i;
-    /* this helps with detonation animation */
+    /* Helps with detonation animation. */
     static const int detphases[4] = { 0, 1, 2, 1 };
     struct fire_struct fs;
+    int x, y, nticks;
 
-    memset(game->field.firemap, 0, sizeof(game->field.firemap));
+    /* Clear firemap. */
+    memset(game->field.firemap, 0*rb->rand() % 5, sizeof(game->field.firemap));
 
     for (i = 0; i < MAX_BOMBS; i++)
     {
         if (game->field.bombs[i].state < BOMB_PLACED)
             continue;
 
-        fs.x = game->field.bombs[i].xpos, fs.y = game->field.bombs[i].ypos;
+        x = fs.x = game->field.bombs[i].xpos;
+        y = fs.y = game->field.bombs[i].ypos;
         fs.rad = game->bomb_rad[game->field.bombs[i].power];
         fs.isFullPower = game->field.bombs[i].owner->isFullPower;
 
-        int x = fs.x, y = fs.y;
+        nticks = tick - game->field.bombs[i].place_time;
 
-        /* todo: check if it neccecary to compute this */
-        /* update detonation animation */
-        game->field.det[x][y] = detphases[((tick - game->field.bombs[i].place_time) /
-                                           BOMB_DELAY_DET_ANIM) % 4];
+        /* Update detonation animation. */
+        game->field.det[x][y] = detphases[(nticks / BOMB_DELAY_DET_ANIM) % 4];
 
-        if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE4)
+        if (nticks >= BOMB_DELAY_PHASE4)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_NONE;
@@ -560,7 +562,7 @@ void UpdateBombs(Game *game)
 
             game->field.bombs[i].owner->bombs_placed--;
         }
-        else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE3)
+        else if (nticks >= BOMB_DELAY_PHASE3)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE4;
@@ -584,7 +586,7 @@ void UpdateBombs(Game *game)
             fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
-        else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE2)
+        else if (nticks >= BOMB_DELAY_PHASE2)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE3;
@@ -608,7 +610,7 @@ void UpdateBombs(Game *game)
             fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
-        else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_PHASE1)
+        else if (nticks >= BOMB_DELAY_PHASE1)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE2;
@@ -632,7 +634,7 @@ void UpdateBombs(Game *game)
             fs.dir_bitmask = BITMASK_UP;
             DoFire(game, &fs);
         }
-        else if (tick - game->field.bombs[i].place_time >= BOMB_DELAY_DET)
+        else if (nticks >= BOMB_DELAY_DET)
         {
             game->field.map[x][y] = SQUARE_FREE;
             game->field.bombs[i].state = BOMB_EXPL_PHASE1;
@@ -662,13 +664,15 @@ void UpdateBombs(Game *game)
 void UpdateBoxes(Game *game)
 {
     int i, j;
+    int nticks;
 
     for (i = 0; i < MAP_W; i++)
         for (j = 0; j < MAP_H; j++)
             if (game->field.map[i][j] == SQUARE_BOX && game->field.boxes[i][j].state > HUNKY)
             {
-                game->field.boxes[i][j].state =
-                        (tick - game->field.boxes[i][j].expl_time) / BOX_DELAY_EXPLOSION_ANIM + 1;
+                nticks = tick - game->field.boxes[i][j].expl_time;
+                game->field.boxes[i][j].state = nticks / BOX_DELAY_EXPLOSION_ANIM + 1;
+
                 if (game->field.boxes[i][j].state > BOX_EXPL_PHASE5)
                     game->field.map[i][j] = SQUARE_FREE;
             }

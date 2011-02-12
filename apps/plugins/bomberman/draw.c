@@ -51,6 +51,7 @@
 #define XMAPOFFSET 25
 #define YMAPOFFSET 30
 
+/* Offsets (in pixels) for each position of player in one square. */
 //int xcoord[3] = {1, 6, 12};
 static const int xcoord[3] = {-4, 0, 4};
 //int ycoord[3] = {3, 9, 14};
@@ -58,6 +59,17 @@ static const int xcoord[3] = {-4, 0, 4};
 //int ycoord[3] = {12, 6, 1};
 static const int ycoord[3] = {9, 3, -2};
 
+/* Some magic constants for right player's movement drawing. */
+static const int xcoord_k[4] = {0, 0, 1, -1};
+static const int ycoord_k[4] = {-1, 1, 0, 0};
+
+/* Drawing move phase for each actual move phase of player. */
+static const int move_cur_phases[6] = {0, 1, 2, 3, 2, 0};
+
+/* Binary offsets for each direction (used in explosion drawing) */
+static const int dir_offsets[5] = {0, 4, 8, 12, 16};
+
+/* Draw function. */
 void Draw(Game *game)
 {
     int i, j;
@@ -67,7 +79,7 @@ void Draw(Game *game)
 
     if (game->state == GAME_GAME)
     {
-	/* Different objects on the field */
+        /* Different objects on the field. */
 	for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
                 switch (game->field.map[i][j])
@@ -134,7 +146,7 @@ void Draw(Game *game)
                     break;
                 }
 
-        /* player without movement */
+        /* Player without movement. */
         /*
         rb->lcd_bitmap_transparent(bomberman_player,
             game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET,
@@ -234,72 +246,21 @@ void Draw(Game *game)
 
                 if (game->draw_order[i]->ismove)
                 {
-                    int curphase = 0;
+                    int curphase = move_cur_phases[game->draw_order[i]->move_phase];
 
-                    if (game->draw_order[i]->move_phase <= 3)
-                        curphase = game->draw_order[i]->move_phase;
-                    else if (game->draw_order[i]->move_phase == 4)
-                        curphase = 2;
-                    else if (game->draw_order[i]->move_phase == 5)
-                        curphase = 0;
-
-                    // todo: make common code for different directions
-                    if (game->draw_order[i]->look == LOOK_UP)
-                    {
-                        rb->lcd_bitmap_transparent_part(move_bitmap,
-                            curphase * BMPWIDTH_bomberman_player,
-                            game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
-                            STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-                            game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
-                            xcoord[game->draw_order[i]->rxpos + 1],
-                            game->draw_order[i]->ypos * SQUARE_SIZE + YMAPOFFSET -
+                    rb->lcd_bitmap_transparent_part(move_bitmap,
+                        curphase * BMPWIDTH_bomberman_player,
+                        game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
+                        STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+                        game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
+                            xcoord[game->draw_order[i]->rxpos + 1] +
+                            xcoord_k[game->draw_order[i]->look] * game->draw_order[i]->move_phase,
+                        game->draw_order[i]->ypos * SQUARE_SIZE + YMAPOFFSET -
                             (BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-                            ycoord[game->draw_order[i]->rypos + 1] - game->draw_order[i]->move_phase,
-                            BMPWIDTH_bomberman_player,
-                            BMPHEIGHT_bomberman_player);
-                    }
-                    else if (game->draw_order[i]->look == LOOK_DOWN)
-                    {
-                        rb->lcd_bitmap_transparent_part(move_bitmap,
-                            curphase * BMPWIDTH_bomberman_player,
-                            game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
-                            STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-                            game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
-                            xcoord[game->draw_order[i]->rxpos + 1],
-                            game->draw_order[i]->ypos * SQUARE_SIZE + YMAPOFFSET -
-                            (BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-                            ycoord[game->draw_order[i]->rypos + 1] + game->draw_order[i]->move_phase,
-                            BMPWIDTH_bomberman_player,
-                            BMPHEIGHT_bomberman_player);
-                    }
-                    else if (game->draw_order[i]->look == LOOK_RIGHT)
-                    {
-                        rb->lcd_bitmap_transparent_part(move_bitmap,
-                            curphase * BMPWIDTH_bomberman_player,
-                            game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
-                            STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-                            game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
-                            xcoord[game->draw_order[i]->rxpos + 1] + game->draw_order[i]->move_phase,
-                            game->draw_order[i]->ypos * SQUARE_SIZE + YMAPOFFSET -
-                            (BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-                            ycoord[game->draw_order[i]->rypos + 1],
-                            BMPWIDTH_bomberman_player,
-                            BMPHEIGHT_bomberman_player);
-                    }
-                    else /* LOOK_LEFT */
-                    {
-                        rb->lcd_bitmap_transparent_part(move_bitmap,
-                            curphase * BMPWIDTH_bomberman_player,
-                            game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
-                            STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
-                            game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
-                            xcoord[game->draw_order[i]->rxpos + 1] - game->draw_order[i]->move_phase,
-                            game->draw_order[i]->ypos * SQUARE_SIZE + YMAPOFFSET -
-                            (BMPHEIGHT_bomberman_player - SQUARE_SIZE) -
-                            ycoord[game->draw_order[i]->rypos + 1],
-                            BMPWIDTH_bomberman_player,
-                            BMPHEIGHT_bomberman_player);
-                    }
+                            ycoord[game->draw_order[i]->rypos + 1] +
+                            ycoord_k[game->draw_order[i]->look] * game->draw_order[i]->move_phase,
+                        BMPWIDTH_bomberman_player,
+                        BMPHEIGHT_bomberman_player);
                 }
                 else
                 {
@@ -318,7 +279,7 @@ void Draw(Game *game)
             }
 	}
 
-	/* Explosions */
+        /* Explosions :) */
         for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
             {
@@ -326,7 +287,7 @@ void Draw(Game *game)
 
                 for (dir = 0; dir < 5; dir++)
                 {
-                    bool is_set = game->field.firemap[i][j] & (BITMASK_ALL_PHASES << (dir * 4));
+                    bool is_set = game->field.firemap[i][j] & (BITMASK_ALL_PHASES << dir_offsets[dir]);
 
                     if (is_set)
                     {
@@ -335,14 +296,15 @@ void Draw(Game *game)
 
                         for (phase = 0; phase < 4; phase++)
                         {
-                            if (game->field.firemap[i][j] & ((BITMASK_SING_PHASE << (dir * 4)) << phase))
+                            if (game->field.firemap[i][j] &
+                                    ((BITMASK_SING_PHASE << dir_offsets[dir]) << phase))
                                 break;
                         }
 
                         if (dir == FIRE_CENTER)
                         {
                             rb->lcd_bitmap_transparent_part(bomberman_explode,
-                                (phase) * SQUARE_SIZE,
+                                phase * SQUARE_SIZE,
                                 0,
                                 STRIDE(SCREEN_MAIN,
                                        BMPWIDTH_bomberman_explode,
@@ -356,7 +318,7 @@ void Draw(Game *game)
                         {
                             rb->lcd_bitmap_transparent_part(bomberman_explode,
                                 dir * SQUARE_SIZE,
-                                SQUARE_SIZE + SQUARE_SIZE * (phase) * 2 +
+                                SQUARE_SIZE + SQUARE_SIZE * phase * 2 +
                                 SQUARE_SIZE * is_end,
                                 STRIDE(SCREEN_MAIN,
                                        BMPWIDTH_bomberman_explode,
@@ -381,5 +343,6 @@ void Draw(Game *game)
                        BMPWIDTH_bomberman_youwon, BMPHEIGHT_bomberman_youwon);
     }
 
+    /* Update the lcd. */
     rb->lcd_update();
 }

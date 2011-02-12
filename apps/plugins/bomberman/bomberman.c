@@ -168,25 +168,25 @@ void InitGame(Game *game)
     for (i = 0; i < MAX_PLAYERS; i++)
         game->draw_order[i] = &game->players[i];
 
-    /* set radius of explosion for each bomb power */
+    /* Set radius of explosion for each bomb power. */
     game->bomb_rad[BOMB_PWR_SINGLE] = 1;
     game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
     game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
     game->bomb_rad[BOMB_PWR_QUAD]   = 6;
     game->bomb_rad[BOMB_PWR_KILLER] = MAX(MAP_W, MAP_H);
 
-    /* set player maximum move phase for each speed */
+    /* Set player maximum move phase for each speed. */
     game->max_move_phase[0] = 5;
     game->max_move_phase[1] = 2;
     game->max_move_phase[2] = 1;
 
-    /* place bonuses */
+    /* Place bonuses. */
     int nboxes = 0, nbonuses;
     for (i = 0; i < MAP_W; i++)
         for (j = 0; j < MAP_H; j++)
             if (game->field.map[i][j] == SQUARE_BOX)
                 nboxes++;
-    /* not all boxes consist a bonus */
+    /* Not all boxes consist a bonus. */
     nbonuses = nboxes / 2;
     while (nbonuses)
     {
@@ -195,12 +195,13 @@ void InitGame(Game *game)
 
         if (game->field.map[i][j] == SQUARE_BOX && game->field.bonuses[i][j] == BONUS_NONE)
         {
-            /* choose a random bonus for this box */
+            /* Choose a random bonus for this box. */
             game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE);
             nbonuses--;
         }
     }
 
+    /* Let the game begin! */
     game->state = GAME_GAME;
 }
 
@@ -232,11 +233,11 @@ static void bomberman_loadgame(void)
 
     resume = false;
 
-    /* open game file */
+    /* Open game file. */
     fd = rb->open(SAVE_FILE, O_RDONLY);
     if (fd < 0) return;
 
-    /* read in saved game */
+    /* Read in saved game. */
     if((rb->read(fd, &game, sizeof(Game)) <= 0))
     {
         rb->splash(HZ/2, "Failed to load game");
@@ -253,7 +254,7 @@ static void bomberman_savegame(void)
 {
     int fd;
 
-    /* write out the game state to the save file */
+    /* Write out the game state to the save file. */
     fd = rb->open(SAVE_FILE, O_WRONLY|O_CREAT, 0666);
     if (fd < 0) return;
 
@@ -378,7 +379,7 @@ static int bomberman_game_loop(void)
     rb->cpu_boost(true);
 #endif
 
-    /* Main loop */
+    /* Main loop. */
     while (true)
     {
         int end = get_tick() + HZ / CYCLETIME;
@@ -502,13 +503,13 @@ static void cleanup(void)
     //rb->lcd_setfont(FONT_UI);
 
     /* Turn on backlight timeout (revert to settings) */
-    backlight_use_settings(); /* backlight control in lib/helper.c */
+    backlight_use_settings(); /* Backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
     remote_backlight_use_settings();
 #endif
 }
 
-/* this is the plugin entry point */
+/* This is the plugin entry point. */
 enum plugin_status plugin_start(const void* parameter)
 {
     int ret;
@@ -520,10 +521,10 @@ enum plugin_status plugin_start(const void* parameter)
 #if LCD_DEPTH > 1
     rb->lcd_set_backdrop(NULL);
 #endif
-    /* Turn off backlight timeout */
-    backlight_force_on(); /* backlight control in lib/helper.c */
+    /* Turn off backlight timeout. */
+    backlight_force_on(); /* Backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
-    remote_backlight_force_on(); /* remote backlight control in lib/helper.c */
+    remote_backlight_force_on(); /* Remote backlight control in lib/helper.c */
 #endif
 
     rb->srand(get_tick());
