@@ -914,7 +914,8 @@ resistor.128x128x16.bmp
 resistor.68x20x16.bmp
 #endif
 
-#if defined(COWON_D2) || defined(IPOD_VIDEO) || defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5)
+#if defined(COWON_D2) || defined(IPOD_VIDEO) \
+    || defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5) || defined(CREATIVE_ZVM60GB)
 battleship_map.240x240x16.bmp
 battleship_placeships.80x80x16.bmp
 battleship_yourturn.80x20x16.bmp

@@ -90,9 +90,13 @@ lua
 #endif
 
 #if defined(COWON_D2) || defined(IPOD_NANO) || defined(IPOD_VIDEO) \
-    || defined(OLYMPUS_MROBE_500)
+    || defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5) || defined(CREATIVE_ZVM60GB)
+#if !defined(CREATIVE_ZVM60GB)
 c-ray
+#endif
+#if !defined(IPOD_NANO)
 bomberman
+#endif
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
