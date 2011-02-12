@@ -914,26 +914,7 @@ resistor.128x128x16.bmp
 resistor.68x20x16.bmp
 #endif
 
-#if defined(COWON_D2) || defined(IPOD_VIDEO) \
-    || defined(OLYMPUS_MROBE_500) || defined(IAUDIO_X5) || defined(CREATIVE_ZVM60GB)
-battleship_map.240x240x16.bmp
-battleship_placeships.80x80x16.bmp
-battleship_yourturn.80x20x16.bmp
-battleship_player1.80x20x16.bmp
-battleship_player2.80x20x16.bmp
-battleship_numbers.20x200x16.bmp
-battleship_numbers_p1.20x200x16.bmp
-battleship_numbers_p2.20x200x16.bmp
-battleship_nsep.5x20x16.bmp
-battleship_aim.10x10x16.bmp
-battleship_missed.10x10x16.bmp
-battleship_shipone_notplaced.22x22x16.bmp
-battleship_shipone.22x22x16.bmp
-battleship_shipone_transparent.22x22x16.bmp
-battleship_shiponedead.22x22x16.bmp
-battleship_noships.10x10x16.bmp
-battleship_gameover.80x60x16.bmp
-
+#if defined(COWON_D2) || defined(IPOD_VIDEO) || defined(CREATIVE_ZVM60GB) || defined(CREATIVE_ZVM30GB)
 bomberman_player.16x24x16.bmp
 bomberman_box.96x16x16.bmp
 bomberman_block.16x16x16.bmp
@@ -953,33 +934,6 @@ bomberman_ai4_win.32x24x16.bmp
 bomberman_bonus.16x64x16.bmp
 bomberman_gameover.320x240x16.bmp
 bomberman_youwon.320x240x16.bmp
-
-#elif defined(IPOD_NANO)
-battleship_huy.80x80x16.bmp
-battleship_map.132x132x16.bmp
-battleship_placeships.44x44x16.bmp
-battleship_yourturn.44x44x16.bmp
-battleship_player1.44x11x16.bmp
-battleship_player2.44x11x16.bmp
-battleship_numbers.12x120x16.bmp
-battleship_numbers_p1.12x120x16.bmp
-battleship_numbers_p2.12x120x16.bmp
-battleship_nsep.3x12x16.bmp
-battleship_aim.10x10x16.bmp
-battleship_missed.10x10x16.bmp
-battleship_shipone_notplaced.13x13x16.bmp
-battleship_shipone.13x13x16.bmp
-battleship_shipone_transparent.12x12x16.bmp
-battleship_shiponedead.13x13x16.bmp
-battleship_noships.10x10x16.bmp
-battleship_gameover.80x60x16.bmp
-#endif
-
-#ifdef HAVE_TOUCHSCREEN
-balls_board.234x234x16.bmp
-balls_balls.26x182x16.bmp
-balls_background.320x240x16.bmp
-balls_chooser.24x24x16.bmp
 #endif
 
 #endif /* HAVE_LCD_BITMAP */
