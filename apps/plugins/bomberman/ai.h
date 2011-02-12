@@ -24,6 +24,6 @@
 #ifndef _AI_H
 #define _AI_H
 
-void UpdateAI(Game *G, Player *Players);
+void UpdateAI(struct game_t *G, struct player_t *Players);
 
 #endif /* _AI_H */

@@ -24,6 +24,6 @@
 #ifndef _DRAW_H
 #define _DRAW_H
 
-void Draw(Game *game);
+void Draw(struct game_t *game);
 
 #endif /* _DRAW_H */

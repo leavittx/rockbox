@@ -25,21 +25,21 @@
 #define _GAME_H
 
 /*
- * Global game params
+ * Global game params.
  */
 
 #define MAP_W 17
 #define MAP_H 11
 #define MAX_PLAYERS 4
-#define MAX_BOMBS 100
+#define MAX_BOMBS 15
 
 /*
- * Animation params
+ * Animation params.
  */
 
 #define CYCLETIME 30
 
-#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates */
+#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates. */
 #define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
 #define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
 #define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
@@ -56,39 +56,39 @@
 #define AFTERGAME_DUR (HZ * 3 / (CYCLETIME / 10))
 
 /*
- * Two types of ticks
+ * Two types of ticks.
  */
 
 #define get_tick() (*rb->current_tick)
 extern unsigned long tick;
 
 /*
- * Enums and structs
+ * Enums and structs.
  */
 
-typedef enum {
+enum square_type {
 	SQUARE_FREE = 0,
 	SQUARE_BOX,
 	SQUARE_BLOCK,
 	SQUARE_BOMB
-} SqType;
+};
 
-typedef enum {
+enum look_side {
 	LOOK_UP = 0,
 	LOOK_DOWN,
 	LOOK_RIGHT,
 	LOOK_LEFT
-} LookSide;
+};
 
-typedef enum {
+enum bomb_power {
 	BOMB_PWR_SINGLE = 0,
 	BOMB_PWR_DOUBLE,
 	BOMB_PWR_TRIPLE,
 	BOMB_PWR_QUAD,
 	BOMB_PWR_KILLER
-} BombPower;
+};
 
-typedef enum {
+enum player_state {
 	ALIVE = 0,
 	GONNA_DIE,
 	EXPL_PHASE1,
@@ -98,23 +98,23 @@ typedef enum {
 	DEAD,
 	WIN_PHASE1,
 	WIN_PHASE2
-} PlayerState;
+};
 
-typedef struct {
-	PlayerState state;
+struct player_status {
+        enum player_state state;
 	unsigned long time_of_death;
-} PlayerStatus;
+};
 
-typedef struct {
-	PlayerStatus status;
+struct player_t {
+        struct player_status status;
 	
 	int xpos, ypos;
-	LookSide look;
+        enum look_side look;
 	int speed;
 	
 	int bombs_max;
 	int bombs_placed;
-	BombPower bomb_power;
+        enum bomb_power power;
         bool isFullPower;
 	
 	int rxpos, rypos;
@@ -125,7 +125,7 @@ typedef struct {
         bool isAI;
 	
 	int num;
-} Player;
+};
 
 /*
  * rxpos & rypos - position of player in single cell
@@ -154,109 +154,103 @@ typedef struct {
 
 #define BITMASK_IS_END      0x00100000
 
-typedef enum {
+enum bomb_state {
         BOMB_NONE = 0,
         BOMB_PLACED,
         BOMB_EXPL_PHASE1,
         BOMB_EXPL_PHASE2,
         BOMB_EXPL_PHASE3,
         BOMB_EXPL_PHASE4
-} BombState;
+};
 
-typedef struct {
-	BombState state;
+struct bomb_t {
+        enum bomb_state state;
 	int xpos, ypos;
-	BombPower power;
+        enum bomb_power power;
 	unsigned long place_time;
-	Player *owner;
-} Bomb;
+        struct player_t *owner;
+};
 
-typedef enum {
+enum fire_dir {
 	FIRE_RIGNT = 0,
 	FIRE_DOWN,
 	FIRE_LEFT,
 	FIRE_UP,
 	FIRE_CENTER
-} FireDir;
+};
 
-typedef struct {
-	BombState state;
-	FireDir dir;
-	bool isend;
-} Fire;
-
-typedef enum {
+enum bomb_detonation {
 	DET_PHASE1 = 0,
 	DET_PHASE2,
 	DET_PHASE3
-} BombDetonation;
+};
 
-typedef enum {
+enum box_state {
 	HUNKY = 0,
 	BOX_EXPL_PHASE1,
 	BOX_EXPL_PHASE2,
 	BOX_EXPL_PHASE3,
 	BOX_EXPL_PHASE4,
 	BOX_EXPL_PHASE5
-} BoxState;
+};
 
-typedef struct {
-	BoxState state;
+struct box_detonation {
+        enum box_state state;
 	unsigned long expl_time;
-} BoxDetonation;
+};
 
-typedef enum {
+enum bonus_type {
 	BONUS_EXTRABOMB, // extra bomb
 	BONUS_POWER,     // increase bomb explosion radius
 	BONUS_SPEEDUP,   // increase player speed
 	BONUS_FULLPOWER, // destroy all destroyable objects in radius
 	BONUS_NONE       // no bonus
-} BonusType;
+};
 
-typedef struct {
-	SqType map[MAP_W][MAP_H];
-	Bomb bombs[MAX_BOMBS];
+struct field_t {
+        enum square_type map[MAP_W][MAP_H];
+        struct bomb_t bombs[MAX_BOMBS];
         volatile uint32_t firemap[MAP_W][MAP_H];
-	BombDetonation det[MAP_W][MAP_H];
-	BoxDetonation boxes[MAP_W][MAP_H];
-	BonusType bonuses[MAP_W][MAP_H];
-} Field;
+        enum bomb_detonation det[MAP_W][MAP_H];
+        struct box_detonation boxes[MAP_W][MAP_H];
+        enum bonus_type bonuses[MAP_W][MAP_H];
+};
 
-typedef enum {
+enum game_state {
 	GAME_GAME = 0,
 	GAME_GAMEOVER,
 	GAME_WON
-} GameState;
+};
 
-typedef struct {
-    	GameState state;
-	Field field;
-	Player players[MAX_PLAYERS];
-	Player *draw_order[MAX_PLAYERS];
+struct game_t {
+        enum game_state state;
+        struct field_t field;
+        struct player_t players[MAX_PLAYERS];
+        struct player_t *draw_order[MAX_PLAYERS];
 	int nplayers;
 	int bomb_rad[5];
         int max_move_phase[3];
         int score;
         int level;
-} Game;
+};
 
 /*
- * Player control functions
+ * Player control functions.
  */
 
-void PlayerMoveUp(Game *game, Player *player);
-void PlayerMoveDown(Game *game, Player *player);
-void PlayerMoveRight(Game *game, Player *player);
-void PlayerMoveLeft(Game *game, Player *player);
-void PlayerPlaceBomb(Game *game, Player *player);
+void PlayerMoveUp(struct game_t *game, struct player_t *player);
+void PlayerMoveDown(struct game_t *game, struct player_t *player);
+void PlayerMoveRight(struct game_t *game, struct player_t *player);
+void PlayerMoveLeft(struct game_t *game, struct player_t *player);
+void PlayerPlaceBomb(struct game_t *game, struct player_t *player);
 
 /*
- * Game update functions
+ * Game update functions.
  */
 
-int  UpdatePlayer(Game *game, Player *player);
-void UpdateBombs(Game *game);
-void UpdateBoxes(Game *game);
-void UpdateAftergame(Game *game);
+int  UpdatePlayer(struct game_t *game, struct player_t *player);
+void UpdateBombs(struct game_t *game);
+void UpdateBoxes(struct game_t *game);
+void UpdateAftergame(struct game_t *game);
 
 #endif /* _GAME_H */

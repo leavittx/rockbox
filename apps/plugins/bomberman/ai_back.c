@@ -67,7 +67,7 @@ typedef struct
 NODE Nodes[MAP_W][MAP_H]; 
 AiVars AI[MAX_PLAYERS];
 
-bool GetNode(Field *field, int x, int y, bool IsBoxesUsed)
+bool GetNode(struct field_t *field, int x, int y, bool IsBoxesUsed)
 {  
 	if (field->map[x][y] == SQUARE_FREE 
 	  || (IsBoxesUsed && field->map[x][y] == SQUARE_BOX))
@@ -76,7 +76,7 @@ bool GetNode(Field *field, int x, int y, bool IsBoxesUsed)
 	return false;
 }
 
-void InitNodes(Field *F, bool IsBoxesUsed)
+void InitNodes(struct field_t *F, bool IsBoxesUsed)
 {
   int x, y;
 
@@ -94,7 +94,7 @@ void InitNodes(Field *F, bool IsBoxesUsed)
 	}
 }
 
-int FindPath(Game *G, PATH *Path, int StartX, int StartY,
+int FindPath(struct game_t *G, PATH *Path, int StartX, int StartY,
                 int EndX, int EndY, bool IsBoxesUsed)
 {
 	int x = 0, y = 0; // for running through the nodes
@@ -246,7 +246,7 @@ int FindPath(Game *G, PATH *Path, int StartX, int StartY,
   return 1;
 }
 
-void MovePlayer(Game *G, Player *P, PATH *Path)
+void MovePlayer(struct game_t *G, struct player_t *P, PATH *Path)
 {
 	//
     if (Path->Distance > 1)
@@ -306,7 +306,7 @@ void LogPath(PATH *P, char *label, int n)
     rb->write(file, logStr, 100);
     
     rb->memset(logStr, 0, 100);
-    rb->snprintf(logStr, 10, "Player %i\n", n);
+    rb->snprintf(logStr, 10, "struct player_t %i\n", n);
     rb->write(file, logStr, 100);
     for (i = 0; i < P->Distance; i++)
     {
@@ -318,7 +318,7 @@ void LogPath(PATH *P, char *label, int n)
     rb->close(file);
 }
 
-int CheckIfThereAnyWall(Game *G, Player *P)
+int CheckIfThereAnyWall(struct game_t *G, struct player_t *P)
 {
   int j;
   
@@ -336,7 +336,7 @@ int CheckIfThereAnyWall(Game *G, Player *P)
 }
 
 
-int CheckIfThereAnyBomb(int *Num, Game *G, Player *P)
+int CheckIfThereAnyBomb(int *Num, struct game_t *G, struct player_t *P)
 {
     int i = 0;
     
@@ -358,7 +358,7 @@ int CheckIfThereAnyBomb(int *Num, Game *G, Player *P)
     return 0;
 }
 
-int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
+int FindSafetyPlace(struct game_t *G, AiVars *P,  PATH *Path, int x, int y)
 {
   int dx, dy;
   int i = 0, res = 0;
@@ -418,14 +418,14 @@ int FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, int x, int y)
   return 0;
 }
 
-int IsABox(Game *G, PATHELEM *P)
+int IsABox(struct game_t *G, PATHELEM *P)
 {
   if(G->field.map[P->X][P->Y] == SQUARE_BOX)
     return 1;
   return 0;
 }
 
-int IfThereIsAWallBetweenPlayers(Game *G, Player *P1, Player *P2)
+int IfThereIsAWallBetweenPlayers(struct game_t *G, struct player_t *P1, struct player_t *P2)
 {
   int i;
   if(P1->xpos > P2->xpos)
@@ -456,7 +456,7 @@ int IfThereIsAWallBetweenPlayers(Game *G, Player *P1, Player *P2)
   return 0;
 }
 
-int IfAiNearPlayer(Player *P1, Player *P2)
+int IfAiNearPlayer(struct player_t *P1, struct player_t *P2)
 {
   
  if(_abs((P1->xpos - P2->xpos)) <= (int)(2 * P2->bomb_power)
@@ -465,7 +465,7 @@ int IfAiNearPlayer(Player *P1, Player *P2)
  return 0;
   
 }
-void UpdateAI(Game *G, Player *Players)
+void UpdateAI(struct game_t *G, struct player_t *Players)
 {
   int i, j, Danger = 0;
   int Bombs2 = 0;

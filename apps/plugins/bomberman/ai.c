@@ -67,12 +67,12 @@ typedef struct {
 static NODE Nodes[MAP_W][MAP_H];
 static AiVars AI[MAX_PLAYERS];
 
-inline static bool GetNode(Field *field, int x, int y, bool UseBoxes)
+inline static bool GetNode(struct field_t *field, int x, int y, bool UseBoxes)
 {
     return (field->map[x][y] == SQUARE_FREE || (UseBoxes && field->map[x][y] == SQUARE_BOX));
 }
 
-static void InitNodes(Field *F, bool UseBoxes)
+static void InitNodes(struct field_t *F, bool UseBoxes)
 {
     int x, y;
 
@@ -90,7 +90,7 @@ static void InitNodes(Field *F, bool UseBoxes)
 	}
 }
 
-static int FindPath(Game *G, PATH *Path, int StartX, int StartY,
+static int FindPath(struct game_t *G, PATH *Path, int StartX, int StartY,
                                          int EndX, int EndY, bool UseBoxes)
 {
     int x = 0, y = 0; /* for running through the nodes */
@@ -267,7 +267,7 @@ void LogPath(PATH *P)
 }
 #endif /* #ifdef __DEBUG */
 
-static int FoundDangerBombs(Game *G, int x, int y)
+static int FoundDangerBombs(struct game_t *G, int x, int y)
 {
     int i, j;
     int ProtectWalls;
@@ -360,23 +360,23 @@ static int FoundDangerBombs(Game *G, int x, int y)
     return 0;
 }
 
-inline static bool IsPlayerNearPlayer(Game *G, Player *P1, Player *P2)
+inline static bool IsPlayerNearPlayer(struct game_t *G, struct player_t *P1, struct player_t *P2)
 {
     if (P1->xpos == P2->xpos)
     {
-        if (abs(P1->ypos - P2->ypos) <= G->bomb_rad[P1->bomb_power])
+        if (abs(P1->ypos - P2->ypos) <= G->bomb_rad[P1->power])
             return true;
     }
     else if (P1->ypos == P2->ypos)
     {
-        if (abs(P1->xpos - P2->xpos) <= G->bomb_rad[P1->bomb_power])
+        if (abs(P1->xpos - P2->xpos) <= G->bomb_rad[P1->power])
             return true;
     }
 
     return false;
 }
 
-static bool FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, Player *Pl)
+static bool FindSafetyPlace(struct game_t *G, AiVars *P,  PATH *Path, struct player_t *Pl)
 {
     int dx, dy;
     int MinDist = UNREAL_F;
@@ -419,12 +419,12 @@ static bool FindSafetyPlace(Game *G, AiVars *P,  PATH *Path, Player *Pl)
     return false;
 }
 
-inline static bool IsABox(Game *G, PATHELEM *P)
+inline static bool IsABox(struct game_t *G, PATHELEM *P)
 {
     return (G->field.map[P->X][P->Y] == SQUARE_BOX);
 }
 
-inline static void MovePlayer(Game *G, Player *P, PATH *Path)
+inline static void MovePlayer(struct game_t *G, struct player_t *P, PATH *Path)
 {
     if (Path->Distance > 1)
     {
@@ -440,12 +440,12 @@ inline static void MovePlayer(Game *G, Player *P, PATH *Path)
     }
 }
 
-inline static int CheckFire(Game *G, int x, int y)
+inline static int CheckFire(struct game_t *G, int x, int y)
 {
     return G->field.firemap[x][y] & BITMASK_ALL_DIRS;
 }
 
-void UpdateAI(Game *G, Player *Players)
+void UpdateAI(struct game_t *G, struct player_t *Players)
 {
     int i, j;
     bool isDanger;

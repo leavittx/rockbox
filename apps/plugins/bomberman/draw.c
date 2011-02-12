@@ -23,7 +23,7 @@
 
 #include "plugin.h"
 
-/* Bitmaps */
+/* Bitmaps. */
 #include "pluginbitmaps/bomberman_player.h"
 #include "pluginbitmaps/bomberman_box.h"
 #include "pluginbitmaps/bomberman_block.h"
@@ -51,12 +51,13 @@
 #define XMAPOFFSET 25
 #define YMAPOFFSET 30
 
+/* Win bitmaps for each player number. */
 static const fb_data *win_bitmaps[5] = {bomberman_player_win,
                                         bomberman_ai1_win,
                                         bomberman_ai2_win,
                                         bomberman_ai3_win,
                                         bomberman_ai4_win};
-
+/* Move bitmaps for each player number. */
 static const fb_data *move_bitmaps[5] = {bomberman_player_move,
                                          bomberman_ai1_move,
                                          bomberman_ai2_move,
@@ -82,7 +83,7 @@ static const int move_cur_phases[6] = {0, 1, 2, 3, 2, 0};
 static const int dir_offsets[5] = {0, 4, 8, 12, 16};
 
 /* Draw function. */
-void Draw(Game *game)
+void Draw(struct game_t *game)
 {
     int i, j;
 

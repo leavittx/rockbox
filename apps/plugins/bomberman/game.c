@@ -36,7 +36,7 @@ enum fire_phase {
 struct fire_struct {
      int x, y;
      int rad;
-     FireDir dir;
+     enum fire_dir dir;
      bool isFullPower;
      enum fire_phase phase;
      volatile uint32_t dir_bitmask;
@@ -49,7 +49,7 @@ struct fire_struct {
     b = tmp; \
 }
 
-void PlayerMoveUp(Game *game, Player *player)
+void PlayerMoveUp(struct game_t *game, struct player_t *player)
 {
     if (player->ismove || player->status.state != ALIVE)
         return;
@@ -78,7 +78,7 @@ void PlayerMoveUp(Game *game, Player *player)
     }
 }
 
-void PlayerMoveDown(Game *game, Player *player)
+void PlayerMoveDown(struct game_t *game, struct player_t *player)
 {
     if (player->ismove || player->status.state != ALIVE)
         return;
@@ -107,7 +107,7 @@ void PlayerMoveDown(Game *game, Player *player)
     }
 }
 
-void PlayerMoveRight(Game *game, Player *player)
+void PlayerMoveRight(struct game_t *game, struct player_t *player)
 {
     if (player->ismove || player->status.state != ALIVE)
         return;
@@ -136,7 +136,7 @@ void PlayerMoveRight(Game *game, Player *player)
     }
 }
 
-void PlayerMoveLeft(Game *game, Player *player)
+void PlayerMoveLeft(struct game_t *game, struct player_t *player)
 {
     if (player->ismove || player->status.state != ALIVE)
         return;
@@ -165,7 +165,7 @@ void PlayerMoveLeft(Game *game, Player *player)
     }
 }
 
-static void RecalcDrawOrder(Game *game)
+static void RecalcDrawOrder(struct game_t *game)
 {
     int i, j, max;
 
@@ -187,7 +187,7 @@ static void RecalcDrawOrder(Game *game)
         }
 }
 
-void PickBonus(Game *game, Player *player)
+void PickBonus(struct game_t *game, struct player_t *player)
 {
     int x = player->xpos, y = player->ypos;
 
@@ -200,8 +200,8 @@ void PickBonus(Game *game, Player *player)
             player->bombs_max++;
         break;
     case BONUS_POWER:
-        if (player->bomb_power < BOMB_PWR_KILLER)
-            player->bomb_power++;
+        if (player->power < BOMB_PWR_KILLER)
+            player->power++;
         break;
     case BONUS_SPEEDUP:
         if (player->speed < 2)
@@ -219,7 +219,7 @@ void PickBonus(Game *game, Player *player)
     game->field.bonuses[x][y] = BONUS_NONE;
 }
 
-int UpdatePlayer(Game *game, Player *player)
+int UpdatePlayer(struct game_t *game, struct player_t *player)
 {
     if (player->status.state == ALIVE)
     {
@@ -312,7 +312,7 @@ int UpdatePlayer(Game *game, Player *player)
     return 0;
 }
 
-void PlayerPlaceBomb(Game *game, Player *player)
+void PlayerPlaceBomb(struct game_t *game, struct player_t *player)
 {
     int i;
 
@@ -335,7 +335,7 @@ void PlayerPlaceBomb(Game *game, Player *player)
             game->field.bombs[i].state = BOMB_PLACED;
             game->field.bombs[i].xpos = player->xpos;
             game->field.bombs[i].ypos = player->ypos;
-            game->field.bombs[i].power = player->bomb_power;
+            game->field.bombs[i].power = player->power;
             game->field.bombs[i].place_time = tick;
             game->field.bombs[i].owner = player;
             game->field.map[player->xpos][player->ypos] = SQUARE_BOMB;
@@ -345,17 +345,17 @@ void PlayerPlaceBomb(Game *game, Player *player)
         }
 }
 
-inline static bool IsTransparentSquare(Field *field, int x, int y)
+inline static bool IsTransparentSquare(struct field_t *field, int x, int y)
 {
     return (field->map[x][y] == SQUARE_FREE ||
            (field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY));
 }
 
-static void DoFire(Game *game, struct fire_struct *fs)
+static void DoFire(struct game_t *game, struct fire_struct *fs)
 {
     int i, j;
     int x = fs->x, y = fs->y, rad = fs->rad;
-    FireDir dir = fs->dir;
+    enum fire_dir dir = fs->dir;
     bool isFullPower = fs->isFullPower;
     enum fire_phase phase = fs->phase - 2;
     volatile uint32_t dir_bitmask = fs->dir_bitmask;
@@ -511,7 +511,7 @@ static void DoFire(Game *game, struct fire_struct *fs)
     }
 }
 
-void UpdateBombs(Game *game)
+void UpdateBombs(struct game_t *game)
 {
     int i;
     /* Helps with detonation animation. */
@@ -661,7 +661,7 @@ void UpdateBombs(Game *game)
     }
 }
 
-void UpdateBoxes(Game *game)
+void UpdateBoxes(struct game_t *game)
 {
     int i, j;
     int nticks;

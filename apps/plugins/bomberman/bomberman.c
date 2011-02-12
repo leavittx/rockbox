@@ -56,7 +56,7 @@ const struct button_mapping *plugin_contexts[] = {
  */
 
 unsigned long tick = 0;
-static Game game;
+static struct game_t game;
 static bool resume = false;
 static bool resume_file = false;
 
@@ -67,7 +67,7 @@ static struct highscore highscores[NUM_SCORES];
  * Main code
  */
 
-void InitGame(Game *game)
+void InitGame(struct game_t *game)
 {
     int i, j;
 
@@ -205,7 +205,7 @@ void InitGame(Game *game)
     game->state = GAME_GAME;
 }
 
-void InitPlayer(Player *player, int num, int x, int y, bool isAI)
+void InitPlayer(struct player_t *player, int num, int x, int y, bool isAI)
 {
     player->status.state = ALIVE;
     player->xpos = x;
@@ -214,7 +214,7 @@ void InitPlayer(Player *player, int num, int x, int y, bool isAI)
     player->speed = 0;
     player->bombs_max = 1;
     player->bombs_placed = 0;
-    player->bomb_power = BOMB_PWR_SINGLE;
+    player->power = BOMB_PWR_SINGLE;
     player->isFullPower = false;
 
     player->rxpos = 0;
@@ -238,7 +238,7 @@ static void bomberman_loadgame(void)
     if (fd < 0) return;
 
     /* Read in saved game. */
-    if((rb->read(fd, &game, sizeof(Game)) <= 0))
+    if((rb->read(fd, &game, sizeof(struct game_t)) <= 0))
     {
         rb->splash(HZ/2, "Failed to load game");
     }
@@ -258,7 +258,7 @@ static void bomberman_savegame(void)
     fd = rb->open(SAVE_FILE, O_WRONLY|O_CREAT, 0666);
     if (fd < 0) return;
 
-    if ((rb->write(fd, &game, sizeof(Game)) <= 0))
+    if ((rb->write(fd, &game, sizeof(struct game_t)) <= 0))
     {
         rb->close(fd);
         rb->remove(SAVE_FILE);
@@ -327,7 +327,7 @@ static int bomberman_menu(void)
                 if (resume_file)
                     rb->remove(SAVE_FILE);
                 return 0;
-            case 1: /* Start New Game */
+            case 1: /* Start New Game*/
                 InitGame(&game);
                 InitPlayer(&game.players[0], 0, 1, 1, false);
                 InitPlayer(&game.players[1], 1, 1, MAP_H - 3, true);
