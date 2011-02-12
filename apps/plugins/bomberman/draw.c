@@ -51,6 +51,18 @@
 #define XMAPOFFSET 25
 #define YMAPOFFSET 30
 
+static const fb_data *win_bitmaps[5] = {bomberman_player_win,
+                                        bomberman_ai1_win,
+                                        bomberman_ai2_win,
+                                        bomberman_ai3_win,
+                                        bomberman_ai4_win};
+
+static const fb_data *move_bitmaps[5] = {bomberman_player_move,
+                                         bomberman_ai1_move,
+                                         bomberman_ai2_move,
+                                         bomberman_ai3_move,
+                                         bomberman_ai4_move};
+
 /* Offsets (in pixels) for each position of player in one square. */
 //int xcoord[3] = {1, 6, 12};
 static const int xcoord[3] = {-4, 0, 4};
@@ -179,31 +191,7 @@ void Draw(Game *game)
                 }
                 else if (game->draw_order[i]->status.state > DEAD)
                 {
-                    const fb_data *win_bitmap;
-
-                    switch (game->draw_order[i]->num)
-                    {
-                        case 0:
-                            win_bitmap = bomberman_player_win;
-                            break;
-                        case 1:
-                            win_bitmap = bomberman_ai1_win;
-                            break;
-                        case 2:
-                            win_bitmap = bomberman_ai2_win;
-                            break;
-                        case 3:
-                            win_bitmap = bomberman_ai3_win;
-                            break;
-                        case 4:
-                            win_bitmap = bomberman_ai4_win;
-                            break;
-                        default:
-                            win_bitmap = bomberman_ai1_win;
-                            break;
-                    }
-
-                    rb->lcd_bitmap_transparent_part(win_bitmap,
+                    rb->lcd_bitmap_transparent_part(win_bitmaps[game->draw_order[i]->num],
                         (game->draw_order[i]->status.state % 2) * BMPWIDTH_bomberman_player,
                         0,
                         STRIDE(SCREEN_MAIN,
@@ -220,35 +208,11 @@ void Draw(Game *game)
             }
             else
             {
-                const fb_data *move_bitmap;
-
-                switch (game->draw_order[i]->num)
-                {
-                    case 0:
-                        move_bitmap = bomberman_player_move;
-                        break;
-                    case 1:
-                        move_bitmap = bomberman_ai1_move;
-                        break;
-                    case 2:
-                        move_bitmap = bomberman_ai2_move;
-                        break;
-                    case 3:
-                        move_bitmap = bomberman_ai3_move;
-                        break;
-                    case 4:
-                        move_bitmap = bomberman_ai4_move;
-                        break;
-                    default:
-                        move_bitmap = bomberman_ai1_move;
-                        break;
-                }
-
                 if (game->draw_order[i]->ismove)
                 {
                     int curphase = move_cur_phases[game->draw_order[i]->move_phase];
 
-                    rb->lcd_bitmap_transparent_part(move_bitmap,
+                    rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num],
                         curphase * BMPWIDTH_bomberman_player,
                         game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
                         STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
@@ -264,7 +228,7 @@ void Draw(Game *game)
                 }
                 else
                 {
-                    rb->lcd_bitmap_transparent_part(move_bitmap,
+                    rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num],
                         0,
                         game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
                         STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
