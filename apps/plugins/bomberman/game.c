@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2010 Lev Panov
+ * Copyright (C) 2010-2011 Lev Panov, Nick Petrov
  * 
  * Bomberman plugin
  *
@@ -225,61 +225,58 @@ int UpdatePlayer(struct game_t *game, struct player_t *player)
     {
         if (player->ismove)
         {
-            if ((tick - player->move_start_time) / PLAYER_MOVE_PART_TIME > player->move_phase)
+            /* Control player speed. */
+            if (player->move_phase == game->max_move_phase[player->speed])
             {
-                /* Control player speed. */
-                if (player->move_phase == game->max_move_phase[player->speed])
+                player->ismove = false;
+                player->move_phase = 0;
+
+                if (player->look == LOOK_UP)
                 {
-                    player->ismove = false;
-                    player->move_phase = 0;
-
-                    if (player->look == LOOK_UP)
+                    if (player->rypos == -1)
                     {
-                        if (player->rypos == -1)
-                        {
-                            player->ypos--;
-                            player->rypos = 1;
-                        }
-                        else
-                            player->rypos--;
+                        player->ypos--;
+                        player->rypos = 1;
                     }
-                    else if (player->look == LOOK_DOWN)
-                    {
-                        if (player->rypos == 1)
-                        {
-                            player->ypos++;
-                            player->rypos = -1;
-                        }
-                        else
-                            player->rypos++;
-                    }
-                    else if (player->look == LOOK_RIGHT)
-                    {
-                        if (player->rxpos == 1)
-                        {
-                            player->xpos++;
-                            player->rxpos = -1;
-                        }
-                        else
-                            player->rxpos++;
-                    }
-                    else /* LOOK_LEFT */
-                    {
-                        if (player->rxpos == -1)
-                        {
-                            player->xpos--;
-                            player->rxpos = 1;
-                        }
-                        else
-                            player->rxpos--;
-                    }
-
-                    RecalcDrawOrder(game);
-                    PickBonus(game, player);
+                    else
+                        player->rypos--;
                 }
-                else
-                    player->move_phase++;
+                else if (player->look == LOOK_DOWN)
+                {
+                    if (player->rypos == 1)
+                    {
+                        player->ypos++;
+                        player->rypos = -1;
+                    }
+                    else
+                        player->rypos++;
+                }
+                else if (player->look == LOOK_RIGHT)
+                {
+                    if (player->rxpos == 1)
+                    {
+                        player->xpos++;
+                        player->rxpos = -1;
+                    }
+                    else
+                        player->rxpos++;
+                }
+                else /* LOOK_LEFT */
+                {
+                    if (player->rxpos == -1)
+                    {
+                        player->xpos--;
+                        player->rxpos = 1;
+                    }
+                    else
+                        player->rxpos--;
+                }
+
+                RecalcDrawOrder(game);
+                PickBonus(game, player);
             }
+            else
+                player->move_phase++;
         }
     }
     else if (player->status.state > GONNA_DIE && player->status.state < DEAD)
@@ -535,7 +532,7 @@ void UpdateBombs(struct game_t *game)
         nticks = tick - game->field.bombs[i].place_time;
 
         /* Update detonation animation. */
-        game->field.det[x][y] = detphases[(nticks / BOMB_DELAY_DET_ANIM) % 4];
+        game->field.det[x][y] = detphases[(nticks/* / BOMB_DELAY_DET_ANIM*/) % 4];
 
         if (nticks >= BOMB_DELAY_PHASE4)
         {

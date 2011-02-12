@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2010 Lev Panov
+ * Copyright (C) 2010-2011 Lev Panov, Nick Petrov
  * 
  * Bomberman plugin
  *
@@ -45,14 +45,14 @@ const struct button_mapping *plugin_contexts[] = {
     (sizeof(plugin_contexts) / sizeof(struct button_mapping*))
 
 /*
- * Files
+ * Files.
  */
 
 #define SAVE_FILE  PLUGIN_GAMES_DIR "/bomberman.save"
 #define SCORE_FILE PLUGIN_GAMES_DIR "/bomberman.score"
 
 /*
- * Some globals
+ * Some globals.
  */
 
 unsigned long tick = 0;
@@ -64,7 +64,7 @@ static bool resume_file = false;
 static struct highscore highscores[NUM_SCORES];
 
 /*
- * Main code
+ * Main code.
  */
 
 void InitGame(struct game_t *game)
@@ -110,7 +110,6 @@ void InitGame(struct game_t *game)
         {2,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,2},
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
         };*/
-    //now listening to me with hands 'i will (no man's land) (radiohead cover)'
     int DefaultMap[MAP_H][MAP_W] = {
         {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
         {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
@@ -214,7 +213,7 @@ void InitPlayer(struct player_t *player, int num, int x, int y, bool isAI)
     player->speed = 0;
     player->bombs_max = 1;
     player->bombs_placed = 0;
-    player->power = BOMB_PWR_SINGLE;
+    player->power = BOMB_PWR_DOUBLE;
     player->isFullPower = false;
 
     player->rxpos = 0;
@@ -273,7 +272,7 @@ static int bomberman_help(void)
 {
     static char *help_text[] = {
         "Bomberman", "", "Aim", "",
-        "Destroy", "all", "the", "enemies", "by", "exploding", "bombs"
+        "Destroy", "all", "the", "enemies", "by", "exploding", "bombs!"
     };
     static struct style_text formation[]={
         { 0, TEXT_CENTER|TEXT_UNDERLINE },
@@ -500,7 +499,8 @@ int main(void)
 
 static void cleanup(void)
 {
-    //rb->lcd_setfont(FONT_UI);
+    /* This is handled by plugin api. Remove in future. */
+    /* rb->lcd_setfont(FONT_UI); */
 
     /* Turn on backlight timeout (revert to settings) */
     backlight_use_settings(); /* Backlight control in lib/helper.c */

@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2010 Lev Panov
+ * Copyright (C) 2010-2011 Lev Panov, Nick Petrov
  * 
  * Bomberman plugin
  *

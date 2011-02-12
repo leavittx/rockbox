@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2010 Lev Panov
+ * Copyright (C) 2010-2011 Lev Panov, Nick Petrov
  * 
  * Bomberman plugin
  *
@@ -39,8 +39,7 @@
 
 #define CYCLETIME 30
 
-#define BOMB_DELAY_DET (HZ * 4 / (CYCLETIME / 10)) /* Delay before bomb detanates. */
-#define BOMB_DELAY_DET_ANIM /*(BOMB_DELAY_DET / 90 / (CYCLETIME / 10))*/(1)
+#define BOMB_DELAY_DET    (HZ * 4    / (CYCLETIME / 10)) /* Delay before bomb detonates. */
 #define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
 #define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
 #define BOMB_DELAY_PHASE3 (HZ * 4.05 / (CYCLETIME / 10))
@@ -48,7 +47,6 @@
 
 #define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
 
-#define PLAYER_MOVE_PART_TIME (HZ * 0.01 / (CYCLETIME / 10))
 #define PLAYER_DELAY_DEATH_ANIM (HZ * 0.09 / (CYCLETIME / 10))
 #define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
 #define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 5 / (CYCLETIME / 10))
@@ -142,6 +140,10 @@ struct player_t {
  |_____|_____|_____|
  */
 
+/*
+ * Binary masks for fire map stuff.
+ */
+
 #define BITMASK_ALL_DIRS    0x000FFFFF
 #define BITMASK_ALL_PHASES  0x0000000F
 #define BITMASK_SING_PHASE  0x00000001
@@ -200,11 +202,11 @@ struct box_detonation {
 };
 
 enum bonus_type {
-	BONUS_EXTRABOMB, // extra bomb
-	BONUS_POWER,     // increase bomb explosion radius
-	BONUS_SPEEDUP,   // increase player speed
-	BONUS_FULLPOWER, // destroy all destroyable objects in radius
-	BONUS_NONE       // no bonus
+        BONUS_EXTRABOMB, /* Extra bomb. */
+        BONUS_POWER,     /* Increase bomb explosion radius. */
+        BONUS_SPEEDUP,   /* Increase player speed. */
+        BONUS_FULLPOWER, /* Destroy all destroyable objects in radius. */
+        BONUS_NONE       /* No bonus. */
 };
 
 struct field_t {
