@@ -96,7 +96,7 @@
 
 #ifndef __PCTOOL__
 /* Tag Cache thread. */
-static struct event_queue tagcache_queue;
+static struct event_queue tagcache_queue SHAREDBSS_ATTR;
 static long tagcache_stack[(DEFAULT_STACK_SIZE + 0x4000)/sizeof(long)];
 static const char tagcache_thread_name[] = "tagcache";
 #endif
@@ -159,7 +159,7 @@ struct tagcache_command_entry {
 static struct tagcache_command_entry command_queue[TAGCACHE_COMMAND_QUEUE_LENGTH];
 static volatile int command_queue_widx = 0;
 static volatile int command_queue_ridx = 0;
-static struct mutex command_queue_mutex;
+static struct mutex command_queue_mutex SHAREDBSS_ATTR;
 #endif
 
 /* Tag database structures. */
@@ -430,7 +430,7 @@ static long find_entry_ram(const char *filename,
 }
 #endif
 
-static long find_entry_disk(const char *filename, bool localfd)
+static long find_entry_disk(const char *filename_raw, bool localfd)
 {
     struct tagcache_header tch;
     static long last_pos = -1;
@@ -442,6 +442,13 @@ static long find_entry_disk(const char *filename, bool localfd)
     char buf[TAG_MAXLEN+32];
     int i;
     int pos = -1;
+
+    const char *filename = filename_raw;
+#ifdef APPLICATION
+    char pathbuf[PATH_MAX]; /* Note: Don't use MAX_PATH here, it's too small */
+    if (realpath(filename, pathbuf) == pathbuf)
+        filename = pathbuf;
+#endif
 
     if (!tc_stat.ready)
         return -2;
