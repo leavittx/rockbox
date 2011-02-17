@@ -186,13 +186,14 @@ void InitGame(struct game_t *game)
             if (game->field.map[i][j] == SQUARE_BOX)
                 nboxes++;
     /* Not all boxes consist a bonus. */
-    nbonuses = nboxes / 2;
+    nbonuses = nboxes / 1.5;
     while (nbonuses)
     {
         i = rb->rand() % MAP_W;
         j = rb->rand() % MAP_H;
 
-        if (game->field.map[i][j] == SQUARE_BOX && game->field.bonuses[i][j] == BONUS_NONE)
+        if (game->field.map[i][j] == SQUARE_BOX &&
+                game->field.bonuses[i][j] == BONUS_NONE)
         {
             /* Choose a random bonus for this box. */
             game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE);
@@ -222,8 +223,9 @@ void InitPlayer(struct player_t *player, int num, int x, int y, bool isAI)
     player->move_phase = 0;
 
     player->isAI = isAI;
-
     player->num = num;
+
+    player->isMoveBombs = true;
 }
 
 static void bomberman_loadgame(void)
@@ -389,7 +391,8 @@ static int bomberman_game_loop(void)
         UpdateBoxes(&game);
         UpdateAI(&game, game.players);
 
-        int action = pluginlib_getaction(TIMEOUT_NOBLOCK, plugin_contexts, NB_ACTION_CONTEXTS);
+        int action = pluginlib_getaction(TIMEOUT_NOBLOCK,
+                                         plugin_contexts, NB_ACTION_CONTEXTS);
         switch (action)
         {
             case PLA_CANCEL:

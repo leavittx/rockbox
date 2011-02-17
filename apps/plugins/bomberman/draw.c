@@ -216,7 +216,9 @@ void Draw(struct game_t *game)
                     rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num],
                         curphase * BMPWIDTH_bomberman_player,
                         game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
-                        STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+                        STRIDE(SCREEN_MAIN,
+                               BMPWIDTH_bomberman_player_move,
+                               BMPHEIGHT_bomberman_player_move),
                         game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
                             xcoord[game->draw_order[i]->rxpos + 1] +
                             xcoord_k[game->draw_order[i]->look] * game->draw_order[i]->move_phase,
@@ -232,7 +234,9 @@ void Draw(struct game_t *game)
                     rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num],
                         0,
                         game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
-                        STRIDE(SCREEN_MAIN, BMPWIDTH_bomberman_player_move, BMPHEIGHT_bomberman_player_move),
+                        STRIDE(SCREEN_MAIN,
+                               BMPWIDTH_bomberman_player_move,
+                               BMPHEIGHT_bomberman_player_move),
                         game->draw_order[i]->xpos * SQUARE_SIZE + XMAPOFFSET +
                         xcoord[game->draw_order[i]->rxpos + 1],
                         game->draw_order[i]->ypos * SQUARE_SIZE + YMAPOFFSET -
@@ -252,11 +256,13 @@ void Draw(struct game_t *game)
 
                 for (dir = 0; dir < 5; dir++)
                 {
-                    bool is_set = game->field.firemap[i][j] & (BITMASK_ALL_PHASES << dir_offsets[dir]);
+                    bool is_set = game->field.firemap[i][j] &
+                            (BITMASK_ALL_PHASES << dir_offsets[dir]);
 
                     if (is_set)
                     {
-                        bool is_end = game->field.firemap[i][j] & (BITMASK_IS_END << dir);
+                        bool is_end = game->field.firemap[i][j] &
+                                (BITMASK_IS_END << dir);
                         int phase;
 
                         for (phase = 0; phase < 4; phase++)

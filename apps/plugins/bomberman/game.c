@@ -51,6 +51,8 @@ struct fire_struct {
 
 void PlayerMoveUp(struct game_t *game, struct player_t *player)
 {
+    int i, x, y;
+
     if (player->ismove || player->status.state != ALIVE)
         return;
 
@@ -69,17 +71,35 @@ void PlayerMoveUp(struct game_t *game, struct player_t *player)
         return;
     }
 
-    if ((player->ypos > 0 && game->field.map[player->xpos][player->ypos - 1] == SQUARE_FREE)
-            || player->rypos == 1)
+    x = player->xpos;
+    y = player->ypos - 1;
+
+    if ((player->ypos > 0 && game->field.map[x][y] == SQUARE_FREE) ||
+            player->rypos == 1)
     {
         player->ismove = true;
         player->move_phase = 1;
-        player->move_start_time = tick;
+    }
+    else if (player->isMoveBombs &&
+             player->ypos > 0 && game->field.map[x][y] == SQUARE_BOMB)
+    {
+        for (i = 0; i < MAX_BOMBS; i++)
+        {
+            if (game->field.bombs[i].xpos == x && game->field.bombs[i].ypos == y &&
+                    game->field.bombs[i].state == BOMB_PLACED)
+            {
+                game->field.bombs[i].move_dir = LOOK_UP;
+                game->field.bombs[i].ismove = true;
+                break;
+            }
+        }
     }
 }
 
 void PlayerMoveDown(struct game_t *game, struct player_t *player)
 {
+    int i, x, y;
+
     if (player->ismove || player->status.state != ALIVE)
         return;
 
@@ -98,17 +118,35 @@ void PlayerMoveDown(struct game_t *game, struct player_t *player)
         return;
     }
 
-    if ((player->ypos < MAP_H - 1 && game->field.map[player->xpos][player->ypos + 1] == SQUARE_FREE)
+    x = player->xpos;
+    y = player->ypos + 1;
+
+    if ((player->ypos < MAP_H - 1 && game->field.map[x][y] == SQUARE_FREE)
             || player->rypos == -1)
     {
         player->ismove = true;
         player->move_phase = 1;
-        player->move_start_time = tick;
+    }
+    else if (player->isMoveBombs &&
+             player->ypos < MAP_H - 1 && game->field.map[x][y] == SQUARE_BOMB)
+    {
+        for (i = 0; i < MAX_BOMBS; i++)
+        {
+            if (game->field.bombs[i].xpos == x && game->field.bombs[i].ypos == y &&
+                    game->field.bombs[i].state == BOMB_PLACED)
+            {
+                game->field.bombs[i].move_dir = LOOK_DOWN;
+                game->field.bombs[i].ismove = true;
+                break;
+            }
+        }
     }
 }
 
 void PlayerMoveRight(struct game_t *game, struct player_t *player)
 {
+    int i, x, y;
+
     if (player->ismove || player->status.state != ALIVE)
         return;
 
@@ -127,17 +165,35 @@ void PlayerMoveRight(struct game_t *game, struct player_t *player)
         return;
     }
 
-    if ((player->xpos < MAP_W - 1 && game->field.map[player->xpos + 1][player->ypos] == SQUARE_FREE)
+    x = player->xpos + 1;
+    y = player->ypos;
+
+    if ((player->xpos < MAP_W - 1 && game->field.map[x][y] == SQUARE_FREE)
             || player->rxpos == -1)
     {
         player->ismove = true;
         player->move_phase = 1;
-        player->move_start_time = tick;
+    }
+    else if (player->isMoveBombs &&
+             player->xpos < MAP_W - 1 && game->field.map[x][y] == SQUARE_BOMB)
+    {
+        for (i = 0; i < MAX_BOMBS; i++)
+        {
+            if (game->field.bombs[i].xpos == x && game->field.bombs[i].ypos == y &&
+                    game->field.bombs[i].state == BOMB_PLACED)
+            {
+                game->field.bombs[i].move_dir = LOOK_RIGHT;
+                game->field.bombs[i].ismove = true;
+                break;
+            }
+        }
     }
 }
 
 void PlayerMoveLeft(struct game_t *game, struct player_t *player)
 {
+    int i, x, y;
+
     if (player->ismove || player->status.state != ALIVE)
         return;
 
@@ -156,12 +212,28 @@ void PlayerMoveLeft(struct game_t *game, struct player_t *player)
         return;
     }
 
-    if ((player->xpos > 0 && game->field.map[player->xpos - 1][player->ypos] == SQUARE_FREE)
+    x = player->xpos - 1;
+    y = player->ypos;
+
+    if ((player->xpos > 0 && game->field.map[x][y] == SQUARE_FREE)
             || player->rxpos == 1)
     {
         player->ismove = true;
         player->move_phase = 1;
-        player->move_start_time = tick;
+    }
+    else if (player->isMoveBombs &&
+             player->ypos < MAP_H - 1 && game->field.map[x][y] == SQUARE_BOMB)
+    {
+        for (i = 0; i < MAX_BOMBS; i++)
+        {
+            if (game->field.bombs[i].xpos == x && game->field.bombs[i].ypos == y &&
+                    game->field.bombs[i].state == BOMB_PLACED)
+            {
+                game->field.bombs[i].move_dir = LOOK_LEFT;
+                game->field.bombs[i].ismove = true;
+                break;
+            }
+        }
     }
 }
 
@@ -210,10 +282,10 @@ void PickBonus(struct game_t *game, struct player_t *player)
     case BONUS_FULLPOWER:
         player->isFullPower = true;
         break;
-    case BONUS_NONE:
-        break;
-    default:
-        break;
+    case BONUS_MOVEBOMBS:
+        player->isMoveBombs = true;
+    default: /* BONUS_NONE */
+        return;
     }
 
     game->field.bonuses[x][y] = BONUS_NONE;
@@ -330,8 +402,14 @@ void PlayerPlaceBomb(struct game_t *game, struct player_t *player)
         if (game->field.bombs[i].state == BOMB_NONE)
         {
             game->field.bombs[i].state = BOMB_PLACED;
+
             game->field.bombs[i].xpos = player->xpos;
             game->field.bombs[i].ypos = player->ypos;
+
+            game->field.bombs[i].ismove = false;
+            game->field.bombs[i].rxpos = 0;
+            game->field.bombs[i].rypos = 0;
+
             game->field.bombs[i].power = player->power;
             game->field.bombs[i].place_time = tick;
             game->field.bombs[i].owner = player;
@@ -416,8 +494,10 @@ static void DoFire(struct game_t *game, struct fire_struct *fs)
             break;
         }
 
-        bool already_used = (game->field.firemap[curx][cury] & (BITMASK_ALL_PHASES << (dir * 4)));
-        bool already_is_end = (game->field.firemap[curx][cury] & (BITMASK_IS_END << dir));
+        bool already_used = game->field.firemap[curx][cury] &
+                (BITMASK_ALL_PHASES << (dir * 4));
+        bool already_is_end = (game->field.firemap[curx][cury] &
+                               (BITMASK_IS_END << dir));
 
         if ((dir == FIRE_RIGNT && curx < MAP_W - 1) ||
             (dir == FIRE_DOWN  && cury < MAP_H - 1) ||
@@ -462,8 +542,8 @@ static void DoFire(struct game_t *game, struct fire_struct *fs)
                 for (i = 0; i < MAX_BOMBS; i++)
                 {
                     if (game->field.bombs[i].xpos == curx &&
-                            game->field.bombs[i].ypos == cury &&
-                            game->field.bombs[i].state == BOMB_PLACED)
+                        game->field.bombs[i].ypos == cury &&
+                        game->field.bombs[i].state == BOMB_PLACED)
                     {
                         game->field.bombs[i].place_time = tick - BOMB_DELAY_DET;
                         break;
@@ -517,7 +597,7 @@ void UpdateBombs(struct game_t *game)
     int x, y, nticks;
 
     /* Clear firemap. */
-    memset(game->field.firemap, 0*rb->rand() % 5, sizeof(game->field.firemap));
+    memset(game->field.firemap, 0, sizeof(game->field.firemap));
 
     for (i = 0; i < MAX_BOMBS; i++)
     {
@@ -529,10 +609,103 @@ void UpdateBombs(struct game_t *game)
         fs.rad = game->bomb_rad[game->field.bombs[i].power];
         fs.isFullPower = game->field.bombs[i].owner->isFullPower;
 
-        nticks = tick - game->field.bombs[i].place_time;
+        /* Move bomb if it's moving. */
+        if (game->field.bombs[i].ismove)
+        {
+            //if (player->move_phase == game->max_move_phase[player->speed])
+            //{
+                if (game->field.bombs[i].move_dir == LOOK_UP)
+                {
+                        if (game->field.bombs[i].rypos == -1)
+                        {
+                            if (y > 0 && game->field.map[x][y - 1] == SQUARE_FREE)
+                            {
+                                game->field.bombs[i].ypos--;
+                                game->field.bombs[i].rypos = 1;
 
+                                game->field.map[x][y] = SQUARE_FREE;
+                                game->field.map[x][y - 1] = SQUARE_BOMB;
+                            }
+                        }
+                        else if (game->field.bombs[i].rypos == 0)
+                        {
+                            if (y > 0 && game->field.map[x][y - 1] == SQUARE_FREE)
+                                game->field.bombs[i].rypos--;
+                        }
+                        else /* rypos = 1 */
+                            game->field.bombs[i].rypos--;
+                }
+                else if (game->field.bombs[i].move_dir == LOOK_DOWN)
+                {
+                    if (game->field.bombs[i].rypos == 1)
+                    {
+                        if (y < MAP_H - 1 && game->field.map[x][y + 1] == SQUARE_FREE)
+                        {
+                            game->field.bombs[i].ypos++;
+                            game->field.bombs[i].rypos = -1;
+
+                            game->field.map[x][y] = SQUARE_FREE;
+                            game->field.map[x][y + 1] = SQUARE_BOMB;
+                        }
+                    }
+                    else if (game->field.bombs[i].rypos == 0)
+                    {
+                        if (y > 0 && game->field.map[x][y + 1] == SQUARE_FREE)
+                            game->field.bombs[i].rypos++;
+                    }
+                    else /* rypos = -1 */
+                        game->field.bombs[i].rypos++;
+                }
+                else if (game->field.bombs[i].move_dir == LOOK_RIGHT)
+                {
+                    if (game->field.bombs[i].rxpos == 1)
+                    {
+                        if (x < MAP_W - 1 && game->field.map[x + 1][y] == SQUARE_FREE)
+                        {
+                            game->field.bombs[i].xpos++;
+                            game->field.bombs[i].rxpos = -1;
+
+                            game->field.map[x][y] = SQUARE_FREE;
+                            game->field.map[x + 1][y] = SQUARE_BOMB;
+                        }
+                    }
+                    else if (game->field.bombs[i].rxpos == 0)
+                    {
+                        if (x < MAP_W - 1 && game->field.map[x + 1][y] == SQUARE_FREE)
+                            game->field.bombs[i].rxpos++;
+                    }
+                    else /* rxpos = -1 */
+                        game->field.bombs[i].rxpos++;
+                }
+                else /* LOOK_LEFT */
+                {
+                    if (game->field.bombs[i].rxpos == -1)
+                    {
+                        if (x > 0 && game->field.map[x - 1][y] == SQUARE_FREE)
+                        {
+                            game->field.bombs[i].xpos--;
+                            game->field.bombs[i].rxpos = 1;
+
+                            game->field.map[x][y] = SQUARE_FREE;
+                            game->field.map[x - 1][y] = SQUARE_BOMB;
+                        }
+                    }
+                    else if (game->field.bombs[i].rxpos == 0)
+                    {
+                        if (x > 0 && game->field.map[x - 1][y] == SQUARE_FREE)
+                            game->field.bombs[i].rxpos--;
+                    }
+                    else /* rxpos = 1 */
+                        game->field.bombs[i].rxpos--;
+                }
+            //}
+            //else
+            //    player->move_phase++;
+        }
+
+        nticks = tick - game->field.bombs[i].place_time;
         /* Update detonation animation. */
-        game->field.det[x][y] = detphases[(nticks/* / BOMB_DELAY_DET_ANIM*/) % 4];
+        game->field.det[x][y] = detphases[nticks % 4];
 
         if (nticks >= BOMB_DELAY_PHASE4)
         {

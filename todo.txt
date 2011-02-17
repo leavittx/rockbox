@@ -1,3 +1,4 @@
+- add: find_bomb() function which returns number of bomb with curx and cury coordinate
 - fix: do something if wins niether player nor ai
 - fix: when big explode radius, the fire ignores one box on it's way
 - add: several lifes, health, several first seconds after re-alival player's health is infinum

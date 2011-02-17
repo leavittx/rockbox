@@ -273,7 +273,7 @@ clock_messages.112x64x1.bmp
 #endif
 
 /* FFT only needs a bitmap with colors mapping to amplitude */
-#ifdef HAVE_LCD_COLOR 
+#ifdef HAVE_LCD_COLOR
 fft_colors.16.bmp
 #endif
 
@@ -791,9 +791,9 @@ superdom_boarditems.320x240x16.bmp
 #elif ((LCD_WIDTH == 240) && (LCD_HEIGHT == 320)) || \
       ((LCD_WIDTH == 240) && (LCD_HEIGHT == 400))
 superdom_boarditems.240x320x16.bmp
-#elif (LCD_WIDTH == 480 && LCD_HEIGHT == 640) 
+#elif (LCD_WIDTH == 480 && LCD_HEIGHT == 640)
 superdom_boarditems.480x640x16.bmp
-#elif (LCD_WIDTH == 640 && LCD_HEIGHT == 480) 
+#elif (LCD_WIDTH == 640 && LCD_HEIGHT == 480)
 superdom_boarditems.640x480x16.bmp
 #endif
 #endif
@@ -931,7 +931,7 @@ bomberman_ai1_win.32x24x16.bmp
 bomberman_ai2_win.32x24x16.bmp
 bomberman_ai3_win.32x24x16.bmp
 bomberman_ai4_win.32x24x16.bmp
-bomberman_bonus.16x64x16.bmp
+bomberman_bonus.16x80x16.bmp
 bomberman_gameover.320x240x16.bmp
 bomberman_youwon.320x240x16.bmp
 #endif
