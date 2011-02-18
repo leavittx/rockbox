@@ -593,6 +593,23 @@ static void DoFire(struct game_t *game, struct fire_struct *fs)
     }
 }
 
+inline static bool stop_bomb(struct game_t *game, int x, int y)
+{
+    int i;
+
+    if (game->field.map[x][y] != SQUARE_FREE)
+        return true;
+
+    for (i = 0; i < MAX_PLAYERS; i++)
+    {
+        if (game->players[i].xpos == x && game->players[i].ypos == y &&
+                game->players[i].status.state == ALIVE)
+            return true;
+    }
+
+    return false;
+}
+
 void UpdateBombs(struct game_t *game)
 {
     int i;
@@ -748,7 +765,7 @@ void UpdateBombs(struct game_t *game)
                 {
                         if (game->field.bombs[i].rypos == -1)
                         {
-                            if (y > 0 && game->field.map[x][y - 1] == SQUARE_FREE)
+                            if (y > 0 && !stop_bomb(game, x, y - 1))
                             {
                                 game->field.bombs[i].ypos--;
                                 game->field.bombs[i].rypos = 1;
@@ -756,11 +773,15 @@ void UpdateBombs(struct game_t *game)
                                 game->field.map[x][y] = SQUARE_FREE;
                                 game->field.map[x][y - 1] = SQUARE_BOMB;
                             }
+                            else
+                                game->field.bombs[i].ismove = false;
                         }
                         else if (game->field.bombs[i].rypos == 0)
                         {
-                            if (y > 0 && game->field.map[x][y - 1] == SQUARE_FREE)
+                            if (y > 0 && !stop_bomb(game, x, y - 1))
                                 game->field.bombs[i].rypos--;
+                            else
+                                game->field.bombs[i].ismove = false;
                         }
                         else /* rypos = 1 */
                             game->field.bombs[i].rypos--;
@@ -769,7 +790,7 @@ void UpdateBombs(struct game_t *game)
                 {
                     if (game->field.bombs[i].rypos == 1)
                     {
-                        if (y < MAP_H - 1 && game->field.map[x][y + 1] == SQUARE_FREE)
+                        if (y < MAP_H - 1 && !stop_bomb(game, x, y + 1))
                         {
                             game->field.bombs[i].ypos++;
                             game->field.bombs[i].rypos = -1;
@@ -777,11 +798,15 @@ void UpdateBombs(struct game_t *game)
                             game->field.map[x][y] = SQUARE_FREE;
                             game->field.map[x][y + 1] = SQUARE_BOMB;
                         }
+                        else
+                            game->field.bombs[i].ismove = false;
                     }
                     else if (game->field.bombs[i].rypos == 0)
                     {
-                        if (y > 0 && game->field.map[x][y + 1] == SQUARE_FREE)
+                        if (y < MAP_H - 1 && !stop_bomb(game, x, y + 1))
                             game->field.bombs[i].rypos++;
+                        else
+                            game->field.bombs[i].ismove = false;
                     }
                     else /* rypos = -1 */
                         game->field.bombs[i].rypos++;
@@ -790,7 +815,7 @@ void UpdateBombs(struct game_t *game)
                 {
                     if (game->field.bombs[i].rxpos == 1)
                     {
-                        if (x < MAP_W - 1 && game->field.map[x + 1][y] == SQUARE_FREE)
+                        if (x < MAP_W - 1 && !stop_bomb(game, x + 1, y))
                         {
                             game->field.bombs[i].xpos++;
                             game->field.bombs[i].rxpos = -1;
@@ -798,11 +823,15 @@ void UpdateBombs(struct game_t *game)
                             game->field.map[x][y] = SQUARE_FREE;
                             game->field.map[x + 1][y] = SQUARE_BOMB;
                         }
+                        else
+                            game->field.bombs[i].ismove = false;
                     }
                     else if (game->field.bombs[i].rxpos == 0)
                     {
-                        if (x < MAP_W - 1 && game->field.map[x + 1][y] == SQUARE_FREE)
+                        if (x < MAP_W - 1 && !stop_bomb(game, x + 1, y))
                             game->field.bombs[i].rxpos++;
+                        else
+                            game->field.bombs[i].ismove = false;
                     }
                     else /* rxpos = -1 */
                         game->field.bombs[i].rxpos++;
@@ -811,7 +840,7 @@ void UpdateBombs(struct game_t *game)
                 {
                     if (game->field.bombs[i].rxpos == -1)
                     {
-                        if (x > 0 && game->field.map[x - 1][y] == SQUARE_FREE)
+                        if (x > 0 && !stop_bomb(game, x - 1, y))
                         {
                             game->field.bombs[i].xpos--;
                             game->field.bombs[i].rxpos = 1;
@@ -819,11 +848,15 @@ void UpdateBombs(struct game_t *game)
                             game->field.map[x][y] = SQUARE_FREE;
                             game->field.map[x - 1][y] = SQUARE_BOMB;
                         }
+                        else
+                            game->field.bombs[i].ismove = false;
                     }
                     else if (game->field.bombs[i].rxpos == 0)
                     {
-                        if (x > 0 && game->field.map[x - 1][y] == SQUARE_FREE)
+                        if (x > 0 && !stop_bomb(game, x - 1, y))
                             game->field.bombs[i].rxpos--;
+                        else
+                            game->field.bombs[i].ismove = false;
                     }
                     else /* rxpos = 1 */
                         game->field.bombs[i].rxpos--;
