@@ -248,7 +248,7 @@ void Draw(struct game_t *game)
             }
 	}
 
-        /* Explosions :) */
+        /* Explosions. */
         for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
             {

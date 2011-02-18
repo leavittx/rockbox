@@ -225,7 +225,7 @@ void InitPlayer(struct player_t *player, int num, int x, int y, bool isAI)
     player->isAI = isAI;
     player->num = num;
 
-    player->isMoveBombs = true;
+    player->isMoveBombs = false;
 }
 
 static void bomberman_loadgame(void)
