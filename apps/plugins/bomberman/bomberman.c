@@ -469,6 +469,7 @@ static int bomberman_game_loop(void)
                 break;
         }
 
+        // todo: optimize, rewrite
         if (game.state == GAME_GAME)
         {
             for (i = 0; i < MAX_PLAYERS; i++)
@@ -480,24 +481,14 @@ static int bomberman_game_loop(void)
                     if (game.nplayers == 1 || !game.players[i].isAI)
                     {
                         for (i = 0; i < MAX_PLAYERS; i++)
-                        {
-                            if (game.players[i].status.state == ALIVE) {
+                            if (game.players[i].status.state == ALIVE)
                                 game.players[i].status.state = WIN_PHASE1;
-                            }
-                        }
                     }
                 }
                 else if (upd == -GAME_GAMEOVER || upd == -GAME_WON)
-                {
-                    game.state = -upd;
-                    tick = 0;
-                }
+                    return 0;
             }
         }
-
-        if (game.state == GAME_GAMEOVER || game.state == GAME_WON)
-//            if (tick >= AFTERGAME_DUR)
-                return 0;
 
         rb->yield();
 

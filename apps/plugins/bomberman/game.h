@@ -52,8 +52,6 @@
 #define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
 #define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 3 / (CYCLETIME / 10))
 
-//#define AFTERGAME_DUR (HZ * 3 / (CYCLETIME / 10))
-
 /*
  * Two types of ticks.
  */

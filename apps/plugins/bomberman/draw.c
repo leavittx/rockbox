@@ -41,8 +41,6 @@
 #include "pluginbitmaps/bomberman_ai3_win.h"
 #include "pluginbitmaps/bomberman_ai4_win.h"
 #include "pluginbitmaps/bomberman_bonus.h"
-//#include "pluginbitmaps/bomberman_gameover.h"
-//#include "pluginbitmaps/bomberman_youwon.h"
 
 #include "game.h"
 #include "draw.h"
@@ -303,16 +301,6 @@ void Draw(struct game_t *game)
                 }
             }
     }
-//    else if (game->state == GAME_GAMEOVER)
-//    {
-//        rb->lcd_bitmap(bomberman_gameover, 0, 0,
-//                       BMPWIDTH_bomberman_gameover, BMPHEIGHT_bomberman_gameover);
-//    }
-//    else if (game->state == GAME_WON)
-//    {
-//        rb->lcd_bitmap(bomberman_youwon, 0, 0,
-//                       BMPWIDTH_bomberman_youwon, BMPHEIGHT_bomberman_youwon);
-//    }
 
     /* Update the lcd. */
     rb->lcd_update();
