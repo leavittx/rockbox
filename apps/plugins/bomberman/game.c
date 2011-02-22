@@ -237,7 +237,7 @@ void PlayerMoveLeft(struct game_t *game, struct player_t *player)
     }
 }
 
-static void RecalcDrawOrder(struct game_t *game)
+static void recalc_draw_order(struct game_t *game)
 {
     int i, j, max;
 
@@ -259,7 +259,7 @@ static void RecalcDrawOrder(struct game_t *game)
         }
 }
 
-void PickBonus(struct game_t *game, struct player_t *player)
+void pick_bonus(struct game_t *game, struct player_t *player)
 {
     int x = player->xpos, y = player->ypos;
 
@@ -345,8 +345,8 @@ int UpdatePlayer(struct game_t *game, struct player_t *player)
                         player->rxpos--;
                 }
 
-                RecalcDrawOrder(game);
-                PickBonus(game, player);
+                recalc_draw_order(game);
+                pick_bonus(game, player);
             }
             else
                 player->move_phase++;
@@ -395,22 +395,19 @@ void PlayerPlaceBomb(struct game_t *game, struct player_t *player)
 
     for (i = 0; i < MAX_BOMBS; i++)
         if (game->field.bombs[i].state > BOMB_NONE &&
-            game->field.bombs[i].xpos == player->xpos &&
-            game->field.bombs[i].ypos == player->ypos)
-                return;
+                game->field.bombs[i].xpos == player->xpos &&
+                game->field.bombs[i].ypos == player->ypos)
+            return;
 
     for (i = 0; i < MAX_BOMBS; i++)
         if (game->field.bombs[i].state == BOMB_NONE)
         {
             game->field.bombs[i].state = BOMB_PLACED;
-
             game->field.bombs[i].xpos = player->xpos;
             game->field.bombs[i].ypos = player->ypos;
-
             game->field.bombs[i].ismove = false;
             game->field.bombs[i].rxpos = 0;
             game->field.bombs[i].rypos = 0;
-
             game->field.bombs[i].power = player->power;
             game->field.bombs[i].place_time = tick;
             game->field.bombs[i].owner = player;
@@ -421,13 +418,13 @@ void PlayerPlaceBomb(struct game_t *game, struct player_t *player)
         }
 }
 
-inline static bool IsTransparentSquare(struct field_t *field, int x, int y)
+inline static bool transparent_square(struct field_t *field, int x, int y)
 {
     return (field->map[x][y] == SQUARE_FREE ||
            (field->map[x][y] == SQUARE_BOX && field->boxes[x][y].state > HUNKY));
 }
 
-static void DoFire(struct game_t *game, struct fire_struct *fs)
+static void do_fire(struct game_t *game, struct fire_struct *fs)
 {
     int i, j;
     int x = fs->x, y = fs->y, rad = fs->rad;
@@ -505,7 +502,7 @@ static void DoFire(struct game_t *game, struct fire_struct *fs)
             (dir == FIRE_LEFT  && curx >= 0) ||
             (dir == FIRE_UP    && cury >= 0))
         {
-            if (IsTransparentSquare(&game->field, curx, cury))
+            if (transparent_square(&game->field, curx, cury))
             {
                 if (phase < PhaseEnd) {
                     game->field.firemap[curx][cury] |= (dir_bitmask << phase);
@@ -555,6 +552,7 @@ static void DoFire(struct game_t *game, struct fire_struct *fs)
                 }
             }
 
+            // todo: optimize
             /* Player gets killed by explosion. */
             if (phase == PhaseEnd) {
                 for (i = 0; i < MAX_PLAYERS; i++)
@@ -644,19 +642,19 @@ void UpdateBombs(struct game_t *game)
 
             fs.dir = FIRE_RIGNT;
             fs.dir_bitmask = BITMASK_RIGHT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_DOWN;
             fs.dir_bitmask = BITMASK_DOWN;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_LEFT;
             fs.dir_bitmask = BITMASK_LEFT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_UP;
             fs.dir_bitmask = BITMASK_UP;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             game->field.bombs[i].owner->bombs_placed--;
         }
@@ -670,19 +668,19 @@ void UpdateBombs(struct game_t *game)
 
             fs.dir = FIRE_RIGNT;
             fs.dir_bitmask = BITMASK_RIGHT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_DOWN;
             fs.dir_bitmask = BITMASK_DOWN;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_LEFT;
             fs.dir_bitmask = BITMASK_LEFT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_UP;
             fs.dir_bitmask = BITMASK_UP;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
         }
         else if (nticks >= BOMB_DELAY_PHASE2)
         {
@@ -694,19 +692,19 @@ void UpdateBombs(struct game_t *game)
 
             fs.dir = FIRE_RIGNT;
             fs.dir_bitmask = BITMASK_RIGHT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_DOWN;
             fs.dir_bitmask = BITMASK_DOWN;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_LEFT;
             fs.dir_bitmask = BITMASK_LEFT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_UP;
             fs.dir_bitmask = BITMASK_UP;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
         }
         else if (nticks >= BOMB_DELAY_PHASE1)
         {
@@ -718,19 +716,19 @@ void UpdateBombs(struct game_t *game)
 
             fs.dir = FIRE_RIGNT;
             fs.dir_bitmask = BITMASK_RIGHT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_DOWN;
             fs.dir_bitmask = BITMASK_DOWN;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_LEFT;
             fs.dir_bitmask = BITMASK_LEFT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_UP;
             fs.dir_bitmask = BITMASK_UP;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
         }
         else if (nticks >= BOMB_DELAY_DET)
         {
@@ -742,19 +740,19 @@ void UpdateBombs(struct game_t *game)
 
             fs.dir = FIRE_RIGNT;
             fs.dir_bitmask = BITMASK_RIGHT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_DOWN;
             fs.dir_bitmask = BITMASK_DOWN;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_LEFT;
             fs.dir_bitmask = BITMASK_LEFT;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
 
             fs.dir = FIRE_UP;
             fs.dir_bitmask = BITMASK_UP;
-            DoFire(game, &fs);
+            do_fire(game, &fs);
         }
         /* Move bomb if it's moving. */
         else if (game->field.bombs[i].ismove)

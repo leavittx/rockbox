@@ -421,6 +421,8 @@ static bool FindSafetyPlace(struct game_t *G, struct ai_vars *P,  struct path_t 
 
 inline static bool IsABox(struct game_t *G, struct path_elem *P)
 {
+    if (P->X < 0 || P->Y < 0 || P->X > MAP_W || P->Y > MAP_H)
+        return false;
     return (G->field.map[P->X][P->Y] == SQUARE_BOX);
 }
 
@@ -442,6 +444,8 @@ inline static void MovePlayer(struct game_t *G, struct player_t *P, struct path_
 
 inline static int CheckFire(struct game_t *G, int x, int y)
 {
+    if (x < 0 || y < 0 || x > MAP_W || y > MAP_H)
+        return false;
     return G->field.firemap[x][y] & BITMASK_ALL_DIRS;
 }
 

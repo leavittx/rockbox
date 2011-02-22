@@ -48,8 +48,9 @@ const struct button_mapping *plugin_contexts[] = {
  * Files.
  */
 
-#define SAVE_FILE  PLUGIN_GAMES_DIR "/bomberman.save"
-#define SCORE_FILE PLUGIN_GAMES_DIR "/bomberman.score"
+#define SAVE_FILE   PLUGIN_GAMES_DIR "/bomberman.save"
+#define SCORE_FILE  PLUGIN_GAMES_DIR "/bomberman.score"
+#define LEVELS_FILE PLUGIN_GAMES_DIR "/bomberman.levels"
 
 /*
  * Some globals.
@@ -62,122 +63,99 @@ static bool resume_file = false;
 
 #define NUM_SCORES 5
 static struct highscore highscores[NUM_SCORES];
+static bool use_highscores = true;
+
+#define MAX_LEVELS 20
+static char levels[MAX_LEVELS][MAP_W][MAP_H];
+static int num_levels;
 
 /*
  * Main code.
  */
 
-void InitGame(struct game_t *game)
+void InitPlayer(struct player_t *player, int num, int x, int y, bool isAI)
+{
+    player->status.state = ALIVE;
+    player->xpos = x;
+    player->ypos = y;
+    player->look = LOOK_DOWN;
+    player->speed = 0;
+    player->bombs_max = 1;
+    player->bombs_placed = 0;
+    player->power = BOMB_PWR_DOUBLE;
+    player->isFullPower = false;
+
+    player->rxpos = 0;
+    player->rypos = 0;
+    player->ismove = false;
+    player->move_phase = 0;
+
+    player->isAI = isAI;
+    player->num = num;
+
+    player->isMoveBombs = false;
+}
+
+void bomberman_load_current_level(struct game_t *game)
 {
     int i, j;
-
-    /*int DefaultMap[MAP_H][MAP_W] = {
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-        {2,0,0,1,1,1,0,1,0,1,0,1,0,1,0,0,2},
-        {2,0,2,1,2,1,2,0,2,1,2,0,2,1,2,0,2},
-        {2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
-        {2,0,2,1,2,1,2,0,2,1,2,0,2,1,2,0,2},
-        {2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
-        {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-        {2,0,0,1,1,1,1,1,0,1,0,1,0,1,0,0,2},
-        {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-        };*/
-    /*int DefaultMap[MAP_H][MAP_W] = {
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-        {2,0,0,1,1,1,0,1,0,1,0,1,0,1,0,0,2},
-        {2,0,2,1,1,1,1,1,1,1,1,1,1,1,2,0,2},
-        {2,0,1,0,0,0,0,0,0,1,0,1,0,1,1,0,2},
-        {2,0,1,1,2,1,2,0,0,1,2,0,2,1,1,0,2},
-        {2,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,2},
-        {2,0,1,0,0,0,0,0,2,1,2,0,2,0,1,0,2},
-        {2,0,0,0,1,1,1,0,0,0,0,0,0,1,1,1,2},
-        {2,0,2,1,1,1,1,1,1,1,1,1,1,1,2,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-        };*/
-    /*int DefaultMap[MAP_H][MAP_W] = {
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-        {2,0,0,0,1,1,0,1,0,1,0,1,1,0,0,0,2},
-        {2,0,2,0,1,1,1,1,1,1,1,1,1,0,2,0,2},
-        {2,1,1,1,1,0,0,0,0,1,0,1,1,1,1,1,2},
-        {2,0,1,1,2,1,2,0,0,1,2,0,2,1,1,0,2},
-        {2,0,1,1,1,1,1,1,0,0,0,0,0,1,1,0,2},
-        {2,0,1,0,0,0,0,0,2,1,2,0,2,0,1,0,2},
-        {2,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,2},
-        {2,0,2,0,1,1,1,1,1,1,1,1,1,0,2,0,2},
-        {2,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,2},
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-        };*/
-    int DefaultMap[MAP_H][MAP_W] = {
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-        {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
-        {2,0,2,1,2,1,2,1,2,1,2,1,2,1,2,0,2},
-        {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
-        {2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2},
-        {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
-        {2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2},
-        {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
-        {2,0,2,1,2,1,2,1,2,1,2,1,2,1,2,0,2},
-        {2,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,2},
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-        };
-    /*int DefaultMap[MAP_H][MAP_W] = {
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-        };*/
-    /*int DefaultMap[MAP_H][MAP_W] = {
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2},
-        {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}
-        };
-        */
+    int num_players = 0, num_ai = 0;
 
     for (i = 0; i < MAP_W; i++)
         for (j = 0; j < MAP_H; j++)
         {
-            game->field.map[i][j] = DefaultMap[j][i];
+            switch (levels[game->level][i][j])
+            {
+            case ' ':
+                game->field.map[i][j] = SQUARE_FREE;
+                break;
+            case '#':
+                game->field.map[i][j] = SQUARE_BLOCK;
+                break;
+            case '*':
+                game->field.map[i][j] = SQUARE_BOX;
+                break;
+            case '@':
+                game->field.map[i][j] = SQUARE_FREE;
+
+                num_players++;
+                if (num_players > 1) {
+                    rb->splashf(HZ/2,
+                               "Incorrect levels file (error in level %d)",
+                               game->level + 1);
+                    exit(PLUGIN_OK);
+                }
+
+                InitPlayer(&game->players[0], 0, i, j, false);
+                break;
+            case '$':
+                game->field.map[i][j] = SQUARE_FREE;
+
+                num_ai++;
+                if (num_ai + 1 > MAX_PLAYERS) {
+                    rb->splashf(HZ/2,
+                                "Incorrect levels file (error in level %d)",
+                                game->level + 1);
+                    exit(PLUGIN_OK);
+                }
+
+                InitPlayer(&game->players[num_ai], num_ai, i, j, true);
+                break;
+            }
+
             game->field.boxes[i][j].state = HUNKY;
             game->field.bonuses[i][j] = BONUS_NONE;
         }
 
-    for (i = 0; i < MAX_BOMBS; i++)
-        game->field.bombs[i].state = BOMB_NONE;
-
-    game->nplayers = MAX_PLAYERS;
+    game->nplayers = num_ai + 1;
+    for (i = game->nplayers; i < MAX_PLAYERS; i++)
+        game->players[i].status.state = DEAD;
 
     for (i = 0; i < MAX_PLAYERS; i++)
         game->draw_order[i] = &game->players[i];
 
-    /* Set radius of explosion for each bomb power. */
-    game->bomb_rad[BOMB_PWR_SINGLE] = 1;
-    game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
-    game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
-    game->bomb_rad[BOMB_PWR_QUAD]   = 6;
-    game->bomb_rad[BOMB_PWR_KILLER] = MAX(MAP_W, MAP_H);
-
-    /* Set player maximum move phase for each speed. */
-    game->max_move_phase[0] = 5;
-    game->max_move_phase[1] = 2;
-    game->max_move_phase[2] = 1;
+    for (i = 0; i < MAX_BOMBS; i++)
+        game->field.bombs[i].state = BOMB_NONE;
 
     /* Place bonuses. */
     int nboxes = 0, nbonuses;
@@ -205,27 +183,24 @@ void InitGame(struct game_t *game)
     game->state = GAME_GAME;
 }
 
-void InitPlayer(struct player_t *player, int num, int x, int y, bool isAI)
+void InitGame(struct game_t *game, int level, int score)
 {
-    player->status.state = ALIVE;
-    player->xpos = x;
-    player->ypos = y;
-    player->look = LOOK_DOWN;
-    player->speed = 0;
-    player->bombs_max = 1;
-    player->bombs_placed = 0;
-    player->power = BOMB_PWR_DOUBLE;
-    player->isFullPower = false;
+    game->level = level;
+    game->score = score;
 
-    player->rxpos = 0;
-    player->rypos = 0;
-    player->ismove = false;
-    player->move_phase = 0;
+    bomberman_load_current_level(game);
 
-    player->isAI = isAI;
-    player->num = num;
+    /* Set radius of explosion for each bomb power. */
+    game->bomb_rad[BOMB_PWR_SINGLE] = 1;
+    game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
+    game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
+    game->bomb_rad[BOMB_PWR_QUAD]   = 6;
+    game->bomb_rad[BOMB_PWR_KILLER] = MAX(MAP_W, MAP_H);
 
-    player->isMoveBombs = false;
+    /* Set player maximum move phase for each speed. */
+    game->max_move_phase[0] = 5;
+    game->max_move_phase[1] = 2;
+    game->max_move_phase[2] = 1;
 }
 
 static void bomberman_loadgame(void)
@@ -270,6 +245,58 @@ static void bomberman_savegame(void)
     rb->close(fd);
 }
 
+static bool bomberman_read_levels(const void* file_name)
+{
+    int fd;
+    char buf[MAP_W + 1], c;
+    int w, h, num_read = 0;
+    int i, j;
+    int nbytes;
+
+    /* Open levels file. */
+    fd = rb->open(file_name, O_RDONLY);
+    if (fd < 0) return false;
+
+    /* Check first line. */
+    rb->read_line(fd, buf, MAP_W + 1);
+    if (sscanf(buf, "%d%d%d", &num_levels, &w, &h) != 3) {
+        rb->close(fd);
+        return false;
+    }
+    if (num_levels < 1 || num_levels > MAX_LEVELS || w != MAP_W || h != MAP_H) {
+        rb->close(fd);
+        return false;
+    }
+
+    /* Read levels. */
+    while (num_read != num_levels) {
+        /* Read empty separating line. */
+        if ((nbytes = rb->read_line(fd, buf, MAP_W + 1)) != 1) {
+            rb->close(fd);
+            return false;
+        }
+        /* Read level itself. */
+        for (i = 0; i < MAP_H; i++) {
+            if ((nbytes = rb->read_line(fd, buf, MAP_W + 1)) != MAP_W + 1) {
+                rb->close(fd);
+                return false;
+            }
+            for (j = 0; j < MAP_W; j++) {
+                c = buf[j];
+                if (c != ' ' && c !='#' && c != '*' && c != '@' && c != '$') {
+                    rb->close(fd);
+                    return false;
+                }
+                levels[num_read][j][i] = c;
+            }
+        }
+        num_read++;
+    }
+
+    rb->close(fd);
+    return true;
+}
+
 static int bomberman_help(void)
 {
     static char *help_text[] = {
@@ -306,7 +333,7 @@ static int bomberman_help(void)
 static int bomberman_menu_cb(int action, const struct menu_item_ex *this_item)
 {
     int i = ((intptr_t)this_item);
-    if (action == ACTION_REQUEST_MENUITEM && !resume && (i == 0 || i == 5))
+    if (action == ACTION_REQUEST_MENUITEM && !resume && (i == 0 || i == 6))
         return ACTION_EXIT_MENUITEM;
     return action;
 }
@@ -314,50 +341,62 @@ static int bomberman_menu_cb(int action, const struct menu_item_ex *this_item)
 static int bomberman_menu(void)
 {
     int selected = 0;
+    int prev_level;
 
     MENUITEM_STRINGLIST(main_menu, "Bomberman Menu", bomberman_menu_cb,
                         "Resume Game", "Start New Game",
+                        "Select Level",
                         "Help", "High Scores",
                         "Playback Control",
                         "Quit without Saving", "Quit");
 
     rb->button_clear_queue();
     while (true) {
-        switch (rb->do_menu(&main_menu, &selected, NULL, false)) {
-            case 0: /* Resume Game */
-                if (resume_file)
-                    rb->remove(SAVE_FILE);
+        switch (rb->do_menu(&main_menu, &selected, NULL, false))
+        {
+        case 0: /* Resume Game */
+            if (resume_file)
+                rb->remove(SAVE_FILE);
+            return 0;
+        case 1: /* Start New Game*/
+            InitGame(&game, 0, 0);
+            return 0;
+        case 2: /* Select Level */
+            prev_level = game.level;
+            game.level++;
+            rb->set_int("Select Level", "", UNIT_INT,
+                        &game.level, NULL, 1, 1,
+                        num_levels, NULL);
+            game.level--;
+            //if (prev_level != game.level) {
+                InitGame(&game, game.level, 0);
+                //bomberman_load_current_level(&game);
                 return 0;
-            case 1: /* Start New Game*/
-                InitGame(&game);
-                InitPlayer(&game.players[0], 0, 1, 1, false);
-                InitPlayer(&game.players[1], 1, 1, MAP_H - 3, true);
-                InitPlayer(&game.players[2], 2, MAP_W - 3, 1, true);
-                InitPlayer(&game.players[3], 3, MAP_W - 3, MAP_H - 2, true);
-                return 0;
-            case 2: /* Help */
-                if (bomberman_help())
-                    return 1;
-                break;
-            case 3: /* High Scores */
-                highscore_show(-1, highscores, NUM_SCORES, true);
-                break;
-            case 4: /* Playback Control */
-                if (playback_control(NULL))
-                    return 1;
-                break;
-            case 5: /* Quit without Saving */
+            //}
+            break;
+        case 3: /* Help */
+            if (bomberman_help())
                 return 1;
-            case 6: /* Quit */
-                if (resume) {
-                    rb->splash(HZ*1, "Saving game ...");
-                    bomberman_savegame();
-                }
+            break;
+        case 4: /* High Scores */
+            highscore_show(-1, highscores, NUM_SCORES, true);
+            break;
+        case 5: /* Playback Control */
+            if (playback_control(NULL))
                 return 1;
-            case MENU_ATTACHED_USB:
-                return 1;
-            default:
-                break;
+            break;
+        case 6: /* Quit without Saving */
+            return 1;
+        case 7: /* Quit */
+            if (resume) {
+                rb->splash(HZ*1, "Saving game ...");
+                bomberman_savegame();
+            }
+            return 1;
+        case MENU_ATTACHED_USB:
+            return 1;
+        default:
+            break;
         }
     }
 }
@@ -457,7 +496,7 @@ static int bomberman_game_loop(void)
         }
 
         if (game.state == GAME_GAMEOVER || game.state == GAME_WON)
-            if (tick >= AFTERGAME_DUR)
+//            if (tick >= AFTERGAME_DUR)
                 return 0;
 
         rb->yield();
@@ -517,7 +556,6 @@ enum plugin_status plugin_start(const void* parameter)
 {
     int ret;
 
-    (void)parameter;
     atexit(cleanup);
 
     rb->lcd_setfont(FONT_SYSFIXED);
@@ -531,6 +569,27 @@ enum plugin_status plugin_start(const void* parameter)
 #endif
 
     rb->srand(get_tick());
+
+    if (parameter == NULL) {
+        if (!bomberman_read_levels(LEVELS_FILE)) {
+            rb->splashf(HZ/2, "Unable to read default levels file");
+            return PLUGIN_OK;
+        }
+        //load_level();
+    }
+    else
+    {
+        if (!bomberman_read_levels(parameter)) {
+            rb->splashf(HZ/2, "Unable to read %s levels file", (char *)parameter);
+            if (!bomberman_read_levels(LEVELS_FILE)) {
+                rb->splashf(HZ/2, "Unable to read default levels file");
+                return PLUGIN_OK;
+            }
+        }
+        else {
+            use_highscores = false;
+        }
+    }
 
     ret = main();
 

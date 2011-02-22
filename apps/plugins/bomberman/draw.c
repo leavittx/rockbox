@@ -41,8 +41,8 @@
 #include "pluginbitmaps/bomberman_ai3_win.h"
 #include "pluginbitmaps/bomberman_ai4_win.h"
 #include "pluginbitmaps/bomberman_bonus.h"
-#include "pluginbitmaps/bomberman_gameover.h"
-#include "pluginbitmaps/bomberman_youwon.h"
+//#include "pluginbitmaps/bomberman_gameover.h"
+//#include "pluginbitmaps/bomberman_youwon.h"
 
 #include "game.h"
 #include "draw.h"
@@ -192,7 +192,7 @@ void Draw(struct game_t *game)
                 }
                 else if (game->draw_order[i]->status.state > DEAD)
                 {
-                    rb->lcd_bitmap_transparent_part(win_bitmaps[game->draw_order[i]->num],
+                    rb->lcd_bitmap_transparent_part(win_bitmaps[game->draw_order[i]->num % 5],
                         (game->draw_order[i]->status.state % 2) * BMPWIDTH_bomberman_player,
                         0,
                         STRIDE(SCREEN_MAIN,
@@ -213,7 +213,7 @@ void Draw(struct game_t *game)
                 {
                     int curphase = move_cur_phases[game->draw_order[i]->move_phase];
 
-                    rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num],
+                    rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num % 5],
                         curphase * BMPWIDTH_bomberman_player,
                         game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
                         STRIDE(SCREEN_MAIN,
@@ -231,7 +231,7 @@ void Draw(struct game_t *game)
                 }
                 else
                 {
-                    rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num],
+                    rb->lcd_bitmap_transparent_part(move_bitmaps[game->draw_order[i]->num % 5],
                         0,
                         game->draw_order[i]->look * BMPHEIGHT_bomberman_player,
                         STRIDE(SCREEN_MAIN,
@@ -303,16 +303,16 @@ void Draw(struct game_t *game)
                 }
             }
     }
-    else if (game->state == GAME_GAMEOVER)
-    {
-        rb->lcd_bitmap(bomberman_gameover, 0, 0,
-                       BMPWIDTH_bomberman_gameover, BMPHEIGHT_bomberman_gameover);
-    }
-    else if (game->state == GAME_WON)
-    {
-        rb->lcd_bitmap(bomberman_youwon, 0, 0,
-                       BMPWIDTH_bomberman_youwon, BMPHEIGHT_bomberman_youwon);
-    }
+//    else if (game->state == GAME_GAMEOVER)
+//    {
+//        rb->lcd_bitmap(bomberman_gameover, 0, 0,
+//                       BMPWIDTH_bomberman_gameover, BMPHEIGHT_bomberman_gameover);
+//    }
+//    else if (game->state == GAME_WON)
+//    {
+//        rb->lcd_bitmap(bomberman_youwon, 0, 0,
+//                       BMPWIDTH_bomberman_youwon, BMPHEIGHT_bomberman_youwon);
+//    }
 
     /* Update the lcd. */
     rb->lcd_update();

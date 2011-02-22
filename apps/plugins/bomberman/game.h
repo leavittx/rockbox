@@ -30,14 +30,14 @@
 
 #define MAP_W 17
 #define MAP_H 11
-#define MAX_PLAYERS 4
+#define MAX_PLAYERS 19
 #define MAX_BOMBS 15
 
 /*
  * Animation params.
  */
 
-#define CYCLETIME 30
+#define CYCLETIME 50
 
 /* Delay before bomb detonates. */
 #define BOMB_DELAY_DET    (HZ * 4    / (CYCLETIME / 10))
@@ -50,9 +50,9 @@
 
 #define PLAYER_DELAY_DEATH_ANIM (HZ * 0.09 / (CYCLETIME / 10))
 #define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
-#define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 5 / (CYCLETIME / 10))
+#define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 3 / (CYCLETIME / 10))
 
-#define AFTERGAME_DUR (HZ * 3 / (CYCLETIME / 10))
+//#define AFTERGAME_DUR (HZ * 3 / (CYCLETIME / 10))
 
 /*
  * Two types of ticks.
