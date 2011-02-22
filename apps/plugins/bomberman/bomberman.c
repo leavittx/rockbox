@@ -259,10 +259,15 @@ static bool bomberman_read_levels(const void* file_name)
 
     /* Check first line. */
     rb->read_line(fd, buf, MAP_W + 1);
-    if (sscanf(buf, "%d%d%d", &num_levels, &w, &h) != 3) {
-        rb->close(fd);
-        return false;
-    }
+    num_levels = rb->atoi(buf);
+    rb->read_line(fd, buf, MAP_W + 1);
+    w = rb->atoi(buf);
+    rb->read_line(fd, buf, MAP_W + 1);
+    h = rb->atoi(buf);
+//    if (sscanf(buf, "%d%d%d", &num_levels, &w, &h) != 3) {
+//        rb->close(fd);
+//        return false;
+//    }
     if (num_levels < 1 || num_levels > MAX_LEVELS || w != MAP_W || h != MAP_H) {
         rb->close(fd);
         return false;
@@ -547,6 +552,10 @@ enum plugin_status plugin_start(const void* parameter)
 {
     int ret;
 
+    /*
+    rb->splashf(HZ*3, "long: %ld int: %ld short: %ld char: %ld",
+        sizeof(long), sizeof(int), sizeof(short), sizeof(char));
+    */
     atexit(cleanup);
 
     rb->lcd_setfont(FONT_SYSFIXED);

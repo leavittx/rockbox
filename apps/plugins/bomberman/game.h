@@ -37,7 +37,7 @@
  * Animation params.
  */
 
-#define CYCLETIME 50
+#define CYCLETIME 35
 
 /* Delay before bomb detonates. */
 #define BOMB_DELAY_DET    (HZ * 4    / (CYCLETIME / 10))
@@ -103,19 +103,19 @@ struct player_status {
 };
 
 struct player_t {
-    int num;
+    short num;
     bool isAI;
     struct player_status status;
 	
     enum look_side look;
-    int xpos, ypos;
-    int rxpos, rypos;
-    int speed;
+    short xpos, ypos;
+    short rxpos, rypos;
+    short speed;
     bool ismove;
-    int move_phase;
+    short move_phase;
 
-    int bombs_max;
-    int bombs_placed;
+    short bombs_max;
+    short bombs_placed;
     enum bomb_power power;
     bool isFullPower;
 
@@ -166,11 +166,11 @@ struct bomb_t {
     enum bomb_state state;
 
     enum look_side move_dir;
-    int xpos, ypos;
-    int rxpos, rypos;
-    //int speed;
+    short xpos, ypos;
+    short rxpos, rypos;
+    //short speed;
     bool ismove;
-    //int move_phase;
+    //short move_phase;
 
     enum bomb_power power;
     unsigned long place_time;
@@ -234,9 +234,9 @@ struct game_t {
     struct field_t field;
     struct player_t players[MAX_PLAYERS];
     struct player_t *draw_order[MAX_PLAYERS];
-    int nplayers;
-    int bomb_rad[5];
-    int max_move_phase[3];
+    short nplayers;
+    short bomb_rad[5];
+    short max_move_phase[3];
     int score;
     int level;
 };

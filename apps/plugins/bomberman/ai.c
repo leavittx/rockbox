@@ -40,11 +40,11 @@ struct node_t {
     bool IsOnOpen;
     bool IsOnClose;
     int G, H, F;
-    int ParentX, ParentY;
+    short ParentX, ParentY;
 };
 
 struct path_elem {
-    int X, Y;
+    short X, Y;
 };
 
 struct path_t {
@@ -53,10 +53,9 @@ struct path_t {
 };
 
 struct ai_vars {
-    int ClosestPlayer;
+    short ClosestPlayer;
     bool Danger;
     struct path_elem SafetyPlace;
-    int Bombs;
 
 #if USE_PATH_CACHE
     struct path_t PathCache;

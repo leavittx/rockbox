@@ -63,22 +63,22 @@ static const fb_data *move_bitmaps[5] = {bomberman_player_move,
                                          bomberman_ai4_move};
 
 /* Offsets (in pixels) for each position of player in one square. */
-//int xcoord[3] = {1, 6, 12};
-static const int xcoord[3] = {-4, 0, 4};
-//int ycoord[3] = {3, 9, 14};
-//int ycoord[3] = {1, 6, 12};
-//int ycoord[3] = {12, 6, 1};
-static const int ycoord[3] = {9, 3, -2};
+//short xcoord[3] = {1, 6, 12};
+static const short xcoord[3] = {-4, 0, 4};
+//short ycoord[3] = {3, 9, 14};
+//short ycoord[3] = {1, 6, 12};
+//short ycoord[3] = {12, 6, 1};
+static const short ycoord[3] = {9, 3, -2};
 
 /* Some magic constants for right player's movement drawing. */
-static const int xcoord_k[4] = {0, 0, 1, -1};
-static const int ycoord_k[4] = {-1, 1, 0, 0};
+static const short xcoord_k[4] = {0, 0, 1, -1};
+static const short ycoord_k[4] = {-1, 1, 0, 0};
 
 /* Drawing move phase for each actual move phase of player. */
-static const int move_cur_phases[6] = {0, 1, 2, 3, 2, 0};
+static const short move_cur_phases[6] = {0, 1, 2, 3, 2, 0};
 
 /* Binary offsets for each direction (used in explosion drawing) */
-static const int dir_offsets[5] = {0, 4, 8, 12, 16};
+static const short dir_offsets[5] = {0, 4, 8, 12, 16};
 
 /* Draw function. */
 void Draw(struct game_t *game)
