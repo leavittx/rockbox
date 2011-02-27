@@ -18,6 +18,7 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#include "config.h"
 #include "plugin.h"
 #include "file.h"
 
@@ -621,6 +622,9 @@ enum plugin_status main_menu(void)
 enum plugin_status plugin_start(const void* parameter)
 {
     (void)parameter;
+#ifdef HAVE_TOUCHSCREEN
+    rb->touchscreen_set_mode(rb->global_settings->touch_mode);
+#endif
 
     cancel = false;
     

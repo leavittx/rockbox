@@ -31,6 +31,7 @@ import java.util.TimerTask;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.rockbox.Helper.MediaButtonReceiver;
 import org.rockbox.Helper.RunForegroundManager;
 
 import android.app.Activity;
@@ -58,46 +59,41 @@ public class RockboxService extends Service
     private static RockboxService instance = null;
     
     /* locals needed for the c code and rockbox state */
-    private RockboxFramebuffer fb = null;
-    private boolean mRockboxRunning = false;
-    private volatile boolean rbLibLoaded;
+    private static volatile boolean rockbox_running;
     private Activity current_activity = null;
     private IntentFilter itf;
     private BroadcastReceiver batt_monitor;
     private RunForegroundManager fg_runner;
+    private MediaButtonReceiver mMediaButtonReceiver;
     @SuppressWarnings("unused")
     private int battery_level;
     private ResultReceiver resultReceiver;
 
-    public static final int RESULT_LIB_LOADED = 0;
+    public static final int RESULT_INVOKING_MAIN = 0;
     public static final int RESULT_LIB_LOAD_PROGRESS = 1;
-    public static final int RESULT_FB_INITIALIZED = 2;
-    public static final int RESULT_ERROR_OCCURED = 3;
+    public static final int RESULT_SERVICE_RUNNING = 3;
+    public static final int RESULT_ERROR_OCCURED = 4;
+    public static final int RESULT_LIB_LOADED = 5;
 
     @Override
     public void onCreate()
     {
         instance = this;
+        mMediaButtonReceiver = new MediaButtonReceiver(this);
+        fg_runner = new RunForegroundManager(this);
     }
     
     public static RockboxService get_instance()
     {
+        /* don't call the construtor here, the instances are managed by
+         * android, so we can't just create a new one */
     	return instance;
     }
     
-    public RockboxFramebuffer get_fb()
+    public boolean isRockboxRunning()
     {
-    	return fb;
+        return rockbox_running;
     }
-    /* framebuffer is initialised by the native code(!) so this is needed */
-    public void set_fb(RockboxFramebuffer newfb)
-    {
-    	fb = newfb;
-        mRockboxRunning = true;
-        if (resultReceiver != null)
-            resultReceiver.send(RESULT_FB_INITIALIZED, null);
-    }
-    
     public Activity get_activity()
     {
     	return current_activity;
@@ -109,48 +105,35 @@ public class RockboxService extends Service
 
     private void do_start(Intent intent)
     {
-        LOG("Start Service");
-
-        if (intent != null && intent.hasExtra("callback"))
+        LOG("Start RockboxService (Intent: " + intent.getAction() + ")");
+        if (intent.hasExtra("callback"))
             resultReceiver = (ResultReceiver) intent.getParcelableExtra("callback");
-        if (!rbLibLoaded)
+
+        if (!rockbox_running)
             startservice();
-        
-        if (intent != null && intent.getAction() != null)
-        {
-            Log.d("RockboxService", intent.getAction());
-            if (intent.getAction().equals("org.rockbox.PlayPause"))
-            {
-                if (fb != null)
-                    fb.onKeyUp(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, null);
-            }
-            else if (intent.getAction().equals("org.rockbox.Prev"))
-            {
-                if (fb != null)
-                    fb.onKeyUp(KeyEvent.KEYCODE_MEDIA_PREVIOUS, null);
-            }
-            else if (intent.getAction().equals("org.rockbox.Next"))
-            {
-                if (fb != null)
-                    fb.onKeyUp(KeyEvent.KEYCODE_MEDIA_NEXT, null);
-            }
-            else if (intent.getAction().equals("org.rockbox.Stop"))
-            {
-                if (fb != null)
-                    fb.onKeyUp(KeyEvent.KEYCODE_MEDIA_STOP, null);
-            }
+        if (resultReceiver != null)
+            resultReceiver.send(RESULT_LIB_LOADED, null);
+
+        if (intent.getAction().equals(Intent.ACTION_MEDIA_BUTTON))
+        {            
+            /* give it a bit of time so we can register button presses 
+             * sleeping longer doesn't work here, apparently Android 
+             * surpresses long sleeps during intent handling */
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) { }
+
+            KeyEvent kev = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+            RockboxFramebuffer.buttonHandler(kev.getKeyCode(), 
+                                kev.getAction() == KeyEvent.ACTION_DOWN);
         }
 
-        /* Display a notification about us starting.  
-         * We put an icon in the status bar. */
-        if (fg_runner == null)
-        {
-            try {
-                fg_runner = new RunForegroundManager(this);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        /* (Re-)attach the media button receiver, in case it has been lost */
+        mMediaButtonReceiver.register();
+        if (resultReceiver != null)
+            resultReceiver.send(RESULT_SERVICE_RUNNING, null);
+        
+        rockbox_running = true;
     }
 
     private void LOG(CharSequence text)
@@ -173,15 +156,22 @@ public class RockboxService extends Service
         return 1; /* old API compatibility: 1 == START_STICKY */
     }
 
-    private void startservice() 
+    private void startservice()
     {
-        final int BUFFER = 8*1024;
+        final Object lock = new Object();        
         Thread rb = new Thread(new Runnable()
         {
             public void run()
             {
+                final int BUFFER = 8*1024;
                 String rockboxDirPath = "/data/data/org.rockbox/app_rockbox/rockbox";
                 File rockboxDir = new File(rockboxDirPath);
+
+                /* load library before unzipping which may take a while */
+                synchronized (lock) {
+                    System.loadLibrary("rockbox");
+                    lock.notify();
+                }
 
 		        /* the following block unzips libmisc.so, which contains the files 
 		         * we ship, such as themes. It's needed to put it into a .so file
@@ -247,27 +237,31 @@ public class RockboxService extends Service
     		        }
                 }
 
-		        System.loadLibrary("rockbox");
-		        rbLibLoaded = true;
 		        if (resultReceiver != null)
-		            resultReceiver.send(RESULT_LIB_LOADED, null);
+		            resultReceiver.send(RESULT_INVOKING_MAIN, null);
 
                 main();
 		        throw new IllegalStateException("native main() returned!");
             }
         }, "Rockbox thread");
         rb.setDaemon(false);
-        rb.start();
+        /* wait at least until the library is loaded */
+        synchronized (lock) 
+        {
+            rb.start();
+            while(true) 
+            {
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                    continue;
+                }
+                break;
+            }   
+        }
     }
+
     private native void main();
-    
-    /* returns true once rockbox is up and running.
-     * This is considered done once the framebuffer is initialised
-     */
-    public boolean isRockboxRunning()
-    {
-    	return mRockboxRunning;
-    }
 
     @Override
     public IBinder onBind(Intent intent) 
@@ -315,12 +309,12 @@ public class RockboxService extends Service
         registerReceiver(batt_monitor, itf);
     }
     
-    public void startForeground()
+    void startForeground()
     {
         fg_runner.startForeground();
     }
     
-    public void stopForeground()
+    void stopForeground()
     {
         fg_runner.stopForeground();
     }
@@ -329,8 +323,11 @@ public class RockboxService extends Service
     public void onDestroy() 
     {
         super.onDestroy();
-        fb.destroy();
+        mMediaButtonReceiver.unregister();
+        mMediaButtonReceiver = null;
         /* Make sure our notification is gone. */
         stopForeground();
+        instance = null;
+        rockbox_running = false;
     }
 }

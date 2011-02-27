@@ -440,13 +440,21 @@ Lyre prototype 1 */
 #include "config/mpiohd200.h"
 #elif defined(MPIO_HD300)
 #include "config/mpiohd300.h"
-
-#elif defined(APPLICATION)
-#include "config/application.h"
-#define CONFIG_CPU 0
-#define CONFIG_STORAGE 0
+#elif defined(SDLAPP)
+#include "config/sdlapp.h"
+#elif defined(ANDROID)
+#include "config/android.h"
+#elif defined(NOKIAN8XX)
+#include "config/nokian8xx.h"
+#elif defined(NOKIAN900)
+#include "config/nokian900.h"
 #else
 /* no known platform */
+#endif
+
+#ifdef APPLICATION
+#define CONFIG_CPU 0
+#define CONFIG_STORAGE 0
 #endif
 
 /* keep this include after the target configs */
@@ -717,7 +725,9 @@ Lyre prototype 1 */
 #define HAVE_WAKEUP_EXT_CB
 
 
-#if (CONFIG_PLATFORM & PLATFORM_ANDROID)
+#if defined(ASSEMBLER_THREADS) \
+    || defined(HAVE_WIN32_FIBER_THREADS) \
+    || defined(HAVE_SIGALTSTACK_THREADS)
 #define HAVE_PRIORITY_SCHEDULING
 #endif
 

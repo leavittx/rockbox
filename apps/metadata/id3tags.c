@@ -266,6 +266,9 @@ static int parseyearnum( struct mp3entry* entry, char* tag, int bufferpos )
 /* parse numeric genre from string, version 2.2 and 2.3 */
 static int parsegenre( struct mp3entry* entry, char* tag, int bufferpos )
 {
+    /* Use bufferpos to hold current position in entry->id3v2buf. */
+    bufferpos = tag - entry->id3v2buf;
+
     if(entry->id3version >= ID3_VER_2_4) {
         /* In version 2.4 and up, there are no parentheses, and the genre frame
            is a list of strings, either numbers or text. */
@@ -273,19 +276,19 @@ static int parsegenre( struct mp3entry* entry, char* tag, int bufferpos )
         /* Is it a number? */
         if(isdigit(tag[0])) {
             entry->genre_string = id3_get_num_genre(atoi( tag ));
-            return tag - entry->id3v2buf;
+            return bufferpos;
         } else {
             entry->genre_string = tag;
-            return bufferpos;
+            return bufferpos + strlen(tag) + 1;
         }
     } else {
         if( tag[0] == '(' && tag[1] != '(' ) {
             entry->genre_string = id3_get_num_genre(atoi( tag + 1 ));
-            return tag - entry->id3v2buf;
+            return bufferpos;
         }
         else {
             entry->genre_string = tag;
-            return bufferpos;
+            return bufferpos + strlen(tag) + 1;
         }
     }
 }
@@ -354,37 +357,35 @@ static int parseuser( struct mp3entry* entry, char* tag, int bufferpos )
 {
     char* value = NULL;
     int desc_len = strlen(tag);
-    int value_len = 0;
+    int length = 0;
 
     if ((tag - entry->id3v2buf + desc_len + 2) < bufferpos) {
         /* At least part of the value was read, so we can safely try to
-         * parse it
-         */
+         * parse it */
         value = tag + desc_len + 1;
-        value_len = bufferpos - (tag - entry->id3v2buf);
         
         if (!strcasecmp(tag, "ALBUM ARTIST")) {
-            strlcpy(tag, value, value_len);
+            length = strlen(value) + 1;
+            strlcpy(tag, value, length);
             entry->albumartist = tag;
 #if CONFIG_CODEC == SWCODEC
         } else {
-            value_len = parse_replaygain(tag, value, entry, tag,
-                value_len);
+            /* Call parse_replaygain(). */
+            parse_replaygain(tag, value, entry);
 #endif
         }
     }
 
-    return tag - entry->id3v2buf + value_len;
+    return tag - entry->id3v2buf + length;
 }
 
 #if CONFIG_CODEC == SWCODEC
 /* parse RVA2 binary data and convert to replaygain information. */
-static int parserva2( struct mp3entry* entry, char* tag, int bufferpos )
+static int parserva2( struct mp3entry* entry, char* tag, int bufferpos)
 {
     int desc_len = strlen(tag);
     int start_pos = tag - entry->id3v2buf;
     int end_pos = start_pos + desc_len + 5;
-    int value_len = 0;
     unsigned char* value = tag + desc_len + 1;
 
     /* Only parse RVA2 replaygain tags if tag version == 2.4 and channel
@@ -439,11 +440,10 @@ static int parserva2( struct mp3entry* entry, char* tag, int bufferpos )
             }
         }
             
-        value_len = parse_replaygain_int(album, gain, peak * 2, entry,
-            tag, sizeof(entry->id3v2buf) - start_pos);
+        parse_replaygain_int(album, gain, peak * 2, entry);
     }
 
-    return start_pos + value_len;
+    return start_pos;
 }
 #endif
 

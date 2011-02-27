@@ -25,7 +25,7 @@ bindir=
 libdir=
 sharedir=
 
-app_modelname=
+thread_support="ASSEMBLER_THREADS"
 app_lcd_width=
 app_lcd_height=
 #
@@ -68,7 +68,7 @@ app_set_paths () {
             bindir="$ARG_PREFIX/bin"
             libdir="$ARG_PREFIX/lib"
         else
-            echo "ERROR: PREFIX does not exist"
+            echo "ERROR: PREFIX directory $ARG_PREFIX does not exist"
             exit
         fi
     fi
@@ -163,6 +163,41 @@ findsdl(){
   done
 }
 
+# check for availability of sigaltstack to support our thread engine
+check_sigaltstack() {
+   cat >$tmpdir/check_threads.c <<EOF
+#include <signal.h>
+int main(int argc, char **argv)
+{
+#ifndef NULL
+  #define NULL (void*)0
+#endif
+  sigaltstack(NULL, NULL);
+  return 0;
+}
+EOF
+   $CC -o $tmpdir/check_threads $tmpdir/check_threads.c 1> /dev/null
+   result=$?
+   rm -rf $tmpdir/check_threads*
+   echo $result
+}
+
+# check for availability of Fiber on Win32 to support our thread engine
+check_fiber() {
+   cat >$tmpdir/check_threads.c <<EOF
+#include <windows.h>
+int main(int argc, char **argv)
+{
+  ConvertThreadToFiber(NULL);
+  return 0;
+}
+EOF
+   $CC -o $tmpdir/check_threads $tmpdir/check_threads.c 2>/dev/null
+   result=$?
+   rm -rf $tmpdir/check_threads*
+   echo $result
+}
+
 simcc () {
 
  # default tool setup for native building
@@ -175,6 +210,8 @@ simcc () {
  GCCOPTS="$GCCOPTS -fno-builtin -g"
  GCCOPTIMIZE=''
  LDOPTS='-lm' # button-sdl.c uses sqrt()
+ sigaltstack=""
+ fibers=""
 
  # default output binary name, don't override app_get_platform()
  if [ "$app_type" != "sdl-app" ]; then
@@ -193,6 +230,7 @@ simcc () {
    CYGWIN*)
    echo "Cygwin host detected"
 
+   fibers=`check_fiber`
    LDOPTS="$LDOPTS -mconsole"
    output="$output.exe"
    winbuild="yes"
@@ -201,29 +239,33 @@ simcc () {
    MINGW*)
    echo "MinGW host detected"
 
+   fibers=`check_fiber`
    LDOPTS="$LDOPTS -mconsole"
    output="$output.exe"
    winbuild="yes"
    ;;
 
    Linux)
+   sigaltstack=`check_sigaltstack`
    echo "Linux host detected"
    LDOPTS="$LDOPTS -ldl"
    ;;
 
    FreeBSD)
+   sigaltstack=`check_sigaltstack`
    echo "FreeBSD host detected"
    LDOPTS="$LDOPTS -ldl"
    ;;
 
    Darwin)
+   sigaltstack=`check_sigaltstack`
    echo "Darwin host detected"
    LDOPTS="$LDOPTS -ldl"
-
    SHARED_FLAG="-dynamiclib -Wl\,-single_module"
    ;;
 
    SunOS)
+   sigaltstack=`check_sigaltstack`
    echo "*Solaris host detected"
 
    GCCOPTS="$GCCOPTS -fPIC"
@@ -319,10 +361,33 @@ EOF
    # add cross-compiler option(s)
    prefixtools i586-mingw32msvc-
    LDOPTS="$LDOPTS -mconsole"
+   fibers=`check_fiber`
    output="rockboxui.exe"
    endian="little" # windows is little endian
    echo "Enabling MMX support"
    GCCOPTS="$GCCOPTS -mmmx"
+ fi
+
+ thread_support=
+ if [ -z "$ARG_THREAD_SUPPORT" ] || [ "$ARG_THREAD_SUPPORT" = "0" ]; then
+   if [ "$sigaltstack" = "0" ]; then
+     thread_support="HAVE_SIGALTSTACK_THREADS"
+     LDOPTS="$LDOPTS -lpthread" # pthread needed
+     echo "Selected sigaltstack threads"
+   elif [ "$fibers" = "0" ]; then
+     thread_support="HAVE_WIN32_FIBER_THREADS"
+     echo "Selected Win32 Fiber threads"
+   fi
+ fi
+
+ if [ -n `echo $app_type | grep "sdl"` ] && [ -z "$thread_support" ] \
+    && [ "$ARG_THREAD_SUPPORT" != "0" ]; then
+   thread_support="HAVE_SDL_THREADS"
+   if [ "$ARG_THREAD_SUPPORT" = "1" ]; then
+     echo "Selected SDL threads"
+   else
+     echo "WARNING: Falling back to SDL threads"
+   fi
  fi
 }
 
@@ -456,6 +521,7 @@ maemocc () {
  GLOBAL_LDOPTS="$GLOBAL_LDOPTS -Wl,-z,defs"
  SHARED_FLAG="-shared"
  endian="little"
+ thread_support="HAVE_SIGALTSTACK_THREADS"
 
  is_n900=0
  # Determine maemo version
@@ -543,7 +609,6 @@ androidcc () {
     GLOBAL_LDOPTS="$GLOBAL_LDOPTS -nostdlib -lc -Wl,--no-undefined -Wl,--gc-sections -Wl,-z,noexecstack \
 		--sysroot=$ANDROID_NDK_PATH/platforms/android-4/arch-arm"
     LDOPTS="$LDOPTS -shared -nostdlib -ldl -llog"
-    extradefines="$extradefines -DANDROID"
     endian="little"
     SHARED_FLAG="-shared"
 }
@@ -994,6 +1059,11 @@ help() {
     --thumb           Build with -mthumb (for ARM builds)
     --no-thumb        The opposite of --thumb (don't use thumb even for targets
                       where this is the default
+    --sdl-threads     Force use of SDL threads. They have inferior performance,
+                      but are better debuggable with GDB
+    --no-sdl-threads  Disallow use of SDL threads. This prevents the default
+                      behavior of falling back to them if no native thread
+                      support was found.
     --prefix          Target installation directory
     --help            Shows this message (must not be used with other options)
 
@@ -1015,6 +1085,7 @@ ARG_VOICE=
 ARG_ARM_EABI=
 ARG_ARM_THUMB=
 ARG_PREFIX="$PREFIX"
+ARG_THREAD_SUPPORT=
 err=
 for arg in "$@"; do
 	case "$arg" in
@@ -1035,6 +1106,9 @@ for arg in "$@"; do
 		--no-eabi)    ARG_ARM_EABI=0;;
 		--thumb)      ARG_ARM_THUMB=1;;
 		--no-thumb)   ARG_ARM_THUMB=0;;
+        --sdl-threads)ARG_THREAD_SUPPORT=1;;
+        --no-sdl-threads)
+                      ARG_THREAD_SUPPORT=0;;
         --prefix=*)   ARG_PREFIX=`echo "$arg" | cut -d = -f 2`;;
 		--help)       help;;
 		*)            err=1; echo "[ERROR] Option '$arg' unsupported";;
@@ -2826,10 +2900,10 @@ fi
     ;;
 
    200|sdlapp)
+    application="yes"
     target_id=73
-    modelname="application"
-    app_modelname="sdlapp"
-    target="-DAPPLICATION"
+    modelname="sdlapp"
+    target="-DSDLAPP"
     app_set_paths
     app_set_lcd_size
     memory=8
@@ -2842,7 +2916,7 @@ fi
     output="rockbox"
     bootoutput="rockbox"
     appextra="recorder:gui:radio"
-    plugins=""
+    plugins="yes"
     swcodec="yes"
     # architecture, manufacturer and model for the target-tree build
     t_cpu="hosted"
@@ -2851,10 +2925,10 @@ fi
     ;;
 
    201|android)
+    application="yes"
     target_id=74
-    modelname="application"
-    app_modelname="android"
-    target="-DAPPLICATION"
+    modelname="android"
+    target="-DANDROID"
     app_type="android"
     app_set_lcd_size
     sharedir="/data/data/org.rockbox/app_rockbox/rockbox"
@@ -2869,8 +2943,8 @@ fi
     bmp2rb_native="$rootdir/tools/bmp2rb -f 4"
     output="librockbox.so"
     bootoutput="librockbox.so"
-    appextra="recorder:gui:radio"
-    plugins=""
+    appextra="recorder:gui:radio:hosted"
+    plugins="yes"
     swcodec="yes"
     # architecture, manufacturer and model for the target-tree build
     t_cpu="hosted"
@@ -2879,12 +2953,11 @@ fi
     ;;
 
    202|nokian8xx)
+    application="yes"
     target_id=75
-    modelname="application"
-    app_modelname="nokian8xx"
+    modelname="nokian8xx"
     app_type="sdl-app"
-    target="-DAPPLICATION"
-    app_set_lcd_size 800 480
+    target="-DNOKIAN8XX"
     sharedir="/opt/rockbox/share/rockbox"
     bindir="/opt/rockbox/bin"
     libdir="/opt/rockbox/lib"
@@ -2898,7 +2971,7 @@ fi
     output="rockbox"
     bootoutput="rockbox"
     appextra="recorder:gui:radio"
-    plugins=""
+    plugins="yes"
     swcodec="yes"
     # architecture, manufacturer and model for the target-tree build
     t_cpu="hosted"
@@ -2907,12 +2980,11 @@ fi
     ;;
 
    203|nokian900)
+    application="yes"
     target_id=76
-    modelname="application"
-    app_modelname="nokian900"
+    modelname="nokian900"
     app_type="sdl-app"
-    target="-DAPPLICATION"
-    app_set_lcd_size 800 480
+    target="-DNOKIAN900"
     sharedir="/opt/rockbox/share/rockbox"
     bindir="/opt/rockbox/bin"
     libdir="/opt/rockbox/lib"
@@ -2926,7 +2998,7 @@ fi
     output="rockbox"
     bootoutput="rockbox"
     appextra="recorder:gui:radio"
-    plugins=""
+    plugins="yes"
     swcodec="yes"
     # architecture, manufacturer and model for the target-tree build
     t_cpu="hosted"
@@ -3160,6 +3232,11 @@ if [ -z "$debug" ]; then
   GCCOPTS="$GCCOPTS $GCCOPTIMIZE"
 fi
 
+if [ "yes" = "$application" ]; then
+  echo Building Rockbox as an Application
+  extradefines="$extradefines -DAPPLICATION"
+fi
+
 echo "Using source code root directory: $rootdir"
 
 # this was once possible to change at build-time, but no more:
@@ -3326,6 +3403,7 @@ sed > autoconf.h \
  -e "s<^#undef DO_BOOTCHART<$use_bootchart<g" \
  -e "s<@config_rtc@<$config_rtc<g" \
  -e "s<@have_rtc_alarm@<$have_rtc_alarm<g" \
+ -e "s<@thread_support@<$thread_support<g" \
  -e "s<@RBDIR@<${rbdir}<g" \
  -e "s<@sharepath@<${sharedir}<g" \
  -e "s<@binpath@<${bindir}<g" \
@@ -3361,6 +3439,9 @@ sed > autoconf.h \
 /* optional defines for RTC mod for h1x0 */
 @config_rtc@
 @have_rtc_alarm@
+
+/* the threading backend we use */
+#define @thread_support@
 
 /* lcd dimensions for application builds from configure */
 @lcd_width@
@@ -3424,13 +3505,11 @@ fi
 if [ -n "$ARG_PREFIX" ]; then
   cmdline="$cmdline--prefix=\$(PREFIX) "
 fi
-if [ "$modelname" = "application" ]; then
-  cmdline="$cmdline--target=$app_modelname --lcdwidth=$ARG_LCDWIDTH --lcdheight=$ARG_LCDHEIGHT "
-else
-  cmdline="$cmdline--target=\$(MODELNAME) "
+if [ -n "$ARG_LCDWIDTH" ]; then
+  cmdline="$cmdline--lcdwidth=$ARG_LCDWIDTH --lcdheight=$ARG_LCDHEIGHT "
 fi
 
-cmdline="$cmdline--ram=\$(MEMORYSIZE) --rbdir=\$(RBDIR) --type=$btype$advopts"
+cmdline="$cmdline--target=\$(MODELNAME) --ram=\$(MEMORYSIZE) --rbdir=\$(RBDIR) --type=$btype$advopts"
 
 ### end of cmdline
 
@@ -3481,6 +3560,7 @@ sed > Makefile \
  -e "s<@TOOLSDIR@<${toolsdir}<g" \
  -e "s<@APPS@<${apps}<g" \
  -e "s<@APP_TYPE@<${app_type}<g" \
+ -e "s<@APPLICATION@<${application}<g" \
  -e "s<@GCCVER@<${gccver}<g" \
  -e "s<@GCCNUM@<${gccnum}<g" \
  -e "s<@UNAME@<${uname}<g" \
@@ -3550,6 +3630,7 @@ export RANLIB=@RANLIB@
 export PREFIX=@PREFIX@
 export PROFILE_OPTS=@PROFILE_OPTS@
 export APP_TYPE=@APP_TYPE@
+export APPLICATION=@APPLICATION@
 export SIMDIR=\$(ROOTDIR)/uisimulator/sdl
 export GCCOPTS=@GCCOPTS@
 export TARGET_INC=@TARGET_INC@

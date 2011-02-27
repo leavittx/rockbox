@@ -117,11 +117,20 @@ static unsigned int read_mp4_tag_string(int fd, int size_left, char** buffer,
 
     if (bytes_read)
     {
-        (*buffer)[bytes_read] = 0;
-        *dest = *buffer;
-        length = strlen(*buffer) + 1;
-        *buffer_left -= length;
-        *buffer += length;
+        /* Do not overwrite already available metadata. Especially when reading
+         * tags with e.g. multiple genres / artists. This way only the first 
+         * of multiple entries is used, all following are dropped. */
+        if (*dest == NULL)
+        {
+            (*buffer)[bytes_read] = 0; /* zero-terminate for correct strlen().*/
+            length = strlen(*buffer) + 1;
+            length = MIN(length, ID3V2_MAX_ITEM_SIZE); /* Limit item size. */
+
+            *dest = *buffer;
+            (*buffer)[length-1] = 0; /* zero-terminate buffer. */
+            *buffer_left -= length;
+            *buffer += length;
+        }
     }
     else
     {
@@ -509,23 +518,17 @@ static bool read_mp4_tags(int fd, struct mp3entry* id3,
                 }   
                 else
                 {
-                    char* any;
+                    char* any = NULL;
                     unsigned int length = read_mp4_tag_string(fd, size,
                         &buffer, &buffer_left, &any);
-                    
+
                     if (length > 0)
                     {
                         /* Re-use the read buffer as the dest buffer... */
                         buffer -= length;
                         buffer_left += length;
                         
-                        if (parse_replaygain(tag_name, buffer, id3, 
-                            buffer, buffer_left) > 0)
-                        {
-                            /* Data used, keep it. */
-                            buffer += length;
-                            buffer_left -= length;
-                        }
+                        parse_replaygain(tag_name, buffer, id3);
                     }
                 }
             }
@@ -544,8 +547,8 @@ static bool read_mp4_tags(int fd, struct mp3entry* id3,
 static bool read_mp4_container(int fd, struct mp3entry* id3, 
                                uint32_t size_left)
 {
-    uint32_t size;
-    uint32_t type;
+    uint32_t size    = 0;
+    uint32_t type    = 0;
     uint32_t handler = 0;
     bool rc = true;
     bool done = false;
