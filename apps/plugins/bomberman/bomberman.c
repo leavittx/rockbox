@@ -34,6 +34,8 @@
 #include "draw.h"
 #include "ai.h"
 
+unsigned long CYCLETIME = 35;
+
 const struct button_mapping *plugin_contexts[] = {
     pla_main_ctx,
     #if defined(HAVE_REMOTE_LCD)
@@ -157,13 +159,13 @@ void bomberman_load_current_level(struct game_t *game)
     for (i = 0; i < MAX_BOMBS; i++)
         game->field.bombs[i].state = BOMB_NONE;
 
-    /* Place bonuses. */
+    /* Place bonuses */
     int nboxes = 0, nbonuses;
     for (i = 0; i < MAP_W; i++)
         for (j = 0; j < MAP_H; j++)
             if (game->field.map[i][j] == SQUARE_BOX)
                 nboxes++;
-    /* Not all boxes consist a bonus. */
+    /* Not all boxes consist a bonus */
     nbonuses = nboxes / 1.5;
     while (nbonuses)
     {
@@ -173,7 +175,7 @@ void bomberman_load_current_level(struct game_t *game)
         if (game->field.map[i][j] == SQUARE_BOX &&
                 game->field.bonuses[i][j] == BONUS_NONE)
         {
-            /* Choose a random bonus for this box. */
+            /* Choose a random bonus for this box */
             game->field.bonuses[i][j] = rb->rand() % (BONUS_NONE);
             nbonuses--;
         }
@@ -190,14 +192,14 @@ void InitGame(struct game_t *game, int level, int score)
 
     bomberman_load_current_level(game);
 
-    /* Set radius of explosion for each bomb power. */
+    /* Set radius of explosion for each bomb power */
     game->bomb_rad[BOMB_PWR_SINGLE] = 1;
     game->bomb_rad[BOMB_PWR_DOUBLE] = 2;
     game->bomb_rad[BOMB_PWR_TRIPLE] = 4;
     game->bomb_rad[BOMB_PWR_QUAD]   = 6;
     game->bomb_rad[BOMB_PWR_KILLER] = MAX(MAP_W, MAP_H);
 
-    /* Set player maximum move phase for each speed. */
+    /* Set player maximum move phase for each speed */
     game->max_move_phase[0] = 5;
     game->max_move_phase[1] = 2;
     game->max_move_phase[2] = 1;
@@ -209,11 +211,11 @@ static void bomberman_loadgame(void)
 
     resume = false;
 
-    /* Open game file. */
+    /* Open game file */
     fd = rb->open(SAVE_FILE, O_RDONLY);
     if (fd < 0) return;
 
-    /* Read in saved game. */
+    /* Read in saved game */
     if((rb->read(fd, &game, sizeof(struct game_t)) <= 0))
     {
         rb->splash(HZ/2, "Failed to load game");
@@ -230,7 +232,7 @@ static void bomberman_savegame(void)
 {
     int fd;
 
-    /* Write out the game state to the save file. */
+    /* Write out the game state to the save file */
     fd = rb->open(SAVE_FILE, O_WRONLY|O_CREAT, 0666);
     if (fd < 0) return;
 
@@ -253,11 +255,11 @@ static bool bomberman_read_levels(const void* file_name)
     int i, j;
     int nbytes;
 
-    /* Open levels file. */
+    /* Open levels file */
     fd = rb->open(file_name, O_RDONLY);
     if (fd < 0) return false;
 
-    /* Check first line. */
+    /* Check first line */
     rb->read_line(fd, buf, MAP_W + 1);
     num_levels = rb->atoi(buf);
     rb->read_line(fd, buf, MAP_W + 1);
@@ -273,14 +275,14 @@ static bool bomberman_read_levels(const void* file_name)
         return false;
     }
 
-    /* Read levels. */
+    /* Read levels */
     while (num_read != num_levels) {
-        /* Read empty separating line. */
+        /* Read empty separating line */
         if ((nbytes = rb->read_line(fd, buf, MAP_W + 1)) != 1) {
             rb->close(fd);
             return false;
         }
-        /* Read level itself. */
+        /* Read level itself */
         for (i = 0; i < MAP_H; i++) {
             if ((nbytes = rb->read_line(fd, buf, MAP_W + 1)) != MAP_W + 1) {
                 rb->close(fd);
@@ -353,7 +355,8 @@ static int bomberman_menu(void)
                         "Select Level",
                         "Help", "High Scores",
                         "Playback Control",
-                        "Quit without Saving", "Quit");
+                        "Quit without Saving", "Quit",
+                        "Change cycle time");
 
     rb->button_clear_queue();
     while (true) {
@@ -394,10 +397,20 @@ static int bomberman_menu(void)
             return 1;
         case 7: /* Quit */
             if (resume) {
-                rb->splash(HZ*1, "Saving game ...");
+                rb->splash(HZ/2, "Saving game...");
                 bomberman_savegame();
             }
             return 1;
+        case 8: /* Change cycle time */
+        {
+            int tmp = -1;
+            rb->set_int("Select cycle time", "", UNIT_INT,
+                        &tmp, NULL, 5, 10,
+                        200, NULL);
+            if (tmp != -1)
+                CYCLETIME = tmp;
+            break;
+        }
         case MENU_ATTACHED_USB:
             return 1;
         default:
@@ -424,7 +437,7 @@ static int bomberman_game_loop(void)
     rb->cpu_boost(true);
 #endif
 
-    /* Main loop. */
+    /* Main loop */
     while (true)
     {
         int end = get_tick() + HZ / CYCLETIME;
@@ -537,7 +550,7 @@ int main(void)
 
 static void cleanup(void)
 {
-    /* This is handled by plugin api. Remove in future. */
+    /* This is handled by plugin api. Remove in future */
     /* rb->lcd_setfont(FONT_UI); */
 
     /* Turn on backlight timeout (revert to settings) */
@@ -547,7 +560,7 @@ static void cleanup(void)
 #endif
 }
 
-/* This is the plugin entry point. */
+/* This is the plugin entry point */
 enum plugin_status plugin_start(const void* parameter)
 {
     int ret;
@@ -562,7 +575,7 @@ enum plugin_status plugin_start(const void* parameter)
 #if LCD_DEPTH > 1
     rb->lcd_set_backdrop(NULL);
 #endif
-    /* Turn off backlight timeout. */
+    /* Turn off backlight timeout */
     backlight_force_on(); /* Backlight control in lib/helper.c */
 #ifdef HAVE_REMOTE_LCD
     remote_backlight_force_on(); /* Remote backlight control in lib/helper.c */

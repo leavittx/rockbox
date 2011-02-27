@@ -23,7 +23,7 @@
 
 #include "plugin.h"
 
-/* Bitmaps. */
+/* Bitmaps */
 #include "pluginbitmaps/bomberman_player.h"
 #include "pluginbitmaps/bomberman_box.h"
 #include "pluginbitmaps/bomberman_block.h"
@@ -49,20 +49,20 @@
 #define XMAPOFFSET 25
 #define YMAPOFFSET 30
 
-/* Win bitmaps for each player number. */
+/* Win bitmaps for each player number */
 static const fb_data *win_bitmaps[5] = {bomberman_player_win,
                                         bomberman_ai1_win,
                                         bomberman_ai2_win,
                                         bomberman_ai3_win,
                                         bomberman_ai4_win};
-/* Move bitmaps for each player number. */
+/* Move bitmaps for each player number */
 static const fb_data *move_bitmaps[5] = {bomberman_player_move,
                                          bomberman_ai1_move,
                                          bomberman_ai2_move,
                                          bomberman_ai3_move,
                                          bomberman_ai4_move};
 
-/* Offsets (in pixels) for each position of player in one square. */
+/* Offsets (in pixels) for each position of player in one square */
 //short xcoord[3] = {1, 6, 12};
 static const short xcoord[3] = {-4, 0, 4};
 //short ycoord[3] = {3, 9, 14};
@@ -70,17 +70,17 @@ static const short xcoord[3] = {-4, 0, 4};
 //short ycoord[3] = {12, 6, 1};
 static const short ycoord[3] = {9, 3, -2};
 
-/* Some magic constants for right player's movement drawing. */
+/* Some magic constants for right player's movement drawing */
 static const short xcoord_k[4] = {0, 0, 1, -1};
 static const short ycoord_k[4] = {-1, 1, 0, 0};
 
-/* Drawing move phase for each actual move phase of player. */
+/* Drawing move phase for each actual move phase of player */
 static const short move_cur_phases[6] = {0, 1, 2, 3, 2, 0};
 
 /* Binary offsets for each direction (used in explosion drawing) */
 static const short dir_offsets[5] = {0, 4, 8, 12, 16};
 
-/* Draw function. */
+/* Draw function */
 void Draw(struct game_t *game)
 {
     int i, j;
@@ -90,7 +90,7 @@ void Draw(struct game_t *game)
 
     if (game->state == GAME_GAME)
     {
-        /* Different objects on the field. */
+        /* Different objects on the field */
 	for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
                 switch (game->field.map[i][j])
@@ -157,7 +157,7 @@ void Draw(struct game_t *game)
                     break;
                 }
 
-        /* Player without movement. */
+        /* Player without movement */
         /*
         rb->lcd_bitmap_transparent(bomberman_player,
             game->players[i].xpos * SQUARE_SIZE + XMAPOFFSET,
@@ -246,7 +246,7 @@ void Draw(struct game_t *game)
             }
 	}
 
-        /* Explosions. */
+        /* Explosions */
         for (i = 0; i < MAP_W; i++)
             for (j = 0; j < MAP_H; j++)
             {
@@ -302,6 +302,6 @@ void Draw(struct game_t *game)
             }
     }
 
-    /* Update the lcd. */
+    /* Update the lcd */
     rb->lcd_update();
 }

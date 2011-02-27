@@ -25,6 +25,8 @@
 
 #include "game.h"
 
+extern unsigned long CYCLETIME;
+
 enum fire_phase {
     Phase1 = 0,
     Phase2,
@@ -42,7 +44,7 @@ struct fire_struct {
      volatile uint32_t dir_bitmask;
 };
 
-/* Swap macro. */
+/* Swap macro */
 #define swap(a, b) { \
     register typeof (a) tmp = a; \
     a = b; \
@@ -298,7 +300,7 @@ int UpdatePlayer(struct game_t *game, struct player_t *player)
     {
         if (player->ismove)
         {
-            /* Control player speed. */
+            /* Control player speed */
             if (player->move_phase == game->max_move_phase[player->speed])
             {
                 player->ismove = false;
@@ -390,7 +392,7 @@ void PlayerPlaceBomb(struct game_t *game, struct player_t *player)
         return;
 
     if (player->bombs_placed >= player->bombs_max &&
-        player->bombs_max != -1) /* Infinity. */
+        player->bombs_max != -1) /* Infinity */
             return;
 
     for (i = 0; i < MAX_BOMBS; i++)
@@ -433,7 +435,7 @@ static void do_fire(struct game_t *game, struct fire_struct *fs)
     enum fire_phase phase = fs->phase;
     volatile uint32_t dir_bitmask = fs->dir_bitmask;
 
-    /* Kill player in the center of explosion. */
+    /* Kill player in the center of explosion */
     if (phase == Phase1) {
         for (i = 0; i < MAX_PLAYERS; i++)
         {
@@ -537,7 +539,7 @@ static void do_fire(struct game_t *game, struct fire_struct *fs)
                 break;
             }
 
-            /* Detonate other bombs. */
+            /* Detonate other bombs */
             else if (game->field.map[curx][cury] == SQUARE_BOMB)
             {
                 for (i = 0; i < MAX_BOMBS; i++)
@@ -553,7 +555,7 @@ static void do_fire(struct game_t *game, struct fire_struct *fs)
             }
 
             // todo: optimize
-            /* Player gets killed by explosion. */
+            /* Player gets killed by explosion */
             if (phase == PhaseEnd) {
                 for (i = 0; i < MAX_PLAYERS; i++)
                 {
@@ -577,7 +579,7 @@ static void do_fire(struct game_t *game, struct fire_struct *fs)
                 }
             }
 
-            /* Change or destroy bonus if it's under fire. */
+            /* Change or destroy bonus if it's under fire */
             if (game->field.bonuses[curx][cury] != BONUS_NONE) {
                 game->field.bonuses[curx][cury] = rb->rand() % (BONUS_NONE + 1);
             }
@@ -611,12 +613,12 @@ inline static bool stop_bomb(struct game_t *game, int x, int y)
 void UpdateBombs(struct game_t *game)
 {
     int i;
-    /* Helps with detonation animation. */
+    /* Helps with detonation animation */
     static const int detphases[4] = {0, 1, 2, 1};
     struct fire_struct fs;
     int x, y, nticks;
 
-    /* Clear firemap. */
+    /* Clear firemap */
     memset(game->field.firemap, 0, sizeof(game->field.firemap));
 
     for (i = 0; i < MAX_BOMBS; i++)
@@ -630,7 +632,7 @@ void UpdateBombs(struct game_t *game)
         fs.isFullPower = game->field.bombs[i].owner->isFullPower;
 
         nticks = tick - game->field.bombs[i].place_time;
-        /* Update detonation animation. */
+        /* Update detonation animation */
         game->field.det[x][y] = detphases[nticks % 4];
 
         if (nticks >= BOMB_DELAY_PHASE4)
@@ -754,7 +756,7 @@ void UpdateBombs(struct game_t *game)
             fs.dir_bitmask = BITMASK_UP;
             do_fire(game, &fs);
         }
-        /* Move bomb if it's moving. */
+        /* Move bomb if it's moving */
         else if (game->field.bombs[i].ismove)
         {
             //if (player->move_phase == game->max_move_phase[player->speed])

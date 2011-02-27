@@ -25,42 +25,42 @@
 #define _GAME_H
 
 /*
- * Global game params.
+ * Global game params
  */
 
 #define MAP_W 17
 #define MAP_H 11
-#define MAX_PLAYERS 19
+#define MAX_PLAYERS 25
 #define MAX_BOMBS 15
 
 /*
- * Animation params.
+ * Animation params
  */
 
-#define CYCLETIME 35
+//#define CYCLETIME 35
 
-/* Delay before bomb detonates. */
-#define BOMB_DELAY_DET    (HZ * 4    / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE1 (HZ * 4.02 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE2 (HZ * 4.03 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE3 (HZ * 4.05 / (CYCLETIME / 10))
-#define BOMB_DELAY_PHASE4 (HZ * 4.06 / (CYCLETIME / 10))
+/* Delay before bomb detonates */
+#define BOMB_DELAY_DET              (HZ * 4.00 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE1           (HZ * 4.02 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE2           (HZ * 4.03 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE3           (HZ * 4.05 / (CYCLETIME / 10))
+#define BOMB_DELAY_PHASE4           (HZ * 4.06 / (CYCLETIME / 10))
 
-#define BOX_DELAY_EXPLOSION_ANIM (HZ * 0.04 / (CYCLETIME / 10))
+#define BOX_DELAY_EXPLOSION_ANIM    (HZ * 0.04 / (CYCLETIME / 10))
 
-#define PLAYER_DELAY_DEATH_ANIM (HZ * 0.09 / (CYCLETIME / 10))
-#define PLAYER_DELAY_WIN_ANIM (HZ * 0.1 / (CYCLETIME / 10))
-#define PLAYER_DELAY_WIN_ANIM_DUR (HZ * 3 / (CYCLETIME / 10))
+#define PLAYER_DELAY_DEATH_ANIM     (HZ * 0.09 / (CYCLETIME / 10))
+#define PLAYER_DELAY_WIN_ANIM       (HZ * 0.10 / (CYCLETIME / 10))
+#define PLAYER_DELAY_WIN_ANIM_DUR   (HZ * 4.00 / (CYCLETIME / 10))
 
 /*
- * Two types of ticks.
+ * Two types of ticks
  */
 
 #define get_tick() (*rb->current_tick)
 extern unsigned long tick;
 
 /*
- * Enums and structs.
+ * Enums and structs
  */
 
 enum square_type {
@@ -138,7 +138,7 @@ struct player_t {
  */
 
 /*
- * Binary masks for fire map stuff.
+ * Binary masks for fire map stuff
  */
 
 #define BITMASK_ALL_DIRS    0x000FFFFF
@@ -206,21 +206,21 @@ struct box_detonation {
 };
 
 enum bonus_type {
-    BONUS_EXTRABOMB, /* Extra bomb. */
-    BONUS_POWER,     /* Increase bomb explosion radius. */
-    BONUS_SPEEDUP,   /* Increase player speed. */
-    BONUS_FULLPOWER, /* Destroy all destroyable objects in radius. */
-    BONUS_MOVEBOMBS, /* Ability of kicking bombs so they move away. */
-    BONUS_NONE       /* No bonus. */
+    BONUS_EXTRABOMB, /* Extra bomb */
+    BONUS_POWER,     /* Increase bomb explosion radius */
+    BONUS_SPEEDUP,   /* Increase player speed */
+    BONUS_FULLPOWER, /* Destroy all destroyable objects in radius */
+    BONUS_MOVEBOMBS, /* Ability of kicking bombs so they move away */
+    BONUS_NONE       /* No bonus */
 };
 
 struct field_t {
     enum square_type map[MAP_W][MAP_H];
-    struct bomb_t bombs[MAX_BOMBS];
-    volatile uint32_t firemap[MAP_W][MAP_H];
     enum bomb_detonation det[MAP_W][MAP_H];
     struct box_detonation boxes[MAP_W][MAP_H];
     enum bonus_type bonuses[MAP_W][MAP_H];
+    volatile uint32_t firemap[MAP_W][MAP_H];
+    struct bomb_t bombs[MAX_BOMBS];
 };
 
 enum game_state {
@@ -232,32 +232,32 @@ enum game_state {
 struct game_t {
     enum game_state state;
     struct field_t field;
+    int level;
+    int score;
+    short nplayers;
     struct player_t players[MAX_PLAYERS];
     struct player_t *draw_order[MAX_PLAYERS];
-    short nplayers;
+
     short bomb_rad[5];
     short max_move_phase[3];
-    int score;
-    int level;
 };
 
 /*
- * Player control functions.
+ * Player control functions
  */
 
-void PlayerMoveUp(struct game_t *game, struct player_t *player);
-void PlayerMoveDown(struct game_t *game, struct player_t *player);
+void PlayerMoveUp   (struct game_t *game, struct player_t *player);
+void PlayerMoveDown (struct game_t *game, struct player_t *player);
 void PlayerMoveRight(struct game_t *game, struct player_t *player);
-void PlayerMoveLeft(struct game_t *game, struct player_t *player);
+void PlayerMoveLeft (struct game_t *game, struct player_t *player);
 void PlayerPlaceBomb(struct game_t *game, struct player_t *player);
 
 /*
- * Game update functions.
+ * Game update functions
  */
 
 int  UpdatePlayer(struct game_t *game, struct player_t *player);
-void UpdateBombs(struct game_t *game);
-void UpdateBoxes(struct game_t *game);
-void UpdateAftergame(struct game_t *game);
+void UpdateBombs (struct game_t *game);
+void UpdateBoxes (struct game_t *game);
 
 #endif /* _GAME_H */
