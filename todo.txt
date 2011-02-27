@@ -1,18 +1,18 @@
-- fix: use short instead of int where possible
 - fix: fullpower bonus active for some time only
-* fix: player must stop moving bomb
-? add: find_bomb() function which returns number of bomb with curx and cury coordinate
 - fix: do something if wins niether player nor ai
-? add: lifes, health, few first seconds after re-alival player's health is infinum
-* add: levels and scores (think about good format of storing levels)
 - add: support for devices with smaller screen size
 - fix: ai path cache
+* add: levels and scores (think about good format of storing levels)
 * fix: check code style (to be rockbox-ok): remove typedefs, funcs names in lowercase, no //, ...
-? fix: strange bug with undead unmoving players
-* fix: when big explode radius, the fire ignores one box on it's way
+? add: lifes, health, few first seconds after re-alival player's health is infinum
+? add: find_bomb() function which returns number of bomb with curx and cury coordinate
 ? fix: check how bitwise operations work on big/little endian devices
+? fix: strange bug with undead unmoving players
 ? fix on resume sometimes:
     Program received signal SIGSEGV, Segmentation fault.
     0x00007fffecf1c403 in CheckFire (G=0x7fffed182920, x=42604896, y=0)
         at /home/lev/work/rockbox/rockbox_my/apps/plugins/bomberman/ai.c:445
     445            return !(G->field.firemap[x][y].state == BOMB_NONE);
++ fix: use short instead of int where possible
++ fix: player must stop moving bomb
++ fix: when big explode radius, the fire ignores one box on it's way
