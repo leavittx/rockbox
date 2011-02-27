@@ -53,6 +53,7 @@
 #include "backdrop.h"
 #include "viewport.h"
 #include "language.h"
+#include "replaygain.h"
 
 #if CONFIG_CODEC == SWCODEC
 #include "dsp.h"
@@ -728,10 +729,12 @@ static const char* id3_get_info(int selected_item, void* data,
                 break;
 #if CONFIG_CODEC == SWCODEC
             case LANG_ID3_TRACK_GAIN:
-                val=id3->track_gain_string;
+                replaygain_itoa(buffer, buffer_len, id3->track_gain);
+                val=(id3->track_gain) ? buffer : NULL; /* only show gains!=0 */
                 break;
             case LANG_ID3_ALBUM_GAIN:
-                val=id3->album_gain_string;
+                replaygain_itoa(buffer, buffer_len, id3->album_gain);
+                val=(id3->album_gain) ? buffer : NULL; /* only show gains!=0 */
                 break;
 #endif
             case LANG_ID3_PATH:
@@ -805,7 +808,7 @@ static int runtime_speak_data(int selected_item, void* data)
     talk_ids(false,
              (selected_item < 2) ? LANG_RUNNING_TIME : LANG_TOP_TIME,
              TALK_ID((selected_item < 2) ? global_status.runtime
-                     : global_status.topruntime, UNIT_TIME_EXACT));
+                     : global_status.topruntime, UNIT_TIME));
     return 0;
 }
 
