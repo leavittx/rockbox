@@ -47,6 +47,9 @@
 #if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 #include <time.h>
 #endif
+#ifndef BOOTLOADER
+#include "bookmark.h"
+#endif
 
 #if (defined(IAUDIO_X5) || defined(IAUDIO_M5)) && !defined (SIMULATOR)
 #include "lcd-remote-target.h"
@@ -62,6 +65,9 @@ int last_sent_battery_level = 100;
 int battery_percent = -1;
 void send_battery_level_event(void);
 
+static bool sleeptimer_active = false;
+static long sleeptimer_endtick;
+
 #if CONFIG_CHARGING
 /* State of the charger input as seen by the power thread */
 enum charger_input_state_type charger_input_state;
@@ -73,8 +79,9 @@ enum charge_state_type charge_state = DISCHARGING;
 #endif
 #endif /* CONFIG_CHARGING */
 
-#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 static int shutdown_timeout = 0;
+
+#if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 /*
  * Average battery voltage and charger voltage, filtered via a digital
  * exponential filter (aka. exponential moving average, scaled):
@@ -105,9 +112,6 @@ static const char power_thread_name[] = "power";
 
 static int poweroff_timeout = 0;
 static int powermgmt_est_runningtime_min = -1;
-
-static bool sleeptimer_active = false;
-static long sleeptimer_endtick;
 
 static long last_event_tick;
 
@@ -202,26 +206,6 @@ bool battery_level_safe(void)
 void set_poweroff_timeout(int timeout)
 {
     poweroff_timeout = timeout;
-}
-
-void set_sleep_timer(int seconds)
-{
-    if (seconds) {
-        sleeptimer_active  = true;
-        sleeptimer_endtick = current_tick + seconds * HZ;
-    }
-    else {
-        sleeptimer_active  = false;
-        sleeptimer_endtick = 0;
-    }
-}
-
-int get_sleep_timer(void)
-{
-    if (sleeptimer_active && (sleeptimer_endtick >= current_tick))
-        return (sleeptimer_endtick - current_tick) / HZ;
-    else
-        return 0;
 }
 
 /* look into the percent_to_volt_* table and get a realistic battery level */
@@ -350,27 +334,8 @@ static void handle_auto_poweroff(void)
             TIME_AFTER(tick, storage_last_disk_activity() + timeout)) {
             sys_poweroff();
         }
-    }
-    else if (sleeptimer_active) {
-        /* Handle sleeptimer */
-        if (TIME_AFTER(tick, sleeptimer_endtick)) {
-            audio_stop();
-
-            if (usb_inserted()
-#if CONFIG_CHARGING && !defined(HAVE_POWEROFF_WHILE_CHARGING)
-                || charger_input_state != NO_CHARGER
-#endif
-            ) {
-                DEBUGF("Sleep timer timeout. Stopping...\n");
-                set_sleep_timer(0);
-                backlight_off(); /* Nighty, nighty... */
-            }
-            else {
-                DEBUGF("Sleep timer timeout. Shutting off...\n");
-                sys_poweroff();
-            }
-        }
-    }
+    } else
+        handle_sleep_timer();
 }
 
 #ifdef CURRENT_NORMAL /*check that we have a current defined in a config file*/
@@ -794,6 +759,7 @@ void shutdown_hw(void)
     sleep(HZ/4);
     power_off();
 }
+#endif /* PLATFORM_NATIVE */
 
 void sys_poweroff(void)
 {
@@ -802,7 +768,7 @@ void sys_poweroff(void)
     /* If the main thread fails to shut down the system, we will force a
        power off after an 20 second timeout - 28 seconds if recording */
     if (shutdown_timeout == 0) {
-#if defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)
+#if (defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)) && !defined(SIMULATOR)
         pcf50606_reset_timeout(); /* Reset timer on first attempt only */
 #endif
 #ifdef HAVE_RECORDING
@@ -825,7 +791,7 @@ void cancel_shutdown(void)
 {
     logf("cancel_shutdown()");
 
-#if defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)
+#if (defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)) && !defined(SIMULATOR)
     /* TODO: Move some things to target/ tree */
     if (shutdown_timeout)
         pcf50606_reset_timeout();
@@ -833,7 +799,6 @@ void cancel_shutdown(void)
 
     shutdown_timeout = 0;
 }
-#endif /* PLATFORM_NATIVE */
 
 /* Send system battery level update events on reaching certain significant
    levels. This must be called after battery_percent has been updated. */
@@ -851,5 +816,52 @@ void send_battery_level_event(void)
         }
 
         level++;
+    }
+}
+
+void set_sleep_timer(int seconds)
+{
+    if (seconds) {
+        sleeptimer_active  = true;
+        sleeptimer_endtick = current_tick + seconds * HZ;
+    }
+    else {
+        sleeptimer_active  = false;
+        sleeptimer_endtick = 0;
+    }
+}
+
+int get_sleep_timer(void)
+{
+    if (sleeptimer_active && (sleeptimer_endtick >= current_tick))
+        return (sleeptimer_endtick - current_tick) / HZ;
+    else
+        return 0;
+}
+
+void handle_sleep_timer(void)
+{
+    if (!sleeptimer_active)
+      return;
+
+    /* Handle sleeptimer */
+    if (TIME_AFTER(current_tick, sleeptimer_endtick)) {
+        if (usb_inserted()
+#if CONFIG_CHARGING && !defined(HAVE_POWEROFF_WHILE_CHARGING)
+            || charger_input_state != NO_CHARGER
+#endif
+        ) {
+            DEBUGF("Sleep timer timeout. Stopping...\n");
+#ifndef BOOTLOADER
+            bookmark_autobookmark(false);
+#endif
+            audio_stop();
+            set_sleep_timer(0);
+            backlight_off(); /* Nighty, nighty... */
+        }
+        else {
+            DEBUGF("Sleep timer timeout. Shutting off...\n");
+            sys_poweroff();
+        }
     }
 }

@@ -5,6 +5,9 @@ buffer.c
 general.c
 load_code.c
 powermgmt.c
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
+target/hosted/powermgmt.c
+#endif
 system.c
 usb.c
 #ifdef ROCKBOX_HAS_LOGF
@@ -197,9 +200,6 @@ drivers/touchscreen.c
 
 /* Storage */
 #if (CONFIG_PLATFORM & PLATFORM_NATIVE)
-#if (CONFIG_STORAGE & STORAGE_MMC)
-drivers/ata_mmc.c
-#endif
 #if (CONFIG_STORAGE & STORAGE_NAND) && (CONFIG_NAND == NAND_IFP7XX)
 drivers/ata_flash.c
 #endif
@@ -209,7 +209,7 @@ target/arm/ata-nand-telechips.c
 #if (CONFIG_STORAGE & STORAGE_NAND) && (CONFIG_NAND == NAND_SAMSUNG)
 target/arm/s5l8700/ata-nand-s5l8700.c
 #endif
-#if (CONFIG_STORAGE & STORAGE_ATA)
+#if (CONFIG_STORAGE & STORAGE_ATA) && !defined(IPOD_6G)
 drivers/ata.c
 #endif
 #if (CONFIG_STORAGE & STORAGE_SD)
@@ -404,7 +404,6 @@ drivers/audio/tsc2100.c
 #if defined(CPU_SH)
 
 #ifndef SIMULATOR
-drivers/i2c.c
 target/sh/adc-sh.c
 target/sh/bitswap.S
 target/sh/crt0.S
@@ -415,6 +414,7 @@ target/sh/memset-sh.S
 target/sh/strlen-sh.S
 target/sh/system-sh.c
 target/sh/archos/descramble.S
+target/sh/archos/i2c-archos.c
 target/sh/debug-sh.c
 #endif /* SIMULATOR */
 
@@ -636,6 +636,7 @@ target/sh/archos/ondio/button-ondio.c
 target/sh/archos/ondio/power-ondio.c
 target/sh/archos/ondio/powermgmt-ondio.c
 target/sh/archos/ondio/usb-ondio.c
+target/sh/archos/ondio/ata_mmc.c
 target/sh/archos/mascodec-archos.c
 target/sh/archos/audio-archos.c
 #if (CONFIG_TUNER & TEA5767)
@@ -1551,6 +1552,7 @@ target/arm/s5l8700/ipodnano2g/adc-nano2g.c
 #ifdef IPOD_6G
 #ifndef SIMULATOR
 target/arm/ipod/button-clickwheel.c
+target/arm/s5l8702/ipod6g/storage_ata-ipod6g.c
 target/arm/s5l8702/ipod6g/cscodec-ipod6g.c
 target/arm/s5l8702/ipod6g/backlight-ipod6g.c
 target/arm/s5l8702/ipod6g/powermgmt-ipod6g.c
@@ -1559,7 +1561,6 @@ target/arm/s5l8702/kernel-s5l8702.c
 target/arm/s5l8702/system-s5l8702.c
 target/arm/s5l8702/ipod6g/lcd-ipod6g.c
 target/arm/s5l8702/ipod6g/lcd-asm-ipod6g.S
-target/arm/s5l8702/ipod6g/ata-ipod6g.c
 #if 0 //TODO
 target/arm/s5l8702/postmortemstub.S
 #endif

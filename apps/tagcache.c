@@ -130,7 +130,7 @@ static long tempbuf_pos;
 static const char *tags_str[] = { "artist", "album", "genre", "title", 
     "filename", "composer", "comment", "albumartist", "grouping", "year", 
     "discnumber", "tracknumber", "bitrate", "length", "playcount", "rating", 
-    "playtime", "lastplayed", "commitid", "mtime" };
+    "playtime", "lastplayed", "commitid", "mtime", "lastoffset" };
 
 /* Status information of the tagcache. */
 static struct tagcache_stat tc_stat;
@@ -3390,8 +3390,8 @@ static int parse_changelog_line(int line_n, const char *buf, void *parameters)
     char tag_data[TAG_MAXLEN+32];
     int idx_id;
     long masterfd = (long)parameters;
-    const int import_tags[] = { tag_playcount, tag_rating, tag_playtime, tag_lastplayed,
-        tag_commitid };
+    const int import_tags[] = { tag_playcount, tag_rating, tag_playtime,
+                                tag_lastplayed, tag_commitid, tag_lastoffset };
     int i;
     (void)line_n;
     
@@ -4351,6 +4351,7 @@ static bool check_dir(const char *dirname, int add_files)
 
         processed_dir_count++;
         if (info.attribute & ATTR_DIRECTORY)
+#ifndef SIMULATOR
         {   /* don't follow symlinks to dirs, but try to add it as a search root
              * this makes able to avoid looping in recursive symlinks */
             if (info.attribute & ATTR_LINK)
@@ -4358,6 +4359,9 @@ static bool check_dir(const char *dirname, int add_files)
             else
                 check_dir(curpath, add_files);
         }
+#else
+            check_dir(curpath, add_files);
+#endif
         else if (add_files)
         {
             tc_stat.curentry = curpath;

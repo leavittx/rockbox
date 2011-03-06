@@ -324,7 +324,8 @@ static int miscscrn(void * param)
     switch (result)
     {
         case GO_TO_PLAYLIST_VIEWER:
-            return GO_TO_PLAYLIST_VIEWER;
+        case GO_TO_WPS:
+            return result;
         default:
             return GO_TO_ROOT;
     }
@@ -431,7 +432,7 @@ MENUITEM_RETURNVALUE(playlists, ID2P(LANG_PLAYLISTS), GO_TO_PLAYLISTS_SCREEN,
 MENUITEM_RETURNVALUE(system_menu_, ID2P(LANG_SYSTEM), GO_TO_SYSTEM_SCREEN,
                      NULL, Icon_System_menu);
 
-#ifdef HAVE_LCD_CHARCELLS
+#if CONFIG_KEYPAD == PLAYER_PAD
 static int do_shutdown(void)
 {
 #if CONFIG_CHARGING
@@ -460,7 +461,7 @@ MAKE_MENU(root_menu_, ID2P(LANG_ROCKBOX_TITLE),
 #endif
             &playlists, &rocks_browser,  &system_menu_
 
-#ifdef HAVE_LCD_CHARCELLS
+#if CONFIG_KEYPAD == PLAYER_PAD
             ,&do_shutdown_item
 #endif
         );

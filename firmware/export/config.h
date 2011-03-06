@@ -86,6 +86,7 @@
 #define PLATFORM_MAEMO4  (1<<4)
 #define PLATFORM_MAEMO5  (1<<5)
 #define PLATFORM_MAEMO   (PLATFORM_MAEMO4|PLATFORM_MAEMO5)
+#define PLATFORM_PANDORA (1<<6)
 
 /* CONFIG_KEYPAD */
 #define PLAYER_PAD          1
@@ -448,6 +449,8 @@ Lyre prototype 1 */
 #include "config/nokian8xx.h"
 #elif defined(NOKIAN900)
 #include "config/nokian900.h"
+#elif defined(PANDORA)
+#include "config/pandora.h"
 #else
 /* no known platform */
 #endif
@@ -511,7 +514,8 @@ Lyre prototype 1 */
 #endif
 
 /* define for all cpus from ARM family */
-#if (CONFIG_PLATFORM & PLATFORM_MAEMO5) && defined(MAEMO_ARM_BUILD)
+#if ((CONFIG_PLATFORM & PLATFORM_MAEMO5) && defined(MAEMO_ARM_BUILD)) \
+  || (CONFIG_PLATFORM & PLATFORM_PANDORA)
 #define CPU_ARM
 #define ARM_ARCH 7 /* ARMv7 */
 
@@ -737,8 +741,6 @@ Lyre prototype 1 */
 #endif /* PLATFORM_NATIVE */
 
 
-#define HAVE_SEMAPHORE_OBJECTS
-
 #ifdef HAVE_USBSTACK
 #if CONFIG_USBOTG == USBOTG_ARC
 #define USB_STATUS_BY_EVENT
@@ -764,8 +766,8 @@ Lyre prototype 1 */
 #if defined(HAVE_USBSTACK) || (CONFIG_CPU == JZ4732) \
     || (CONFIG_CPU == AS3525) || (CONFIG_CPU == AS3525v2) \
     || defined(CPU_S5L870X) || (CONFIG_CPU == S3C2440) \
-    || defined(APPLICATION)
-#define HAVE_WAKEUP_OBJECTS
+    || defined(APPLICATION) || (CONFIG_CPU == PP5002)
+#define HAVE_SEMAPHORE_OBJECTS
 #endif
 
 /*include support for crossfading - requires significant PCM buffer space*/

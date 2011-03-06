@@ -43,7 +43,7 @@
 #define opendir opendir_android
 #define mkdir   mkdir_android
 #define rmdir   rmdir_android
-#elif (CONFIG_PLATFORM & (PLATFORM_SDL|PLATFORM_MAEMO))
+#elif (CONFIG_PLATFORM & (PLATFORM_SDL|PLATFORM_MAEMO|PLATFORM_PANDORA))
 #define open    sim_open
 #define remove  sim_remove
 #define rename  sim_rename
@@ -70,6 +70,7 @@ void paths_init(void)
     /* make sure $HOME/.config/rockbox.org exists, it's needed for config.cfg */
 #if (CONFIG_PLATFORM & PLATFORM_ANDROID)
     mkdir("/sdcard/rockbox");
+    mkdir("/sdcard/rockbox/rocks.data");
 #else
     char config_dir[MAX_PATH];
 
@@ -83,6 +84,9 @@ void paths_init(void)
     snprintf(config_dir, sizeof(config_dir), "%s/.config", home);
     mkdir(config_dir);
     snprintf(config_dir, sizeof(config_dir), "%s/.config/rockbox.org", home);
+    mkdir(config_dir);
+    /* Plugin data directory */
+    snprintf(config_dir, sizeof(config_dir), "%s/.config/rockbox.org/rocks.data", home);
     mkdir(config_dir);
 #endif
 }

@@ -182,6 +182,7 @@ struct viewport_colour {
 };
 #ifdef HAVE_TOUCHSCREEN
 struct touchregion {
+    char* label;            /* label to identify this region */
     struct skin_viewport* wvp;/* The viewport this region is in */
     short int x;             /* x-pos */
     short int y;             /* y-pos */
@@ -198,9 +199,23 @@ struct touchregion {
     bool armed;              /* A region is armed on press. Only armed regions are triggered
                                 on repeat or release. */
     union {                  /* Extra data, action dependant */
-        void* data;
+        struct touchsetting {
+			const struct settings_list *setting; /* setting being controlled */
+			union {			/* Value to set the setting to for ACTION_SETTING_SET */
+				int number;
+				char* text;
+			} value;
+		} setting_data;
         int   value;
     };
+    long last_press;        /* last tick this was pressed */
+};
+
+
+
+struct touchregion_lastpress {
+    struct touchregion *region;
+    long timeout;
 };
 #endif
 
