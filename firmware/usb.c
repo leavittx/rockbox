@@ -77,7 +77,7 @@ static int usb_mmc_countdown = 0;
 
 /* Make sure there's enough stack space for screendump */
 #ifdef USB_FULL_INIT
-static long usb_stack[(DEFAULT_STACK_SIZE + SECTOR_SIZE + DUMP_BMP_LINESIZE)/sizeof(long)];
+static long usb_stack[(DEFAULT_STACK_SIZE + DUMP_BMP_LINESIZE)/sizeof(long)];
 static const char usb_thread_name[] = "usb";
 static unsigned int usb_thread_entry = 0;
 static bool usb_monitor_enabled = false;
@@ -220,7 +220,7 @@ static inline void usb_slave_mode(bool on)
     {
         trigger_cpu_boost();
 #ifdef HAVE_PRIORITY_SCHEDULING
-        thread_set_priority(THREAD_ID_CURRENT, PRIORITY_REALTIME);
+        thread_set_priority(thread_self(), PRIORITY_REALTIME);
 #endif
         disk_unmount_all();
         usb_attach();
@@ -229,7 +229,7 @@ static inline void usb_slave_mode(bool on)
     {
         usb_enable(false);
 #ifdef HAVE_PRIORITY_SCHEDULING
-        thread_set_priority(THREAD_ID_CURRENT, PRIORITY_SYSTEM);
+        thread_set_priority(thread_self(), PRIORITY_SYSTEM);
 #endif
         /* Entered exclusive mode */
         rc = disk_mount_all();

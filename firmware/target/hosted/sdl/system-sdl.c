@@ -71,11 +71,6 @@ bool debug_audio = false;
 bool debug_wps = false;
 int wps_verbose_level = 3;
 
-
-void sys_poweroff(void)
-{
-}
-
 /*
  * This thread will read the buttons in an interrupt like fashion, and
  * also initializes SDL_INIT_VIDEO and the surfaces
@@ -133,7 +128,7 @@ static int sdl_event_thread(void * param)
         depth = 16;
 
     flags = SDL_HWSURFACE|SDL_DOUBLEBUF;
-#if (CONFIG_PLATFORM & PLATFORM_MAEMO)
+#if (CONFIG_PLATFORM & (PLATFORM_MAEMO|PLATFORM_PANDORA))
     /* Fullscreen mode for maemo app */
     flags |= SDL_FULLSCREEN;
 #endif
@@ -142,7 +137,7 @@ static int sdl_event_thread(void * param)
         panicf("%s", SDL_GetError());
     }
 
-#if (CONFIG_PLATFORM & PLATFORM_MAEMO)
+#if (CONFIG_PLATFORM & (PLATFORM_MAEMO|PLATFORM_PANDORA))
     /* Hide mouse cursor on real touchscreen device */
     SDL_ShowCursor(SDL_DISABLE);
 #endif
@@ -187,15 +182,38 @@ static int sdl_event_thread(void * param)
 #ifdef HAVE_SDL_THREADS
     sim_thread_shutdown(); /* not needed for native threads */
 #endif
-    sim_kernel_shutdown();
-
     return 0;
 }
 
-void sim_do_exit(void)
+void shutdown_hw(void)
 {
+    /* Shut down SDL event loop */
+    SDL_Event event;
+    memset(&event, 0, sizeof(SDL_Event));
+    event.type = SDL_USEREVENT;
+    SDL_PushEvent(&event);
+#ifdef HAVE_SDL_THREADS
+    /* since sim_thread_shutdown() grabs the mutex we need to let it free,
+     * otherwise SDL_WaitThread will deadlock */
+    struct thread_entry* t = sim_thread_unlock();
+#endif
     /* wait for event thread to finish */
     SDL_WaitThread(evt_thread, NULL);
+
+#ifdef HAVE_SDL_THREADS
+    /* lock again before entering the scheduler */
+    sim_thread_lock(t);
+    /* sim_thread_shutdown() will cause sim_do_exit() to be called via longjmp,
+     * but only if we let the sdl thread scheduler exit the other threads */
+    while(1) yield();
+#else
+    sim_do_exit();
+#endif
+}
+
+void sim_do_exit()
+{
+    sim_kernel_shutdown();
 
     SDL_Quit();
     exit(EXIT_SUCCESS);

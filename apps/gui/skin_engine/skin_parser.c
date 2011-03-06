@@ -547,6 +547,7 @@ static int parse_logical_if(struct skin_element *element,
     return 0;
     
 }
+
 static int parse_timeout_tag(struct skin_element *element,
                              struct wps_token *token,
                              struct wps_data *wps_data)
@@ -562,7 +563,6 @@ static int parse_timeout_tag(struct skin_element *element,
             case SKIN_TOKEN_BUTTON_VOLUME:
             case SKIN_TOKEN_TRACK_STARTING:
             case SKIN_TOKEN_TRACK_ENDING:
-            case SKIN_TOKEN_LASTTOUCH:
                 val = 10;
                 break;
             default:
@@ -878,10 +878,52 @@ static int parse_albumart_load(struct skin_element* element,
 #endif /* HAVE_ALBUMART */
 
 #ifdef HAVE_TOUCHSCREEN
+struct touchregion* find_touchregion(const char *label, 
+                                       struct wps_data *data)
+{
+    struct skin_token_list *list = data->touchregions;
+    while (list)
+    {
+        struct touchregion *tr = 
+            (struct touchregion *)list->token->value.data;
+        if (tr->label && !strcmp(tr->label, label))
+            return tr;
+        list = list->next;
+    }
+    return NULL;
+}
+
+static int parse_lasttouch(struct skin_element *element,
+                           struct wps_token *token,
+                           struct wps_data *wps_data)
+{
+    struct touchregion_lastpress *data = 
+            (struct touchregion_lastpress*)skin_buffer_alloc(
+                                sizeof(struct touchregion_lastpress));
+    int i;
+    if (!data)
+        return WPS_ERROR_INVALID_PARAM;
+    data->region = NULL;
+    data->timeout = 10;
+    
+    for (i=0; i<element->params_count; i++)
+    {
+        if (element->params[i].type == STRING)
+            data->region = find_touchregion(
+                                element->params[i].data.text, wps_data);
+        else if (element->params[i].type == INTEGER)
+            data->timeout = element->params[i].data.number;
+    }
+
+    data->timeout *= TIMEOUT_UNIT;
+    token->value.data = data;
+    return 0;
+}
 
 struct touchaction {const char* s; int action;};
 static const struct touchaction touchactions[] = {
     /* generic actions, convert to screen actions on use */
+    {"none", ACTION_TOUCHSCREEN},
     {"prev", ACTION_STD_PREV },         {"next", ACTION_STD_NEXT },
     {"rwd", ACTION_STD_PREVREPEAT },    {"ffwd", ACTION_STD_NEXTREPEAT },
     {"hotkey", ACTION_STD_HOTKEY},      {"select", ACTION_STD_OK },
@@ -895,7 +937,8 @@ static const struct touchaction touchactions[] = {
     {"mute", ACTION_TOUCH_MUTE },
     
     /* generic settings changers */
-    {"setting_inc", ACTION_SETTINGS_INC}, {"setting_dec", ACTION_SETTINGS_DEC}, 
+    {"setting_inc", ACTION_SETTINGS_INC}, {"setting_dec", ACTION_SETTINGS_DEC},
+    {"setting_set", ACTION_SETTINGS_SET}, 
 
     /* WPS specific actions */
     {"browse", ACTION_WPS_BROWSE },
@@ -910,6 +953,7 @@ static const struct touchaction touchactions[] = {
     {"presets", ACTION_FM_PRESET}, 
 #endif
 };
+bool cfg_string_to_int(int setting_id, int* out, const char* str);
 
 static int parse_touchregion(struct skin_element *element,
                              struct wps_token *token,
@@ -917,32 +961,16 @@ static int parse_touchregion(struct skin_element *element,
 {
     (void)token;
     unsigned i, imax;
+    int p;
     struct touchregion *region = NULL;
     const char *action;
     const char pb_string[] = "progressbar";
     const char vol_string[] = "volume";
     char temp[20];
 
-    /* format: %T(x,y,width,height,action)
+    /* format: %T([label,], x,y,width,height,action[, ...])
      * if action starts with & the area must be held to happen
-     * action is one of:
-     * play  -  play/pause playback
-     * stop  -  stop playback, exit the wps
-     * prev  -  prev track
-     * next  -  next track
-     * ffwd  -  seek forward
-     * rwd   -  seek backwards
-     * menu  -  go back to the main menu
-     * browse - go back to the file/db browser
-     * shuffle - toggle shuffle mode
-     * repmode - cycle the repeat mode
-     * quickscreen - go into the quickscreen
-     * contextmenu - open the context menu
-     * playlist - go into the playlist
-     * pitch - go into the pitchscreen
-     * volup - increase volume by one step
-     * voldown - decrease volume by one step
-    */
+     */
 
     
     region = (struct touchregion*)skin_buffer_alloc(sizeof(struct touchregion));
@@ -951,15 +979,33 @@ static int parse_touchregion(struct skin_element *element,
 
     /* should probably do some bounds checking here with the viewport... but later */
     region->action = ACTION_NONE;
-    region->x = element->params[0].data.number;
-    region->y = element->params[1].data.number;
-    region->width = element->params[2].data.number;
-    region->height = element->params[3].data.number;
+    
+    if (element->params[0].type == STRING)
+    {
+        region->label = element->params[0].data.text;
+        p = 1;
+        /* "[SI]III[SI]|SS" is the param list. There MUST be 4 numbers
+         * followed by at least one string. Verify that here */
+        if (element->params_count < 6 ||
+            element->params[4].type != INTEGER)
+            return WPS_ERROR_INVALID_PARAM;
+    }
+    else
+    {
+        region->label = NULL;
+        p = 0;
+    }
+    
+    region->x = element->params[p++].data.number;
+    region->y = element->params[p++].data.number;
+    region->width = element->params[p++].data.number;
+    region->height = element->params[p++].data.number;
     region->wvp = curr_vp;
     region->armed = false;
     region->reverse_bar = false;
-    region->data = NULL;
-    action = element->params[4].data.text;
+    region->value = 0;
+    region->last_press = 0xffff;
+    action = element->params[p++].data.text;
 
     strcpy(temp, action);
     action = temp;
@@ -994,15 +1040,16 @@ static int parse_touchregion(struct skin_element *element,
             {
                 region->action = touchactions[i].action;
                 if (region->action == ACTION_SETTINGS_INC ||
-                    region->action == ACTION_SETTINGS_DEC)
+                    region->action == ACTION_SETTINGS_DEC ||
+                    region->action == ACTION_SETTINGS_SET)
                 {
-                    if (element->params_count < 6)
+                    if (element->params_count < p+1)
                     {
                         return WPS_ERROR_INVALID_PARAM;
                     }
                     else
                     {
-                        char *name = element->params[5].data.text;
+                        char *name = element->params[p].data.text;
                         int j;
                         /* Find the setting */
                         for (j=0; j<nb_settings; j++)
@@ -1011,7 +1058,52 @@ static int parse_touchregion(struct skin_element *element,
                                 break;
                         if (j==nb_settings)
                             return WPS_ERROR_INVALID_PARAM;
-                        region->data = (void*)&settings[j];
+                        region->setting_data.setting = (void*)&settings[j];
+                        if (region->action == ACTION_SETTINGS_SET)
+                        {
+                            char* text;
+                            int temp;
+                            struct touchsetting *setting = 
+                                &region->setting_data;
+                            if (element->params_count < p+2)
+                                return WPS_ERROR_INVALID_PARAM;
+#ifndef __PCTOOL__
+                            text = element->params[p+1].data.text;
+                            switch (settings[j].flags&F_T_MASK)
+                            {
+                            case F_T_CUSTOM:
+                                setting->value.text = text;
+                                break;                              
+                            case F_T_INT:
+                            case F_T_UINT:
+                                if (settings[j].cfg_vals == NULL)
+                                {
+                                    setting->value.number = atoi(text);
+                                }
+                                else if (cfg_string_to_int(j, &temp, text))
+                                {
+                                    if (settings[j].flags&F_TABLE_SETTING)
+                                        setting->value.number = 
+                                            settings[j].table_setting->values[temp];
+                                    else
+                                        setting->value.number = temp;
+                                }
+                                else
+                                    return WPS_ERROR_INVALID_PARAM;
+                                break;
+                            case F_T_BOOL:
+                                if (cfg_string_to_int(j, &temp, text))
+                                {
+                                    setting->value.number = temp;
+                                }
+                                else
+                                    return WPS_ERROR_INVALID_PARAM;
+                                break;
+                            default:
+                                return WPS_ERROR_INVALID_PARAM;
+                            }
+#endif /* __PCTOOL__ */
+                        }
                     }
                 }
                 break;
@@ -1445,7 +1537,6 @@ static int skin_element_callback(struct skin_element* element, void* data)
                 case SKIN_TOKEN_BUTTON_VOLUME:
                 case SKIN_TOKEN_TRACK_STARTING:
                 case SKIN_TOKEN_TRACK_ENDING:
-                case SKIN_TOKEN_LASTTOUCH:
                     function = parse_timeout_tag;
                     break;
 #ifdef HAVE_LCD_BITMAP
@@ -1498,6 +1589,9 @@ static int skin_element_callback(struct skin_element* element, void* data)
 #ifdef HAVE_TOUCHSCREEN
                 case SKIN_TOKEN_TOUCHREGION:
                     function = parse_touchregion;
+                    break;
+                case SKIN_TOKEN_LASTTOUCH:
+                    function = parse_lasttouch;
                     break;
 #endif
 #ifdef HAVE_ALBUMART

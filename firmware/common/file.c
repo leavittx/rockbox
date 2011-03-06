@@ -39,7 +39,7 @@
 */
 
 struct filedesc {
-    unsigned char cache[SECTOR_SIZE];
+    unsigned char cache[SECTOR_SIZE] CACHEALIGN_ATTR;
     int cacheoffset; /* invariant: 0 <= cacheoffset <= SECTOR_SIZE */
     long fileoffset;
     long size;
@@ -49,9 +49,9 @@ struct filedesc {
     bool write;
     bool dirty;
     bool trunc;
-};
+} CACHEALIGN_ATTR;
 
-static struct filedesc openfiles[MAX_OPEN_FILES];
+static struct filedesc openfiles[MAX_OPEN_FILES] CACHEALIGN_ATTR;
 
 static int flush_cache(int fd);
 
@@ -499,6 +499,10 @@ static int readwrite(int fd, void* buf, long count, bool write)
     long nread=0;
     struct filedesc* file;
     int rc;
+#ifdef STORAGE_NEEDS_ALIGN
+    long i;
+    int rc2;
+#endif
 
     if (fd < 0 || fd > MAX_OPEN_FILES-1) {
         errno = EINVAL;
@@ -561,9 +565,25 @@ static int readwrite(int fd, void* buf, long count, bool write)
 
     /* read/write whole sectors right into/from the supplied buffer */
     sectors = count / SECTOR_SIZE;
+    rc = 0;
     if ( sectors ) {
-        rc = fat_readwrite(&(file->fatfile), sectors,
-            (unsigned char*)buf+nread, write );
+#ifdef STORAGE_NEEDS_ALIGN
+        if (((uint32_t)buf + nread) & (CACHEALIGN_SIZE - 1))
+            for (i = 0; i < sectors; i++)
+            {
+                if (write) memcpy(file->cache, buf+nread+i*SECTOR_SIZE, SECTOR_SIZE);
+                rc2 = fat_readwrite(&(file->fatfile), 1, file->cache, write );
+                if (rc2 < 0)
+                {
+                    rc = rc2;
+                    break;
+                }
+                else rc += rc2;
+                if (!write) memcpy(buf+nread+i*SECTOR_SIZE, file->cache, SECTOR_SIZE);
+            }
+        else
+#endif
+            rc = fat_readwrite(&(file->fatfile), sectors, (unsigned char*)buf+nread, write );
         if ( rc < 0 ) {
             DEBUGF("Failed read/writing %ld sectors\n",sectors);
             errno = EIO;
