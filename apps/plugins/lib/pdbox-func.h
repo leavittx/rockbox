@@ -29,6 +29,7 @@ double rb_strtod(const char*, char**);
 double rb_atof(const char*);
 void rb_ftoan(float, char*, int);
 float rb_floor(float);
+float rb_ceil(float);
 long rb_atol(const char* s);
 float rb_sin(float rad);
 float rb_cos(float rad);
@@ -40,7 +41,9 @@ float rb_sqrt(float);
 float rb_fabs(float);
 float rb_atan(float);
 float rb_atan2(float, float);
+float rb_acos(float);
 float rb_sinh(float);
 float rb_tan(float);
+float rb_fmod(float, float);
 
 #endif /* _PDBOX_LIB_H_ */

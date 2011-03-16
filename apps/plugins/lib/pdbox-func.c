@@ -37,6 +37,10 @@ float rb_floor(float value)
     return (float) ((int) value);
 }
 
+float rb_ceil(float value)
+{
+    return rb_floor(value) + 1;
+}
 
 /* Implementation of strtod() and atof(),
    taken from SanOS (http://www.jbox.dk/sanos/). */
@@ -764,6 +768,10 @@ float rb_atan2(float x, float y)
 	}
 }
 
+float rb_acos(float x)
+{
+    return rb_atan2(rb_sqrt(1.0 - x * x), x);
+}
 
 /* Sine hyperbolic, taken from dietlibc-0.32 */
 float rb_sinh(float x)
@@ -1395,4 +1403,24 @@ float rb_exp(float x)
   else
     /* Return x, if x is a NaN or Inf; or overflow, otherwise.  */
     return TWO127*x;
+}
+
+
+float rb_fmod(float x, float y)
+{
+    int ir, iy;
+    double r, w;
+
+    if (y == (double)0/* || isnan(y) || !finite(x)*/)
+        return (x*y)/(x*y);
+
+    r = rb_fabs(x);
+    y = rb_fabs(y);
+    //(void)frexp(y,&iy);
+    //while (r >= y) {
+    //    (void)frexp(r,&ir);
+    //    w = ldexp(y,ir-iy);
+    //    r -= w <= r ? w : w*(double)0.5;
+    //}
+    return x >= (double)0 ? r : -r;
 }
