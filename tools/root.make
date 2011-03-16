@@ -21,7 +21,7 @@ ASMFLAGS = -D__ASSEMBLER__      # work around gcc 3.4.x bug with -std=gnu99, onl
 TOOLS = $(TOOLSDIR)/rdf2binary $(TOOLSDIR)/convbdf \
 	$(TOOLSDIR)/codepages $(TOOLSDIR)/scramble $(TOOLSDIR)/bmp2rb \
 	$(TOOLSDIR)/uclpack $(TOOLSDIR)/mkboot $(TOOLSDIR)/iaudio_bl_flash.c \
-	$(TOOLSDIR)/iaudio_bl_flash.h $(TOOLSDIR)/convttf
+	$(TOOLSDIR)/iaudio_bl_flash.h
 
 
 ifeq (,$(PREFIX))
@@ -147,7 +147,8 @@ clean::
 		*.wav *.mp3 *.voice $(CLEANOBJS) \
 		$(LINKRAM) $(LINKROM) rockbox.elf rockbox.map rockbox.bin \
 		make.dep rombox.elf rombox.map rombox.bin rombox.ucl romstart.txt \
-		$(BINARY) $(FLASHFILE) uisimulator bootloader flash $(BOOTLINK)
+		$(BINARY) $(FLASHFILE) uisimulator bootloader flash $(BOOTLINK) \
+		rockbox.apk
 
 #### linking the binaries: ####
 
