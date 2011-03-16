@@ -47,9 +47,6 @@
 #if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 #include <time.h>
 #endif
-#ifndef BOOTLOADER
-#include "bookmark.h"
-#endif
 
 #if (defined(IAUDIO_X5) || defined(IAUDIO_M5)) && !defined (SIMULATOR)
 #include "lcd-remote-target.h"
@@ -81,6 +78,10 @@ enum charge_state_type charge_state = DISCHARGING;
 
 static int shutdown_timeout = 0;
 
+void handle_auto_poweroff(void);
+static int poweroff_timeout = 0;
+static long last_event_tick = 0;
+
 #if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 /*
  * Average battery voltage and charger voltage, filtered via a digital
@@ -110,10 +111,7 @@ static char power_stack[DEFAULT_STACK_SIZE/2 + POWERMGMT_DEBUG_STACK];
 #endif
 static const char power_thread_name[] = "power";
 
-static int poweroff_timeout = 0;
 static int powermgmt_est_runningtime_min = -1;
-
-static long last_event_tick;
 
 static int voltage_to_battery_level(int battery_millivolts);
 static void battery_status_update(void);
@@ -131,11 +129,6 @@ void battery_read_info(int *voltage, int *level)
 
     if (level)
         *level = voltage_to_battery_level(millivolts);
-}
-
-void reset_poweroff_timer(void)
-{
-    last_event_tick = current_tick;
 }
 
 #if BATTERY_TYPES_COUNT > 1
@@ -201,11 +194,6 @@ bool battery_level_safe(void)
 #else
     return battery_millivolts > battery_level_dangerous[battery_type];
 #endif
-}
-
-void set_poweroff_timeout(int timeout)
-{
-    poweroff_timeout = timeout;
 }
 
 /* look into the percent_to_volt_* table and get a realistic battery level */
@@ -286,56 +274,6 @@ static void battery_status_update(void)
 
     battery_percent = level;
     send_battery_level_event();
-}
-
-/*
- * We shut off in the following cases:
- * 1) The unit is idle, not playing music
- * 2) The unit is playing music, but is paused
- * 3) The battery level has reached shutdown limit
- *
- * We do not shut off in the following cases:
- * 1) The USB is connected
- * 2) The charger is connected
- * 3) We are recording, or recording with pause
- * 4) The radio is playing
- */
-static void handle_auto_poweroff(void)
-{
-    long timeout = poweroff_timeout*60*HZ;
-    int audio_stat = audio_status();
-    long tick = current_tick;
-
-#if CONFIG_CHARGING
-    /*
-     * Inhibit shutdown as long as the charger is plugged in.  If it is
-     * unplugged, wait for a timeout period and then shut down.
-     */
-    if (charger_input_state == CHARGER || audio_stat == AUDIO_STATUS_PLAY) {
-        last_event_tick = current_tick;
-    }
-#endif
-
-    if (!shutdown_timeout && query_force_shutdown()) {
-        backlight_on();
-        sys_poweroff();
-    }
-
-    if (timeout &&
-#if CONFIG_TUNER
-        !(get_radio_status() & FMRADIO_PLAYING) &&
-#endif
-        !usb_inserted() &&
-        (audio_stat == 0 ||
-         (audio_stat == (AUDIO_STATUS_PLAY | AUDIO_STATUS_PAUSE) &&
-          !sleeptimer_active))) {
-
-        if (TIME_AFTER(tick, last_event_tick + timeout) &&
-            TIME_AFTER(tick, storage_last_disk_activity() + timeout)) {
-            sys_poweroff();
-        }
-    } else
-        handle_sleep_timer();
 }
 
 #ifdef CURRENT_NORMAL /*check that we have a current defined in a config file*/
@@ -761,6 +699,16 @@ void shutdown_hw(void)
 }
 #endif /* PLATFORM_NATIVE */
 
+void set_poweroff_timeout(int timeout)
+{
+    poweroff_timeout = timeout;
+}
+
+void reset_poweroff_timer(void)
+{
+    last_event_tick = current_tick;
+}
+
 void sys_poweroff(void)
 {
 #ifndef BOOTLOADER
@@ -839,8 +787,9 @@ int get_sleep_timer(void)
         return 0;
 }
 
-void handle_sleep_timer(void)
+static void handle_sleep_timer(void)
 {
+#ifndef BOOTLOADER
     if (!sleeptimer_active)
       return;
 
@@ -852,10 +801,7 @@ void handle_sleep_timer(void)
 #endif
         ) {
             DEBUGF("Sleep timer timeout. Stopping...\n");
-#ifndef BOOTLOADER
-            bookmark_autobookmark(false);
-#endif
-            audio_stop();
+            audio_pause();
             set_sleep_timer(0);
             backlight_off(); /* Nighty, nighty... */
         }
@@ -864,4 +810,60 @@ void handle_sleep_timer(void)
             sys_poweroff();
         }
     }
+#endif /* BOOTLOADER */
+}
+
+/*
+ * We shut off in the following cases:
+ * 1) The unit is idle, not playing music
+ * 2) The unit is playing music, but is paused
+ * 3) The battery level has reached shutdown limit
+ *
+ * We do not shut off in the following cases:
+ * 1) The USB is connected
+ * 2) The charger is connected
+ * 3) We are recording, or recording with pause
+ * 4) The radio is playing
+ */
+void handle_auto_poweroff(void)
+{
+    long timeout = poweroff_timeout*60*HZ;
+    int audio_stat = audio_status();
+    long tick = current_tick;
+
+#if CONFIG_CHARGING
+    /*
+     * Inhibit shutdown as long as the charger is plugged in.  If it is
+     * unplugged, wait for a timeout period and then shut down.
+     */
+    if (charger_input_state == CHARGER || audio_stat == AUDIO_STATUS_PLAY) {
+        last_event_tick = current_tick;
+    }
+#endif
+
+#if !(CONFIG_PLATFORM & PLATFORM_HOSTED)
+    if (!shutdown_timeout && query_force_shutdown()) {
+        backlight_on();
+        sys_poweroff();
+    }
+#endif
+
+    if (timeout &&
+#if CONFIG_TUNER
+        !(get_radio_status() & FMRADIO_PLAYING) &&
+#endif
+        !usb_inserted() &&
+        (audio_stat == 0 ||
+         (audio_stat == (AUDIO_STATUS_PLAY | AUDIO_STATUS_PAUSE) &&
+          !sleeptimer_active))) {
+
+        if (TIME_AFTER(tick, last_event_tick + timeout)
+#if !(CONFIG_PLATFORM & PLATFORM_HOSTED)
+            && TIME_AFTER(tick, storage_last_disk_activity() + timeout)
+#endif
+        ) {
+            sys_poweroff();
+        }
+    } else
+        handle_sleep_timer();
 }

@@ -30,7 +30,6 @@
 #include "kernel.h"
 
 extern JNIEnv   *env_ptr;
-static jclass    RockboxYesno_class = NULL;
 static jobject   RockboxYesno_instance = NULL;
 static jmethodID yesno_func;
 static struct semaphore    yesno_done;
@@ -49,12 +48,12 @@ static void yesno_init(void)
 {
     JNIEnv e = *env_ptr;
     static jmethodID yesno_is_usable;
-    if (RockboxYesno_class == NULL)
+    if (RockboxYesno_instance == NULL)
     {
         semaphore_init(&yesno_done, 1, 0);
         /* get the class and its constructor */
-        RockboxYesno_class = e->FindClass(env_ptr,
-                                            "org/rockbox/RockboxYesno");
+        jclass RockboxYesno_class = e->FindClass(env_ptr,
+                                                 "org/rockbox/RockboxYesno");
         jmethodID constructor = e->GetMethodID(env_ptr,
                                                RockboxYesno_class,
                                                "<init>", "()V");
