@@ -32,13 +32,13 @@
 #include "uninstallwindow.h"
 #include "utils.h"
 #include "rockboxinfo.h"
-#include "rbzip.h"
 #include "sysinfo.h"
 #include "system.h"
 #include "systrace.h"
 #include "rbsettings.h"
 #include "serverinfo.h"
 #include "systeminfo.h"
+#include "ziputil.h"
 
 #include "progressloggerinterface.h"
 
@@ -578,6 +578,7 @@ bool RbUtilQt::installAuto()
            tr("Rockbox installation detected. Do you want to backup first?"),
            QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes)
         {
+            bool result;
             logger->addItem(tr("Starting backup..."),LOGINFO);
             QString backupName = RbSettings::value(RbSettings::Mountpoint).toString()
                 + "/.backup/rockbox-backup-" + rbinfo.version() + ".zip";
@@ -590,11 +591,19 @@ bool RbUtilQt::installAuto()
                 a.mkpath(backupFile.path());
             }
 
+            logger->addItem(tr("Beginning Backup..."),LOGINFO);
+            QCoreApplication::processEvents();
+
             //! create backup
-            RbZip backup;
-            connect(&backup,SIGNAL(zipProgress(int,int)),logger, SLOT(setProgress(int,int)));
-            if(backup.createZip(backupName,
-                RbSettings::value(RbSettings::Mountpoint).toString() + "/.rockbox") == Zip::Ok)
+            ZipUtil zip(this);
+            connect(&zip, SIGNAL(logProgress(int, int)), logger, SLOT(setProgress(int, int)));
+            connect(&zip, SIGNAL(logItem(QString, int)), logger, SLOT(addItem(QString, int)));
+            zip.open(backupName, QuaZip::mdCreate);
+            QString mp = RbSettings::value(RbSettings::Mountpoint).toString();
+            QString folder = mp + "/.rockbox";
+            result = zip.appendDirToArchive(folder, mp);
+            zip.close();
+            if(result)
             {
                 logger->addItem(tr("Backup successful"),LOGOK);
             }
@@ -1262,13 +1271,13 @@ void RbUtilQt::checkUpdate(void)
 #elif defined(Q_OS_MACX)
     url += "macosx/";
 #endif
-    
+
     update = new HttpGet(this);
     connect(update, SIGNAL(done(bool)), this, SLOT(downloadUpdateDone(bool)));
     connect(qApp, SIGNAL(lastWindowClosed()), update, SLOT(abort()));
     if(RbSettings::value(RbSettings::CacheOffline).toBool())
         update->setCache(true);
-   
+
     ui.statusbar->showMessage(tr("Checking for update ..."));
     update->getFile(QUrl(url));
 }
@@ -1280,44 +1289,49 @@ void RbUtilQt::downloadUpdateDone(bool error)
     }
     else {
         QString toParse(update->readAll());
-        
+
         QRegExp searchString("<a[^>]*>([a-zA-Z]+[^<]*)</a>");
         QStringList rbutilList;
         int pos = 0;
-        while ((pos = searchString.indexIn(toParse, pos)) != -1) 
+        while ((pos = searchString.indexIn(toParse, pos)) != -1)
         {
             rbutilList << searchString.cap(1);
             pos += searchString.matchedLength();
         }
-        qDebug() << "[Checkupdate] " << rbutilList;
-        
+        qDebug() << "[RbUtilQt] Checking for update";
+
         QString newVersion = "";
-        //check if there is a binary with higher version in this list
+        QString foundVersion = "";
+        // check if there is a binary with higher version in this list
         for(int i=0; i < rbutilList.size(); i++)
         {
+            QString item = rbutilList.at(i);
 #if defined(Q_OS_LINUX) 
 #if defined(__amd64__)
-            //skip if it isnt a 64bit build
-            if( !rbutilList.at(i).contains("64bit"))
+            // skip if it isn't a 64 bit build
+            if( !item.contains("64bit"))
                 continue;
+            // strip the "64bit" suffix for comparison
+            item = item.remove("64bit");
 #else
             //skip if it is a 64bit build
-            if(rbutilList.at(i).contains("64bit"))
+            if(item.contains("64bit"))
                 continue;
-#endif                
-#endif            
-            //check if it is newer, and remember newest
-            if(Utils::compareVersionStrings(VERSION, rbutilList.at(i)) == 1)
+#endif
+#endif
+            // check if it is newer, and remember newest
+            if(Utils::compareVersionStrings(VERSION, item) == 1)
             {
-                if(Utils::compareVersionStrings(newVersion, rbutilList.at(i)) == 1)
+                if(Utils::compareVersionStrings(newVersion, item) == 1)
                 {
-                    newVersion = rbutilList.at(i);
+                    newVersion = item;
+                    foundVersion = rbutilList.at(i);
                 }
             }
         }
 
         // if we found something newer, display info
-        if(newVersion != "")
+        if(foundVersion != "")
         {
             QString url = SystemInfo::value(SystemInfo::RbutilUrl).toString();
 #if defined(Q_OS_WIN32)   
@@ -1327,11 +1341,12 @@ void RbUtilQt::downloadUpdateDone(bool error)
 #elif defined(Q_OS_MACX)
             url += "macosx/";
 #endif
-            url += newVersion;
-            
+            url += foundVersion;
+
             QMessageBox::information(this,tr("RockboxUtility Update available"),
                         tr("<b>New RockboxUtility Version available.</b> <br><br>"
-                        "Download it from here: <a href='%1'>%2</a>").arg(url).arg(newVersion) );
+                        "Download it from here: <a href='%1'>%2</a>")
+                        .arg(url).arg(foundVersion));
             ui.statusbar->showMessage(tr("New version of Rockbox Utility available."));
         }
         else {
