@@ -28,7 +28,11 @@
 #include "option_select.h"
 #include "sound.h"
 #include "settings_list.h"
-
+#include "wps.h"
+#include "lang.h"
+#include "splash.h"
+#include "playlist.h"
+#include "dsp.h"
 
 /** Disarms all touchregions. */
 void skin_disarm_touchregions(struct wps_data *data)
@@ -58,6 +62,7 @@ int skin_get_touchaction(struct wps_data *data, int* edge_offset,
     bool released = (type == BUTTON_REL);
     bool pressed = (type == BUTTON_TOUCHSCREEN);
     struct skin_token_list *regions = data->touchregions;
+    bool needs_repeat;
 
     while (regions)
     {
@@ -68,6 +73,7 @@ int skin_get_touchaction(struct wps_data *data, int* edge_offset,
             regions = regions->next;
             continue;
         }
+        needs_repeat = r->press_length != PRESS;
         /* check if it's inside this viewport */
         if (viewport_point_within_vp(&(r->wvp->vp), x, y))
         {   /* reposition the touch inside the viewport since touchregions
@@ -83,10 +89,25 @@ int skin_get_touchaction(struct wps_data *data, int* edge_offset,
                 vy -= r->y;
                 
 
-                switch(r->type)
+                switch(r->action)
                 {
-                    case WPS_TOUCHREGION_ACTION:
-                        if (r->armed && ((repeated && r->repeat) || (released && !r->repeat)))
+                    case ACTION_TOUCH_SCROLLBAR:
+                    case ACTION_TOUCH_VOLUME:
+                        if (edge_offset)
+                        {
+                            if(r->width > r->height)
+                                *edge_offset = vx*100/r->width;
+                            else
+                                *edge_offset = vy*100/r->height;
+                            if (r->reverse_bar)
+                                *edge_offset = 100 - *edge_offset;
+                        }
+                        temp = r;
+                        returncode = r->action;
+                        break;
+                    default:
+                        if (r->armed && ((repeated && needs_repeat) || 
+                            (released && !needs_repeat)))
                         {
                             last_action = r->action;
                             returncode = r->action;
@@ -97,19 +118,6 @@ int skin_get_touchaction(struct wps_data *data, int* edge_offset,
                             r->armed = true;
                             r->last_press = current_tick;
                         }
-                        break;
-                    default:
-                        if (edge_offset)
-                        {
-                            if(r->width > r->height)
-                                *edge_offset = vx*100/r->width;
-                            else
-                                *edge_offset = vy*100/r->height;
-                            if (r->reverse_bar)
-                                *edge_offset = 100 - *edge_offset;
-                        }
-                        returncode = r->type;
-                        temp = r;
                         break;
                 }
             }
@@ -122,11 +130,61 @@ int skin_get_touchaction(struct wps_data *data, int* edge_offset,
         skin_disarm_touchregions(data);
     if (retregion && temp)
         *retregion = temp;
+    if (temp && temp->press_length == LONG_PRESS)
+        temp->armed = false;
     
     if (returncode != ACTION_NONE)
     {
+        if (global_settings.party_mode)
+        {
+            switch (returncode)
+            {
+                case ACTION_WPS_PLAY:
+                case ACTION_WPS_SKIPPREV:
+                case ACTION_WPS_SKIPNEXT:
+                case ACTION_WPS_STOP:
+                    returncode = ACTION_NONE;
+                    break;
+                default:
+                    break;
+            }
+        }
         switch (returncode)
         {
+            case ACTION_WPS_PLAY:
+                if (!audio_status())
+                {
+                    if ( global_status.resume_index != -1 )
+                    {
+                        if (playlist_resume() != -1)
+                        {
+                            playlist_start(global_status.resume_index,
+                                global_status.resume_offset);
+                        }
+                    }
+                    else
+                    {
+                        splash(HZ*2, ID2P(LANG_NOTHING_TO_RESUME));
+                    }
+                }
+                else
+                {
+                    wps_do_playpause(false);
+                }
+                returncode = ACTION_REDRAW;
+                break;
+            case ACTION_WPS_SKIPPREV:
+                audio_prev();
+                returncode = ACTION_REDRAW;
+                break;
+            case ACTION_WPS_SKIPNEXT:
+                audio_next();
+                returncode = ACTION_REDRAW;
+                break;
+            case ACTION_WPS_STOP:
+                audio_stop();
+                returncode = ACTION_REDRAW;
+                break;
             case ACTION_SETTINGS_INC:
             case ACTION_SETTINGS_DEC:
             {
@@ -183,6 +241,29 @@ int skin_get_touchaction(struct wps_data *data, int* edge_offset,
                     global_settings.volume = min_vol;
                 }
                 setvol();
+                returncode = ACTION_REDRAW;
+            }
+            break;
+            case ACTION_TOUCH_SHUFFLE: /* toggle shuffle mode */
+            {
+                global_settings.playlist_shuffle = 
+                                            !global_settings.playlist_shuffle;
+#if CONFIG_CODEC == SWCODEC
+                dsp_set_replaygain();
+#endif
+                if (global_settings.playlist_shuffle)
+                    playlist_randomise(NULL, current_tick, true);
+                else
+                    playlist_sort(NULL, true);
+                returncode = ACTION_REDRAW;
+            }
+            break;
+            case ACTION_TOUCH_REPMODE: /* cycle the repeat mode setting */
+            {
+                const struct settings_list *rep_setting = 
+                                find_setting(&global_settings.repeat_mode, NULL);
+                option_select_next_val(rep_setting, false, true);
+                audio_flush_and_reload_tracks();
                 returncode = ACTION_REDRAW;
             }
             break;
